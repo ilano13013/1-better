@@ -12,7 +12,7 @@ import { basketFromPlan } from '../engine/basket';
 import { ingredientQty, recipeCost, recipeMacros, resolveRecipe } from '../engine/recipes';
 import { filterFromProfile, needsCertification } from '../engine/filters';
 import { CATEGORY_LABELS, CATEGORY_ORDER, formatQty } from '../engine/shopping';
-import { Bar, Card, Checkbox, Empty, Sheet, eur, num } from '../components/ui';
+import { Bar, Card, Checkbox, Empty, Sheet, eur, num, type BarTone } from '../components/ui';
 import { IconCart, IconChevron, IconClock, IconFlame, IconInfo, IconSwap } from '../components/icons';
 import type { Screen } from '../App';
 
@@ -64,8 +64,9 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
             onClick={() => setDay(i as DayIndex)}
             style={{
               width: 62, padding: '11px 6px', textAlign: 'center', cursor: 'pointer',
-              borderColor: day === i ? 'var(--accent)' : undefined,
-              background: day === i ? 'var(--accent-soft)' : undefined,
+              borderColor: day === i ? 'var(--invert-bg)' : undefined,
+              background: day === i ? 'var(--invert-bg)' : undefined,
+              color: day === i ? 'var(--invert-fg)' : undefined,
             }}
           >
             <div className="xs dim">{label}</div>
@@ -78,7 +79,7 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
 
       <div className="stack">
         {/* Totaux du jour */}
-        <Card className="card-accent">
+        <Card className="card-ink">
           <div className="row-between" style={{ alignItems: 'baseline' }}>
             <div>
               <div className="card-title" style={{ margin: 0 }}>Total de la journée</div>
@@ -95,14 +96,14 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
 
           <div className="macro-grid" style={{ marginTop: 18 }}>
             <MacroCell label="Protéines" value={dayPlan.totals.protein} target={targets.protein} />
-            <MacroCell label="Glucides" value={dayPlan.totals.carbs} target={targets.carbs} tone="violet" />
-            <MacroCell label="Lipides" value={dayPlan.totals.fat} target={targets.fat} tone="warn" />
+            <MacroCell label="Glucides" value={dayPlan.totals.carbs} target={targets.carbs} tone="muted" />
+            <MacroCell label="Lipides" value={dayPlan.totals.fat} target={targets.fat} tone="hatch" />
           </div>
         </Card>
 
         {/* Déficit protéique persistant : on en explique la cause */}
         {proteinShortfall > 0.1 && (
-          <Card className="card-warn">
+          <Card className="card-notice">
             <div className="strong">Objectif protéines difficile à tenir</div>
             <p className="sm muted" style={{ marginTop: 8 }}>
               Le plan atteint {Math.round((1 - proteinShortfall) * 100)} % de ta cible
@@ -119,7 +120,7 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
 
         {/* Créneaux impossibles à honorer : signalés, jamais escamotés */}
         {dayPlan.unmetSlots.length > 0 && (
-          <Card className="card-warn">
+          <Card className="card-notice">
             <div className="strong">
               {dayPlan.unmetSlots.length === 1 ? 'Un repas n\'a pas pu être planifié' : 'Des repas n\'ont pas pu être planifiés'}
             </div>
@@ -203,8 +204,8 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
 }
 
 function MacroCell({
-  label, value, target, tone = 'accent',
-}: { label: string; value: number; target: number; tone?: 'accent' | 'violet' | 'warn' }) {
+  label, value, target, tone = 'ink',
+}: { label: string; value: number; target: number; tone?: BarTone }) {
   const gap = value - target;
   return (
     <div>
@@ -212,7 +213,7 @@ function MacroCell({
       <div className="xs dim" style={{ marginBottom: 5 }}>{label}</div>
       <Bar value={value} max={target} tone={tone} />
       {Math.abs(gap) > target * 0.12 && (
-        <div className={`xs ${gap < 0 ? 'warn' : 'dim'}`} style={{ marginTop: 4 }}>
+        <div className={`xs ${gap < 0 ? 'notice' : 'dim'}`} style={{ marginTop: 4 }}>
           {gap > 0 ? '+' : ''}{Math.round(gap)} g
         </div>
       )}
@@ -236,7 +237,7 @@ function MealCard({
           style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', minWidth: 0 }}>
           <div className="row" style={{ gap: 8, marginBottom: 6 }}>
             <span className="badge">{SLOT_LABELS[meal.slot]}</span>
-            {meal.scale !== 1 && <span className="badge badge-violet">×{meal.scale.toString().replace('.', ',')}</span>}
+            {meal.scale !== 1 && <span className="badge badge-muted">×{meal.scale.toString().replace('.', ',')}</span>}
           </div>
           <div className="strong" style={{ fontSize: 17 }}>{recipe.name}</div>
           <div className="row xs dim wrap" style={{ marginTop: 8, gap: 12 }}>
@@ -297,7 +298,7 @@ function RecipeSheet({ meal, onReplace }: { meal: Meal; onReplace: () => void })
               <div key={ing.foodId} className="list-row">
                 <span className="grow sm">{food.name}</span>
                 {needsCertification(food, filter) && (
-                  <span className="badge badge-warn">à certifier</span>
+                  <span className="badge badge-notice">à certifier</span>
                 )}
                 <span className="sm strong num">{formatQty(qty, food.unit)}</span>
               </div>
@@ -311,7 +312,7 @@ function RecipeSheet({ meal, onReplace }: { meal: Meal; onReplace: () => void })
         <div className="stack-sm">
           {recipe.steps.map((step, i) => (
             <div key={i} className="row" style={{ gap: 12, alignItems: 'flex-start' }}>
-              <span className="badge badge-accent" style={{ flex: 'none' }}>{i + 1}</span>
+              <span className="badge badge-ink" style={{ flex: 'none' }}>{i + 1}</span>
               <span className="sm muted">{step}</span>
             </div>
           ))}
@@ -373,7 +374,7 @@ function MealAlternatives({
                 <span>{o.recipe.prepTimeMin} min</span>
               </span>
             </span>
-            <span className={`badge ${o.cost === 0 ? 'badge-accent' : ''}`}>
+            <span className={`badge ${o.cost === 0 ? 'badge-ink' : ''}`}>
               {o.cost === 0 ? 'déjà au panier' : `+${eur(o.cost)}`}
             </span>
           </button>
@@ -414,7 +415,7 @@ function PantryEditor() {
     <div className="stack">
       <div className="card card-flat" style={{ padding: 12 }}>
         <div className="row xs" style={{ gap: 8, alignItems: 'flex-start' }}>
-          <span className="accent" style={{ flex: 'none', marginTop: 1 }}><IconInfo size={13} /></span>
+          <span className="ink" style={{ flex: 'none', marginTop: 1 }}><IconInfo size={13} /></span>
           <span className="muted">
             Ces quantités sont consommées en priorité : elles sont déduites de la
             liste de courses avant tout nouvel achat.

@@ -12,6 +12,7 @@ import { evaluateCheckIn, isCheckInDue } from '../engine/checkin';
 import { buildBadges, sessionCount, weekStreak, progressToGoal } from '../engine/gamification';
 import { personalRecords } from '../engine/progression';
 import { Bar, Card, Chip, Empty, Field, Segmented, Sheet, eur, kg, num } from '../components/ui';
+import { BrandMark } from '../components/BrandMark';
 import { IconCheck, IconMedal, IconSpark, IconTrend } from '../components/icons';
 
 /**
@@ -62,7 +63,7 @@ export default function ProfileScreen() {
           <div className="row" style={{ alignItems: 'baseline', gap: 10 }}>
             <span className="display num" style={{ fontSize: 34 }}>{kg(current)}</span>
             {trend !== null && (
-              <span className={`badge ${trend > 0 ? 'badge-accent' : 'badge-violet'}`}>
+              <span className={`badge ${trend > 0 ? 'badge-ink' : 'badge-muted'}`}>
                 <IconTrend size={12} /> {trend > 0 ? '+' : ''}{trend.toFixed(2).replace('.', ',')} %/sem.
               </span>
             )}
@@ -72,7 +73,7 @@ export default function ProfileScreen() {
           </div>
 
           <div style={{ marginTop: 14 }}>
-            <Bar value={goalProgress * 100} max={100} tone="violet" />
+            <Bar value={goalProgress * 100} max={100} tone="muted" />
           </div>
 
           <WeightChart entries={entries} />
@@ -84,7 +85,7 @@ export default function ProfileScreen() {
         </Card>
 
         {/* Check-in */}
-        <Card className={isCheckInDue(state.checkIns) ? 'card-accent' : ''}
+        <Card className={isCheckInDue(state.checkIns) ? 'card-ink' : ''}
           onClick={() => setSheet('checkin')}>
           <div className="row-between">
             <div>
@@ -103,7 +104,7 @@ export default function ProfileScreen() {
         <Card onClick={() => setSheet('macros')}>
           <div className="row-between" style={{ marginBottom: 12 }}>
             <span className="card-title" style={{ margin: 0 }}>Objectif quotidien</span>
-            {plan.targets.manual && <span className="badge badge-violet">manuel</span>}
+            {plan.targets.manual && <span className="badge badge-muted">manuel</span>}
           </div>
           <div className="metric num">{num(plan.targets.kcal)} kcal</div>
           <div className="row xs dim" style={{ marginTop: 8, gap: 14 }}>
@@ -118,9 +119,11 @@ export default function ProfileScreen() {
           <div className="card-title">Réglages</div>
           <Card className="card-flat">
             <SettingRow label="Objectif" value={GOAL_LIST.find((g) => g.id === state.profile.goal)!.label} onClick={() => setSheet('goal')} />
-            <SettingRow label="Salle" value={gym?.name ?? '—'} onClick={() => setSheet('gym')} />
+            <SettingRow label="Salle" value={gym?.name ?? '—'} onClick={() => setSheet('gym')}
+              mark={gym && <BrandMark name={gym.name} color={gym.color} logo={gym.logo} size={20} quiet={gym.custom} />} />
             <SettingRow label="Disponibilités" value={`${state.profile.sessionsPerWeek} × ${state.profile.sessionDurationMin} min`} onClick={() => setSheet('schedule')} />
-            <SettingRow label="Supermarché" value={store?.name ?? '—'} onClick={() => setSheet('store')} />
+            <SettingRow label="Supermarché" value={store?.name ?? '—'} onClick={() => setSheet('store')}
+              mark={store && <BrandMark name={store.name} color={store.color} logo={store.logo} size={20} quiet={store.id === 'autre'} />} />
             <SettingRow label="Budget" value={`${eur(state.profile.weeklyBudget)} / sem.`} onClick={() => setSheet('budget')} />
             <SettingRow label="Alimentation" value={DIET_LABELS[state.profile.diet]} onClick={() => setSheet('diet')} />
           </Card>
@@ -152,7 +155,7 @@ export default function ProfileScreen() {
               <div key={b.id} className="card card-flat" style={{ padding: 13, opacity: b.unlocked ? 1 : 0.62 }}>
                 <div className="row-between">
                   <div className="row" style={{ gap: 10, minWidth: 0 }}>
-                    <span className={b.unlocked ? 'accent' : 'dim'} style={{ flex: 'none' }}>
+                    <span className={b.unlocked ? 'ink' : 'dim'} style={{ flex: 'none' }}>
                       {b.unlocked ? <IconCheck size={14} /> : <IconMedal size={14} />}
                     </span>
                     <div style={{ minWidth: 0 }}>
@@ -163,7 +166,7 @@ export default function ProfileScreen() {
                   <span className="xs dim num">{Math.round(b.progress * 100)} %</span>
                 </div>
                 {!b.unlocked && (
-                  <div style={{ marginTop: 8 }}><Bar value={b.progress * 100} max={100} tone="violet" /></div>
+                  <div style={{ marginTop: 8 }}><Bar value={b.progress * 100} max={100} tone="muted" /></div>
                 )}
               </div>
             ))}
@@ -182,7 +185,7 @@ export default function ProfileScreen() {
               onClick={() => { dispatch({ type: 'loadDemo' }); notify('Profil de démonstration chargé'); }}>
               Charger le profil de démonstration
             </button>
-            <button type="button" className="btn btn-danger btn-block"
+            <button type="button" className="btn btn-alert btn-block"
               onClick={() => {
                 if (!window.confirm('Effacer toutes tes données locales ? Cette action est définitive.')) return;
                 clearState();
@@ -255,8 +258,9 @@ export default function ProfileScreen() {
           {STORES.map((s) => (
             <button key={s.id} type="button" className="option" aria-pressed={state.profile.storeId === s.id}
               onClick={() => { dispatch({ type: 'patchProfile', patch: { storeId: s.id } }); notify('Prix et liste recalculés'); setSheet(null); }}>
-              <span className="option-mark">{state.profile.storeId === s.id && <IconCheck />}</span>
+              <BrandMark name={s.name} color={s.color} logo={s.logo} quiet={s.id === 'autre'} />
               <span className="grow strong">{s.name}</span>
+              <span className="option-mark">{state.profile.storeId === s.id && <IconCheck />}</span>
             </button>
           ))}
         </div>
@@ -273,11 +277,14 @@ export default function ProfileScreen() {
   );
 }
 
-function SettingRow({ label, value, onClick }: { label: string; value: string; onClick: () => void }) {
+function SettingRow({
+  label, value, onClick, mark,
+}: { label: string; value: string; onClick: () => void; mark?: React.ReactNode }) {
   return (
     <button type="button" className="list-row" onClick={onClick}
       style={{ width: '100%', background: 'none', border: 'none', borderBottom: '1px solid var(--line)', cursor: 'pointer', textAlign: 'left' }}>
       <span className="grow sm dim">{label}</span>
+      {mark}
       <span className="sm strong truncate">{value}</span>
     </button>
   );
@@ -302,10 +309,10 @@ function WeightChart({ entries }: { entries: { date: string; weightKg: number }[
     <div style={{ marginTop: 16 }}>
       <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: '100%', height: 92, overflow: 'visible' }}>
         <path d={path(values)} fill="none" stroke="var(--line-strong)" strokeWidth="0.8" vectorEffect="non-scaling-stroke" />
-        <path d={path(avg.map((a) => a.value))} fill="none" stroke="var(--accent)" strokeWidth="2"
+        <path d={path(avg.map((a) => a.value))} fill="none" stroke="var(--ink)" strokeWidth="2"
           strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         {values.map((v, i) => (
-          <circle key={i} cx={x(i)} cy={y(v)} r="1.4" fill="var(--text-3)" vectorEffect="non-scaling-stroke" />
+          <circle key={i} cx={x(i)} cy={y(v)} r="1.4" fill="var(--ink-3)" vectorEffect="non-scaling-stroke" />
         ))}
       </svg>
       <div className="row-between xs dim num" style={{ marginTop: 6 }}>
@@ -430,12 +437,12 @@ function CheckInForm({ onDone }: { onDone: () => void }) {
 
       {result && (
         <>
-          <Card className="card-accent">
+          <Card className="card-ink">
             <div className="card-title">Proposition du moteur</div>
             <div className="stack-sm">
               {result.messages.map((m, i) => (
                 <div key={i} className="row sm" style={{ gap: 9, alignItems: 'flex-start' }}>
-                  <span className="dot accent" style={{ marginTop: 8 }} />
+                  <span className="dot ink" style={{ marginTop: 8 }} />
                   <span className="muted">{m}</span>
                 </div>
               ))}
@@ -443,12 +450,12 @@ function CheckInForm({ onDone }: { onDone: () => void }) {
             {(result.kcalDelta !== 0 || result.budgetDelta !== 0) && (
               <div className="row wrap" style={{ marginTop: 14, gap: 8 }}>
                 {result.kcalDelta !== 0 && (
-                  <span className="badge badge-accent num">
+                  <span className="badge badge-ink num">
                     {result.kcalDelta > 0 ? '+' : ''}{result.kcalDelta} kcal / jour
                   </span>
                 )}
                 {result.budgetDelta !== 0 && (
-                  <span className="badge badge-warn num">+{eur(result.budgetDelta)} / semaine</span>
+                  <span className="badge badge-notice num">+{eur(result.budgetDelta)} / semaine</span>
                 )}
               </div>
             )}
@@ -521,7 +528,7 @@ function MacroEditor({ onDone }: { onDone: () => void }) {
           <span className="strong num">{num(computed.kcal)} kcal</span></div>
       </Card>
 
-      <Card className="card-accent center">
+      <Card className="card-ink center">
         <div className="display num" style={{ fontSize: 32 }}>{num(kcal)} kcal</div>
         <div className="xs dim" style={{ marginTop: 4 }}>calculé depuis tes macros</div>
       </Card>
@@ -583,8 +590,9 @@ function GymEditor({ onDone }: { onDone: () => void }) {
               notify('Exercices incompatibles remplacés');
               if (!g.custom) onDone();
             }}>
-            <span className="option-mark">{state.profile.gymId === g.id && <IconCheck />}</span>
+            <BrandMark name={g.name} color={g.color} logo={g.logo} quiet={g.custom} />
             <span className="grow strong">{g.name}</span>
+            <span className="option-mark">{state.profile.gymId === g.id && <IconCheck />}</span>
           </button>
         ))}
       </div>
@@ -662,7 +670,7 @@ function BudgetEditor() {
 
   return (
     <div className="stack">
-      <Card className="card-accent center">
+      <Card className="card-ink center">
         <div className="display num" style={{ fontSize: 32 }}>{num(budget)} €</div>
         <div className="xs dim" style={{ marginTop: 4 }}>{eur(budget / 7)} par jour</div>
       </Card>
@@ -675,7 +683,7 @@ function BudgetEditor() {
           <span>€ / semaine</span>
         </div>
       </Field>
-      <Card className={over > 0 ? 'card-warn' : 'card-flat'}>
+      <Card className={over > 0 ? 'card-notice' : 'card-flat'}>
         <div className="row-between sm">
           <span className="dim">Panier recalculé</span>
           <span className="strong num">{eur(plan.shoppingList.total)}</span>

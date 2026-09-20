@@ -17,6 +17,20 @@ export function todayIndex(today = new Date()): 0 | 1 | 2 | 3 | 4 | 5 | 6 {
   return ((today.getDay() + 6) % 7) as 0 | 1 | 2 | 3 | 4 | 5 | 6;
 }
 
+/**
+ * Thème de départ : celui du système. L'utilisateur peut le changer ensuite,
+ * et son choix est conservé. Sans cette lecture, le premier rendu peut
+ * clignoter lorsque l'appareil est en mode clair.
+ */
+export function preferredTheme(): 'light' | 'dark' {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return 'dark';
+  try {
+    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  } catch {
+    return 'dark';
+  }
+}
+
 export const EMPTY_PROFILE: Profile = {
   firstName: '',
   sex: 'homme',
@@ -60,7 +74,7 @@ export function createInitialState(): AppState {
     performances: [],
     weightEntries: [],
     checkIns: [],
-    theme: 'dark',
+    theme: preferredTheme(),
     weekStart: currentWeekStart(),
   };
 }

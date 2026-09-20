@@ -12,8 +12,9 @@ import { purchasableItems } from '../engine/shopping';
 import { latestWeight, weeklyTrendPct } from '../engine/weight';
 import { isCheckInDue } from '../engine/checkin';
 import { sessionCount, weekStreak } from '../engine/gamification';
-import { Bar, Card, Ring, eur, kg, num } from '../components/ui';
+import { Bar, Card, Ring, eur, kg, num, type BarTone } from '../components/ui';
 import { IconCart, IconChevron, IconClock, IconFlame, IconMedal, IconRest, IconWallet } from '../components/icons';
+import { BrandMark } from '../components/BrandMark';
 import type { Screen } from '../App';
 
 /**
@@ -64,7 +65,7 @@ export default function Dashboard({ go }: { go: (s: Screen) => void }) {
           <h1>Bonjour{state.profile.firstName ? ` ${state.profile.firstName}` : ''} 👋</h1>
         </div>
         {streak > 0 && (
-          <span className="badge badge-accent"><IconMedal size={13} /> {streak} sem.</span>
+          <span className="badge badge-ink"><IconMedal size={13} /> {streak} sem.</span>
         )}
       </div>
 
@@ -84,8 +85,8 @@ export default function Dashboard({ go }: { go: (s: Screen) => void }) {
                 <IconChevron />
               </div>
               <MacroLine label="Protéines" value={eatenProtein} max={plan.targets.protein} unit="g" />
-              <MacroLine label="Glucides" value={Math.round(passedMeals.reduce((s, m) => s + m.macros.carbs, 0))} max={plan.targets.carbs} unit="g" tone="violet" />
-              <MacroLine label="Lipides" value={Math.round(passedMeals.reduce((s, m) => s + m.macros.fat, 0))} max={plan.targets.fat} unit="g" tone="warn" />
+              <MacroLine label="Glucides" value={Math.round(passedMeals.reduce((s, m) => s + m.macros.carbs, 0))} max={plan.targets.carbs} unit="g" tone="muted" />
+              <MacroLine label="Lipides" value={Math.round(passedMeals.reduce((s, m) => s + m.macros.fat, 0))} max={plan.targets.fat} unit="g" tone="hatch" />
             </div>
           </div>
         </Card>
@@ -100,7 +101,7 @@ export default function Dashboard({ go }: { go: (s: Screen) => void }) {
             </div>
             <div className="xs dim">→ {kg(state.profile.targetWeightKg)}</div>
             {trend !== null && (
-              <div className="xs" style={{ marginTop: 6, color: 'var(--text-2)' }}>
+              <div className="xs" style={{ marginTop: 6, color: 'var(--ink-2)' }}>
                 {trend > 0 ? '+' : ''}{trend.toFixed(2).replace('.', ',')} %/sem.
               </div>
             )}
@@ -131,9 +132,13 @@ export default function Dashboard({ go }: { go: (s: Screen) => void }) {
         </div>
 
         {/* Budget de la semaine */}
-        <Card onClick={() => go('shopping')} className={overBudget > 0 ? 'card-warn' : ''}>
+        <Card onClick={() => go('shopping')} className={overBudget > 0 ? 'card-notice' : ''}>
           <div className="row-between" style={{ marginBottom: 12 }}>
-            <span className="card-title" style={{ margin: 0 }}>Budget semaine · {store.name}</span>
+            <span className="row" style={{ gap: 9 }}>
+              <BrandMark name={store.name} color={store.color} logo={store.logo}
+                size={22} quiet={store.id === 'autre'} />
+              <span className="card-title" style={{ margin: 0 }}>Budget semaine</span>
+            </span>
             <IconChevron />
           </div>
           <div className="row" style={{ alignItems: 'baseline', gap: 6 }}>
@@ -141,13 +146,13 @@ export default function Dashboard({ go }: { go: (s: Screen) => void }) {
             <span className="sm dim">/ {eur(budget)}</span>
           </div>
           <div style={{ marginTop: 10 }}>
-            <Bar value={cart} max={budget} tone={overBudget > 0 ? 'warn' : 'accent'} />
+            <Bar value={cart} max={budget} tone={overBudget > 0 ? 'notice' : 'ink'} />
           </div>
           <div className="row-between xs" style={{ marginTop: 8 }}>
             <span className="dim">
               {purchasableItems(plan.shoppingList).length} produits · {eur(spent)} cochés
             </span>
-            <span className={overBudget > 0 ? 'warn strong' : 'accent strong'}>
+            <span className={overBudget > 0 ? 'notice strong' : 'ink strong'}>
               {overBudget > 0 ? `Dépassement ${eur(overBudget)}` : `Reste ${eur(-overBudget)}`}
             </span>
           </div>
@@ -178,7 +183,7 @@ export default function Dashboard({ go }: { go: (s: Screen) => void }) {
 
         {/* Check-in */}
         {isCheckInDue(state.checkIns) && (
-          <Card onClick={() => go('profile')} className="card-accent">
+          <Card onClick={() => go('profile')} className="card-ink">
             <div className="row-between">
               <div>
                 <div className="strong">Check-in hebdomadaire</div>
@@ -202,8 +207,8 @@ export default function Dashboard({ go }: { go: (s: Screen) => void }) {
 }
 
 function MacroLine({
-  label, value, max, unit, tone = 'accent',
-}: { label: string; value: number; max: number; unit: string; tone?: 'accent' | 'violet' | 'warn' }) {
+  label, value, max, unit, tone = 'ink',
+}: { label: string; value: number; max: number; unit: string; tone?: BarTone }) {
   return (
     <div>
       <div className="row-between xs" style={{ marginBottom: 4 }}>

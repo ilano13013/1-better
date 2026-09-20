@@ -17,6 +17,7 @@ import {
   IconBack, IconCheck, IconCopy, IconDownload, IconInfo, IconMinus, IconPlus,
   IconShare, IconSpark, IconSwap, IconWallet,
 } from '../components/icons';
+import { BrandMark } from '../components/BrandMark';
 import type { Screen } from '../App';
 
 /**
@@ -95,16 +96,20 @@ export default function Shopping({ go }: { go: (s: Screen) => void }) {
           <button type="button" className="icon-btn" onClick={() => go('nutrition')} aria-label="Retour">
             <IconBack />
           </button>
-          <div>
-            <div className="eyebrow">{store.name}</div>
-            <h1>Liste de courses</h1>
+          <div className="row" style={{ gap: 10 }}>
+            <BrandMark name={store.name} color={store.color} logo={store.logo}
+              size={34} quiet={store.id === 'autre'} />
+            <div>
+              <div className="eyebrow">{store.name}</div>
+              <h1>Liste de courses</h1>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="stack">
         {/* Budget */}
-        <Card className={over > 0 ? 'card-warn' : 'card-accent'}>
+        <Card className={over > 0 ? 'card-notice' : 'card-ink'}>
           <div className="row-between" style={{ alignItems: 'baseline' }}>
             <div>
               <div className="card-title" style={{ margin: 0 }}>Panier calculé</div>
@@ -117,7 +122,7 @@ export default function Shopping({ go }: { go: (s: Screen) => void }) {
           </div>
 
           <div style={{ marginTop: 14 }}>
-            <Bar value={list.total} max={budget} tone={over > 0 ? 'warn' : 'accent'} />
+            <Bar value={list.total} max={budget} tone={over > 0 ? 'notice' : 'ink'} />
           </div>
 
           {list.longLifeTotal > 0 && (
@@ -130,7 +135,7 @@ export default function Shopping({ go }: { go: (s: Screen) => void }) {
 
           <div className="row-between sm" style={{ marginTop: 10 }}>
             <span className="dim">{items.length} produits</span>
-            <span className={over > 0 ? 'warn strong' : 'accent strong'}>
+            <span className={over > 0 ? 'notice strong' : 'ink strong'}>
               {over > 0
                 ? `Ton panier dépasse ton budget de ${eur(over)}.`
                 : `Reste ${eur(-over)}`}
@@ -156,7 +161,7 @@ export default function Shopping({ go }: { go: (s: Screen) => void }) {
               <span className="strong num">{eur(checkedTotal)}</span>
             </div>
             <div style={{ marginTop: 8 }}>
-              <Bar value={checkedTotal} max={list.total} tone="violet" />
+              <Bar value={checkedTotal} max={list.total} tone="muted" />
             </div>
             <button type="button" className="btn btn-sm btn-ghost" style={{ marginTop: 12 }}
               onClick={() => dispatch({ type: 'clearChecked' })}>
@@ -212,7 +217,7 @@ export default function Shopping({ go }: { go: (s: Screen) => void }) {
             <Card className="card-flat">
               {covered.map((item) => (
                 <div key={item.id} className="list-row">
-                  <span className="accent" style={{ flex: 'none' }}><IconCheck size={13} /></span>
+                  <span className="ink" style={{ flex: 'none' }}><IconCheck size={13} /></span>
                   <span className="grow sm">{item.foodName}</span>
                   <span className="xs dim num">{formatQty(item.neededQty, item.unit)} utilisés</span>
                 </div>
@@ -291,8 +296,8 @@ function ItemRow({
         aria-label={checked ? 'Décocher' : 'Cocher'}
         style={{
           borderRadius: 7, cursor: 'pointer',
-          background: checked ? 'var(--accent)' : 'transparent',
-          borderColor: checked ? 'var(--accent)' : undefined,
+          background: checked ? 'var(--ink)' : 'transparent',
+          borderColor: checked ? 'var(--ink)' : undefined,
           color: checked ? '#04120c' : undefined,
         }}>
         {checked && <IconCheck size={12} />}
@@ -305,7 +310,7 @@ function ItemRow({
         </div>
         <div className="row xs dim wrap" style={{ gap: 8, marginTop: 2 }}>
           <span>besoin {formatQty(item.toBuyQty, item.unit)}</span>
-          {item.pantryQty > 0 && <span className="accent">−{formatQty(item.pantryQty, item.unit)} en stock</span>}
+          {item.pantryQty > 0 && <span className="ink">−{formatQty(item.pantryQty, item.unit)} en stock</span>}
           {item.weeksOfSupply >= LONG_LIFE_WEEKS && (
             <span title="Le conditionnement couvre plusieurs semaines">
               ≈ {Math.round(item.weeksOfSupply)} semaines
@@ -335,15 +340,15 @@ function ItemRow({
 
 function PriceBadge({ item, onClick }: { item: ShoppingListItem; onClick: () => void }) {
   const map = {
-    verifie: { cls: 'badge-accent', label: 'Prix vérifié' },
+    verifie: { cls: 'badge-ink', label: 'Prix vérifié' },
     estime: { cls: '', label: 'Prix estimé' },
-    inconnu: { cls: 'badge-warn', label: 'Prix inconnu — saisir' },
+    inconnu: { cls: 'badge-notice', label: 'Prix inconnu — saisir' },
   } as const;
   const conf = map[item.priceStatus];
   return (
     <button type="button" onClick={onClick}
       className={`badge ${conf.cls}`}
-      style={{ border: 'none', cursor: 'pointer', fontSize: 10.5 }}
+      style={{ cursor: 'pointer' }}
       title={item.priceSource}>
       {conf.label}
     </button>
@@ -421,7 +426,7 @@ function Optimizer({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="stack">
-      <Card className={over > 0 ? 'card-warn' : 'card-flat'}>
+      <Card className={over > 0 ? 'card-notice' : 'card-flat'}>
         <div className="row-between">
           <div>
             <div className="card-title" style={{ margin: 0 }}>Panier actuel</div>
@@ -433,7 +438,7 @@ function Optimizer({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         {over > 0 && (
-          <p className="sm warn" style={{ marginTop: 10 }}>
+          <p className="sm notice" style={{ marginTop: 10 }}>
             Ton panier dépasse ton budget de {eur(over)}.
           </p>
         )}
@@ -458,13 +463,13 @@ function Optimizer({ onClose }: { onClose: () => void }) {
                       <div className="xs dim" style={{ marginTop: 2 }}>{s.reason}</div>
                     </div>
                   </div>
-                  <span className="badge badge-accent num">−{eur(s.saving)}</span>
+                  <span className="badge badge-ink num">−{eur(s.saving)}</span>
                 </div>
               </Card>
             ))}
           </div>
 
-          <Card className="card-accent">
+          <Card className="card-ink">
             <div className="row-between">
               <span className="sm muted">Nouveau total</span>
               <span className="metric num">
@@ -488,7 +493,7 @@ function Optimizer({ onClose }: { onClose: () => void }) {
       )}
 
       {Object.keys(state.foodSwaps).length > 0 && (
-        <button type="button" className="btn btn-danger btn-block"
+        <button type="button" className="btn btn-alert btn-block"
           onClick={() => { dispatch({ type: 'setSwaps', swaps: {} }); notify('Substitutions annulées'); onClose(); }}>
           Annuler les substitutions en cours
         </button>
@@ -566,7 +571,7 @@ function RemainingMode({ onClose }: { onClose: () => void }) {
 
       {preview && (
         <>
-          <Card className={preview.withinBudget ? 'card-accent' : 'card-warn'}>
+          <Card className={preview.withinBudget ? 'card-ink' : 'card-notice'}>
             <div className="row-between">
               <div>
                 <div className="card-title" style={{ margin: 0 }}>Courses restantes</div>
@@ -631,12 +636,12 @@ function DrivePanel() {
       </Card>
 
       {status.state === 'connecteur_absent' ? (
-        <Card className="card-warn">
+        <Card className="card-notice">
           <div className="strong">Aucun connecteur disponible</div>
           <p className="sm muted" style={{ marginTop: 8 }}>{status.message}</p>
         </Card>
       ) : (
-        <Card className="card-accent">
+        <Card className="card-ink">
           <div className="strong">Connecteur {status.connector.label} disponible</div>
         </Card>
       )}

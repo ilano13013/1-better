@@ -7,6 +7,7 @@ import { EQUIPMENT_LABELS, GYM_BY_ID } from '../data/gyms';
 import { DAY_NAMES, DAY_SHORT, findReplacements } from '../engine/training';
 import { historyFor, lastPerformance, personalRecords, suggestNext, unitLabel } from '../engine/progression';
 import { Card, Checkbox, Empty, Sheet, num } from '../components/ui';
+import { BrandMark } from '../components/BrandMark';
 
 const LEVEL_LABELS = { debutant: 'Débutant', intermediaire: 'Intermédiaire', avance: 'Avancé' } as const;
 import {
@@ -41,7 +42,12 @@ export default function Training() {
           <div className="eyebrow">{plan.workoutPlan.splitName}</div>
           <h1>Training</h1>
         </div>
-        <span className="badge">{gym?.name ?? 'Salle'}</span>
+        {gym && (
+          <span className="row" style={{ gap: 8 }}>
+            <BrandMark name={gym.name} color={gym.color} logo={gym.logo} size={24} quiet={gym.custom} />
+            <span className="sm strong">{gym.name}</span>
+          </span>
+        )}
       </div>
 
       {/* Sélecteur de jour */}
@@ -57,16 +63,17 @@ export default function Training() {
               onClick={() => setSelectedDay(i as DayIndex)}
               style={{
                 width: 76, padding: '12px 8px', textAlign: 'center',
-                borderColor: active ? 'var(--accent)' : undefined,
-                background: active ? 'var(--accent-soft)' : undefined,
+                borderColor: active ? 'var(--invert-bg)' : undefined,
+                background: active ? 'var(--invert-bg)' : undefined,
+                color: active ? 'var(--invert-fg)' : undefined,
                 cursor: 'pointer',
               }}
             >
               <div className="xs dim">{label}</div>
-              <div className="sm strong truncate" style={{ marginTop: 4, color: w ? undefined : 'var(--text-3)' }}>
+              <div className="sm strong truncate" style={{ marginTop: 4, color: w ? undefined : 'var(--ink-3)' }}>
                 {w ? w.name : 'Repos'}
               </div>
-              {i === today && <div className="xs accent" style={{ marginTop: 2 }}>auj.</div>}
+              {i === today && <div className="xs ink" style={{ marginTop: 2 }}>auj.</div>}
             </button>
           );
         })}
@@ -86,7 +93,7 @@ export default function Training() {
         </Card>
       ) : (
         <div className="stack">
-          <Card className="card-accent">
+          <Card className="card-ink">
             <div className="row-between">
               <div>
                 <div className="card-title" style={{ margin: 0 }}>{DAY_NAMES[workout.day]}</div>
@@ -271,7 +278,7 @@ function ExerciseCard({
 
       <div className="card card-flat" style={{ marginTop: 12, padding: 12 }}>
         <div className="row xs" style={{ gap: 8, alignItems: 'flex-start' }}>
-          <span className="accent" style={{ flex: 'none', marginTop: 1 }}><IconInfo size={13} /></span>
+          <span className="ink" style={{ flex: 'none', marginTop: 1 }}><IconInfo size={13} /></span>
           <span className="muted">{suggestion.message}</span>
         </div>
       </div>
@@ -388,7 +395,7 @@ function ExerciseDetail({
   return (
     <div className="stack">
       <div className="row wrap" style={{ gap: 6 }}>
-        <span className="badge badge-accent">{MUSCLE_LABELS[ex.primary]}</span>
+        <span className="badge badge-ink">{MUSCLE_LABELS[ex.primary]}</span>
         {ex.secondary.map((m) => <span key={m} className="badge">{MUSCLE_LABELS[m]}</span>)}
       </div>
 

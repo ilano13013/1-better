@@ -55,7 +55,7 @@ export default function Week({ go }: { go: (s: Screen) => void }) {
               onClick={() => setOpen(day.day)}>
               <div className="row-between" style={{ marginBottom: 10 }}>
                 <span className="strong">{DAY_NAMES[day.day]}</span>
-                {day.day === today && <span className="badge badge-accent">aujourd'hui</span>}
+                {day.day === today && <span className="badge badge-ink">aujourd'hui</span>}
               </div>
 
               <div className="row" style={{ gap: 9, marginBottom: 6 }}>
@@ -98,7 +98,7 @@ function DayDetail({
 
   return (
     <div className="stack">
-      <Card className="card-accent">
+      <Card className="card-ink">
         <div className="row-between" style={{ alignItems: 'baseline' }}>
           <div>
             <div className="card-title" style={{ margin: 0 }}>Nutrition</div>

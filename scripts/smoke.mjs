@@ -77,13 +77,13 @@ await shot('e2e-dashboard');
 console.log('→ remplacement de repas');
 await page.locator('.tabbar button', { hasText: 'Nutrition' }).click();
 await page.waitForTimeout(400);
-const before = await page.locator('.card.card-accent .display').first().innerText();
+const before = await page.locator('.card.card-ink .display').first().innerText();
 await page.locator('button[aria-label="Remplacer ce repas"]').first().click();
 await page.waitForTimeout(500);
 await shot('e2e-remplacer-repas');
 await page.locator('.sheet .option').first().click();
 await page.waitForTimeout(700);
-const after = await page.locator('.card.card-accent .display').first().innerText();
+const after = await page.locator('.card.card-ink .display').first().innerText();
 console.log('   kcal du jour:', before.trim(), '→', after.trim());
 
 console.log('→ liste de courses');
@@ -143,12 +143,16 @@ await page.getByRole('button', { name: /^Enregistrer$/ }).click();
 await page.waitForTimeout(700);
 await shot('e2e-training');
 
-console.log('→ mode clair');
+console.log('→ bascule de thème');
 await page.locator('.tabbar button', { hasText: 'Profil' }).click();
 await page.waitForTimeout(400);
-await page.getByRole('button', { name: 'Mode clair' }).click();
+// Le thème de départ suit le système : le bouton propose l'autre mode.
+const themeBtn = page.getByRole('button', { name: /^Mode (clair|sombre)$/ });
+const themeLabel = await themeBtn.innerText();
+await themeBtn.click();
 await page.waitForTimeout(600);
-await shot('e2e-profil-clair');
+await shot('e2e-profil-theme');
+console.log('   thème basculé vers :', themeLabel.trim().toLowerCase().replace('mode ', ''));
 
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(700);

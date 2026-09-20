@@ -34,21 +34,29 @@ export function Card({
 }
 
 export function Option({
-  selected, onClick, title, subtitle, right, multi = false,
+  selected, onClick, title, subtitle, right, leading, multi = false,
 }: {
   selected: boolean; onClick: () => void; title: ReactNode;
-  subtitle?: ReactNode; right?: ReactNode; multi?: boolean;
+  subtitle?: ReactNode; right?: ReactNode; leading?: ReactNode; multi?: boolean;
 }) {
   return (
     <button type="button" className="option" aria-pressed={selected} onClick={onClick}>
-      <span className="option-mark" style={multi ? { borderRadius: 7 } : undefined}>
-        {selected && <IconCheck />}
-      </span>
+      {leading}
+      {!leading && (
+        <span className="option-mark" style={multi ? { borderRadius: 6 } : undefined}>
+          {selected && <IconCheck />}
+        </span>
+      )}
       <span className="grow">
         <span className="strong" style={{ display: 'block' }}>{title}</span>
         {subtitle && <span className="sm dim" style={{ display: 'block', marginTop: 2 }}>{subtitle}</span>}
       </span>
       {right}
+      {leading && (
+        <span className="option-mark" style={multi ? { borderRadius: 6 } : undefined}>
+          {selected && <IconCheck />}
+        </span>
+      )}
     </button>
   );
 }
@@ -77,19 +85,26 @@ export function Checkbox({
   );
 }
 
+/**
+ * Trois séries de données se distinguent par le poids d'une même encre puis
+ * par une trame : aucune couleur n'est nécessaire, et les barres restent
+ * lisibles en niveaux de gris comme pour un daltonien.
+ */
+export type BarTone = 'ink' | 'muted' | 'hatch' | 'notice' | 'alert';
+
 export function Bar({
-  value, max, tone = 'accent',
-}: { value: number; max: number; tone?: 'accent' | 'warn' | 'bad' | 'violet' }) {
+  value, max, tone = 'ink',
+}: { value: number; max: number; tone?: BarTone }) {
   const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
   return (
-    <div className={`bar ${tone === 'accent' ? '' : tone}`}>
+    <div className={`bar ${tone === 'ink' ? '' : tone}`}>
       <i style={{ width: `${pct}%` }} />
     </div>
   );
 }
 
 export function Ring({
-  value, max, size = 92, stroke = 8, tone = 'var(--accent)', children,
+  value, max, size = 92, stroke = 8, tone = 'var(--ink)', children,
 }: {
   value: number; max: number; size?: number; stroke?: number;
   tone?: string; children?: ReactNode;
@@ -100,7 +115,7 @@ export function Ring({
   return (
     <div style={{ position: 'relative', width: size, height: size, flex: 'none' }}>
       <svg className="ring" width={size} height={size}>
-        <circle cx={size / 2} cy={size / 2} r={r} stroke="var(--surface-2)" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} stroke="var(--inset)" strokeWidth={stroke} />
         <circle
           cx={size / 2} cy={size / 2} r={r} stroke={tone} strokeWidth={stroke}
           strokeDasharray={c} strokeDashoffset={c * (1 - pct)}

@@ -11,6 +11,7 @@ import { CATEGORY_LABELS, CATEGORY_ORDER, formatQty } from '../engine/shopping';
 import { DIET_LABELS, RESTRICTION_LABELS } from '../engine/filters';
 import { DAY_NAMES } from '../engine/training';
 import { Card, Checkbox, Chip, Field, Option, Segmented, eur, num } from '../components/ui';
+import { BrandMark } from '../components/BrandMark';
 import { IconBack, IconSpark } from '../components/icons';
 
 /**
@@ -94,7 +95,7 @@ export default function Onboarding() {
       <div style={{
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
         width: '100%', maxWidth: 560, padding: '14px 20px calc(18px + env(safe-area-inset-bottom, 0px))',
-        background: 'linear-gradient(transparent, var(--bg) 26%)',
+        background: 'linear-gradient(transparent, var(--ground) 26%)',
       }}>
         <button
           type="button"
@@ -138,7 +139,7 @@ function Welcome({ onStart, onDemo }: { onStart: () => void; onDemo: () => void 
   return (
     <div className="screen" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', justifyContent: 'center', gap: 28 }}>
       <div>
-        <div className="badge badge-accent" style={{ marginBottom: 18 }}>
+        <div className="badge badge-ink" style={{ marginBottom: 18 }}>
           <IconSpark size={13} /> Planification déterministe
         </div>
         <h1 className="display">Ton objectif,<br />ta salle,<br />ton supermarché,<br />ton budget.</h1>
@@ -282,7 +283,7 @@ function GymStep({ p, patch }: StepProps) {
             onClick={() => patch({ gymId: g.id, customEquipment: g.custom ? p.customEquipment : [] })}
             title={g.name}
             subtitle={g.custom ? 'Tu choisis ton matériel à l\'étape suivante' : `${g.equipment.length} équipements référencés`}
-            right={<span className="dot" style={{ color: g.color, width: 8, height: 8 }} />}
+            leading={<BrandMark name={g.name} color={g.color} logo={g.logo} quiet={g.custom} />}
           />
         ))}
       </div>
@@ -341,7 +342,7 @@ function AvailabilityStep({ p, patch }: StepProps) {
           ))}
         </div>
         {p.availableDays.length < p.sessionsPerWeek && (
-          <p className="xs warn" style={{ marginTop: 10 }}>
+          <p className="xs notice" style={{ marginTop: 10 }}>
             Tu as choisi {p.sessionsPerWeek} séances pour {p.availableDays.length} jour
             {p.availableDays.length > 1 ? 's' : ''} : certaines séances seront regroupées.
           </p>
@@ -373,7 +374,7 @@ function StoreStep({ p, patch }: StepProps) {
           <Option key={s.id} selected={p.storeId === s.id} onClick={() => patch({ storeId: s.id })}
             title={s.name}
             subtitle={s.id === 'autre' ? 'Prix de référence, sans indice d\'enseigne' : undefined}
-            right={<span className="dot" style={{ color: s.color, width: 8, height: 8 }} />}
+            leading={<BrandMark name={s.name} color={s.color} logo={s.logo} quiet={s.id === 'autre'} />}
           />
         ))}
       </div>
@@ -388,7 +389,7 @@ function BudgetStep({ p, patch }: StepProps) {
   return (
     <>
       <Head title="Ton budget alimentaire par semaine ?" hint="C'est une contrainte réelle du plan : les repas s'y adaptent." />
-      <div className="card card-accent center" style={{ padding: '26px 18px' }}>
+      <div className="card card-ink center" style={{ padding: '26px 18px' }}>
         <div className="display num">{num(p.weeklyBudget)} €</div>
         <div className="sm muted" style={{ marginTop: 6 }}>
           soit environ {eur(p.weeklyBudget / 7)} par jour
@@ -584,7 +585,7 @@ function RecapStep({ p, pantry }: { p: Profile; pantry: PantryItem[] }) {
   return (
     <>
       <Head title="Ton objectif quotidien" hint="Tu pourras ajuster ces valeurs à tout moment." />
-      <Card className="card-accent">
+      <Card className="card-ink">
         <div className="display num">{num(t.kcal)} <span style={{ fontSize: 20 }}>kcal</span></div>
         <div className="macro-grid" style={{ marginTop: 20 }}>
           <div><div className="metric num">{t.protein}<span className="sm dim"> g</span></div><div className="xs dim">Protéines</div></div>
@@ -604,9 +605,21 @@ function RecapStep({ p, pantry }: { p: Profile; pantry: PantryItem[] }) {
       <Card className="card-flat">
         <div className="card-title">Ce que le moteur va construire</div>
         <div className="stack-sm sm">
-          <div className="row-between"><span className="dim">Salle</span><span className="strong">{gym?.name}</span></div>
+          <div className="row-between">
+            <span className="dim">Salle</span>
+            <span className="row" style={{ gap: 8 }}>
+              {gym && <BrandMark name={gym.name} color={gym.color} logo={gym.logo} size={22} quiet={gym.custom} />}
+              <span className="strong">{gym?.name}</span>
+            </span>
+          </div>
           <div className="row-between"><span className="dim">Séances</span><span className="strong">{p.sessionsPerWeek} × {p.sessionDurationMin} min</span></div>
-          <div className="row-between"><span className="dim">Magasin</span><span className="strong">{store?.name}</span></div>
+          <div className="row-between">
+            <span className="dim">Magasin</span>
+            <span className="row" style={{ gap: 8 }}>
+              {store && <BrandMark name={store.name} color={store.color} logo={store.logo} size={22} quiet={store.id === 'autre'} />}
+              <span className="strong">{store?.name}</span>
+            </span>
+          </div>
           <div className="row-between"><span className="dim">Budget</span><span className="strong num">{eur(p.weeklyBudget)} / semaine</span></div>
           <div className="row-between"><span className="dim">Repas</span><span className="strong">{p.mealsPerDay} par jour</span></div>
           <div className="row-between"><span className="dim">Déjà en stock</span><span className="strong">{pantry.length} aliment{pantry.length > 1 ? 's' : ''}</span></div>

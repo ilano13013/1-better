@@ -87,6 +87,36 @@ Rien n'est une maquette statique. Toutes les interactions recalculent l'état :
 
 ---
 
+## Identité visuelle
+
+L'interface est **achromatique**. L'emphase ne vient pas d'une couleur d'accent
+mais du contraste et de la typographie : un chiffre large et serré porte plus
+qu'une pastille colorée, et l'action principale est un bloc inversé — encre sur
+papier, papier sur encre.
+
+Une seule couleur de signal, une terre de Sienne désaturée, est réservée aux
+dépassements. Elle ne marque jamais un état positif : un budget tenu se lit en
+encre normale, pas en vert.
+
+Les trois séries de macronutriments se distinguent par le **poids d'une même
+encre** puis par une trame diagonale pour la troisième. Aucune couleur n'est
+nécessaire, et les barres restent lisibles en niveaux de gris comme pour un
+daltonien.
+
+La seule couleur vive de l'application provient des **marques** d'enseignes et
+de salles, ce qui rend les listes de choix immédiatement lisibles.
+
+Les neutres portent un léger biais froid plutôt qu'un gris pur : un gris neutre
+absolu se lit comme un défaut, pas comme un choix.
+
+### Logos
+
+Aucun logo n'est embarqué : ce sont des marques déposées, et les redessiner de
+mémoire produirait des visuels faux présentés comme authentiques.
+`<BrandMark>` affiche donc un **monogramme** sur la couleur de la marque, et
+bascule automatiquement sur le fichier officiel dès qu'il est déposé — voir
+`src/assets/logos/README.md`.
+
 ## Architecture
 
 ```
@@ -113,7 +143,8 @@ src/
 │   ├── gamification Compteurs et badges discrets
 │   └── planner     Recalcul en cascade reliant tous les moteurs
 ├── store/          État global, reducer, persistance locale
-├── components/     Système de design (cartes, feuilles, anneaux, barres…)
+├── components/     Système de design (cartes, feuilles, anneaux, barres,
+│                   marques d'enseignes)
 └── screens/        Onboarding, Accueil, Semaine, Training, Nutrition,
                     Courses, Profil
 ```

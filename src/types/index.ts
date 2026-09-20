@@ -132,6 +132,8 @@ export interface Food {
 export interface Store {
   id: string;
   name: string;
+  /** Fichier logo officiel, s'il a été ajouté. Voir src/assets/logos/. */
+  logo?: string;
   /** Indice de prix relatif utilisé pour les estimations (1 = référence). */
   priceIndex: number;
   color: string;
@@ -242,6 +244,8 @@ export interface Exercise {
 export interface Gym {
   id: string;
   name: string;
+  /** Fichier logo officiel, s'il a été ajouté. Voir src/assets/logos/. */
+  logo?: string;
   equipment: EquipmentId[];
   /** true si l'utilisateur doit choisir lui-même ses équipements. */
   custom: boolean;
