@@ -17,11 +17,26 @@ artificielle n'est utilisée : à profil identique, le plan produit est identiqu
 
 ## Démarrer
 
+### Essayer sans rien installer
+
+```bash
+npm install && npm run build && npm run bundle
+# → dist/1-better.html : un fichier unique, à ouvrir par double-clic.
+```
+
+Le fichier est entièrement autonome : CSS et JavaScript inclus, aucune requête
+réseau, aucune police externe. Il fonctionne hors ligne et se déploie tel quel
+sur n'importe quel hébergeur statique.
+
+### Développement
+
 ```bash
 npm install
 npm run dev        # http://localhost:5173
 npm test           # 86 tests des moteurs métier
 npm run build      # build de production
+
+npm run bundle     # assemble dist/1-better.html, fichier unique autonome
 
 # test de fumée end-to-end (nécessite `npm run preview` en parallèle)
 npm run smoke
@@ -32,9 +47,26 @@ interaction recalcule réellement l'état : remplacement de repas, optimisation 
 budget, mode « il me reste X € », remplacement d'exercice, saisie de
 performance, bascule de thème et persistance après rechargement.
 
+### Par où commencer
+
 Au premier lancement, « Essayer avec le profil de démonstration » charge un profil
 complet (homme, 26 ans, 175 cm, 63 kg, prise de masse vers 66 kg, 4 séances par
 semaine, Basic-Fit, Lidl, 60 €/semaine) avec garde-manger, pesées et performances.
+
+Pour vérifier que le moteur travaille vraiment, essaie dans cet ordre :
+
+1. **Profil → Budget**, descends à 35 € : les repas et la liste de courses
+   changent immédiatement, et l'écran Nutrition explique ce qu'il n'arrive plus
+   à tenir.
+2. **Profil → Salle → Domicile**, ne coche que « Haltères » : le programme
+   remplace tous les exercices devenus impossibles.
+3. **Nutrition → ⇄ sur un repas** : chaque alternative affiche ce qu'elle
+   ajoute *réellement* au panier, conditionnements compris — souvent 0 €.
+4. **Courses → Optimiser mon panier** quand le budget est dépassé.
+5. **Nutrition → J'ai déjà ça chez moi** : coche du riz, la ligne disparaît des
+   courses.
+
+Les données restent dans le navigateur : « Profil → Tout effacer » remet à zéro.
 
 ---
 

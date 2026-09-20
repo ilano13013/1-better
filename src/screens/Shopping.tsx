@@ -60,15 +60,32 @@ export default function Shopping({ go }: { go: (s: Screen) => void }) {
     copy(text, 'Liste copiée — prête à être partagée');
   };
 
-  const download = (content: string, filename: string, type: string) => {
-    const blob = new Blob([content], { type });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-    notify('Fichier exporté');
+  /**
+   * Certains contextes d'exécution (aperçu intégré, navigateur restreint)
+   * bloquent silencieusement les téléchargements lancés par la page. On tente
+   * donc l'export ET on dépose le contenu dans le presse-papiers, pour que
+   * l'action aboutisse dans tous les cas.
+   */
+  const download = async (content: string, filename: string, type: string) => {
+    try {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      /* téléchargement indisponible : le presse-papiers prend le relais */
+    }
+    // Le presse-papiers est la voie fiable : le téléchargement peut avoir été
+    // ignoré sans erreur, on ne prétend donc pas qu'il a abouti.
+    try {
+      await navigator.clipboard.writeText(content);
+      notify('Copié dans le presse-papiers — et téléchargé si ton navigateur l\'autorise');
+    } catch {
+      notify('Export lancé — si rien ne se passe, ton navigateur bloque les téléchargements');
+    }
   };
 
   return (
