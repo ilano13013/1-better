@@ -31,6 +31,12 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
   const store = getStore(state.profile.storeId);
   const targets = plan.targets;
 
+  // Déficit protéique moyen sur la semaine, exprimé en part de la cible.
+  const proteinShortfall = useMemo(() => {
+    const avg = plan.mealPlan.days.reduce((s, d) => s + d.totals.protein, 0) / plan.mealPlan.days.length;
+    return targets.protein > 0 ? Math.max(0, (targets.protein - avg) / targets.protein) : 0;
+  }, [plan.mealPlan, targets.protein]);
+
   const dayCost = useMemo(() => {
     let total = 0;
     for (const meal of dayPlan.meals) {
@@ -93,6 +99,38 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
             <MacroCell label="Lipides" value={dayPlan.totals.fat} target={targets.fat} tone="warn" />
           </div>
         </Card>
+
+        {/* Déficit protéique persistant : on en explique la cause */}
+        {proteinShortfall > 0.1 && (
+          <Card className="card-warn">
+            <div className="strong">Objectif protéines difficile à tenir</div>
+            <p className="sm muted" style={{ marginTop: 8 }}>
+              Le plan atteint {Math.round((1 - proteinShortfall) * 100)} % de ta cible
+              protéique sur la semaine. Avec {eur(state.profile.weeklyBudget)} par semaine
+              chez {store.name}, les sources de protéines nécessaires ne rentrent pas
+              dans l'enveloppe.
+            </p>
+            <p className="sm muted" style={{ marginTop: 8 }}>
+              Trois leviers : augmenter le budget, cocher ce que tu as déjà chez toi,
+              ou abaisser la cible protéique depuis ton profil.
+            </p>
+          </Card>
+        )}
+
+        {/* Créneaux impossibles à honorer : signalés, jamais escamotés */}
+        {dayPlan.unmetSlots.length > 0 && (
+          <Card className="card-warn">
+            <div className="strong">
+              {dayPlan.unmetSlots.length === 1 ? 'Un repas n\'a pas pu être planifié' : 'Des repas n\'ont pas pu être planifiés'}
+            </div>
+            <p className="sm muted" style={{ marginTop: 8 }}>
+              Aucune recette ne satisfait à la fois ton régime, tes restrictions et
+              les produits disponibles chez {store.name} pour :{' '}
+              {dayPlan.unmetSlots.map((s) => SLOT_LABELS[s].toLowerCase()).join(', ')}.
+              Assouplis une restriction, retire un aliment refusé ou change d'enseigne.
+            </p>
+          </Card>
+        )}
 
         {/* Repas */}
         {dayPlan.meals.map((meal, index) => (

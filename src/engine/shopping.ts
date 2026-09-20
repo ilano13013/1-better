@@ -27,6 +27,9 @@ export const CATEGORY_ORDER: FoodCategory[] = [
   'proteines', 'feculents', 'fruits', 'legumes', 'laitiers', 'epicerie', 'surgeles', 'autres',
 ];
 
+/** Au-delà de ce nombre de semaines couvertes, un achat est « longue durée ». */
+export const LONG_LIFE_WEEKS = 3;
+
 export interface ShoppingOptions {
   /** Jours pris en compte. Par défaut la semaine entière. */
   days?: DayIndex[];
@@ -108,6 +111,7 @@ export function buildShoppingList(
       totalPrice: round2(packs * unitPriceValue),
       priceStatus: status,
       priceSource: source,
+      weeksOfSupply: toBuyQty > 0 ? Math.round((packs * packSize) / toBuyQty * 10) / 10 : 0,
     });
   }
 
@@ -123,6 +127,10 @@ export function buildShoppingList(
   const uncertainTotal = round2(
     purchased.filter((it) => it.priceStatus !== 'verifie').reduce((s, it) => s + it.totalPrice, 0),
   );
+  const longLifeTotal = round2(
+    purchased.filter((it) => it.weeksOfSupply >= LONG_LIFE_WEEKS)
+      .reduce((s, it) => s + it.totalPrice, 0),
+  );
 
   return {
     items,
@@ -130,12 +138,18 @@ export function buildShoppingList(
     budget: options.budget ?? profile.weeklyBudget,
     storeId: profile.storeId,
     uncertainTotal,
+    longLifeTotal,
   };
 }
 
 /** Lignes réellement à acheter (le reste est couvert par le garde-manger). */
 export function purchasableItems(list: ShoppingList): ShoppingListItem[] {
   return list.items.filter((it) => it.packs > 0);
+}
+
+/** Lignes dont le conditionnement couvre nettement plus d'une semaine. */
+export function longLifeItems(list: ShoppingList): ShoppingListItem[] {
+  return list.items.filter((it) => it.packs > 0 && it.weeksOfSupply >= LONG_LIFE_WEEKS);
 }
 
 /** Lignes intégralement couvertes par les stocks à domicile. */

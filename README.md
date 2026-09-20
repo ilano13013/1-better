@@ -20,7 +20,7 @@ artificielle n'est utilisée : à profil identique, le plan produit est identiqu
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 84 tests des moteurs métier
+npm test           # 86 tests des moteurs métier
 npm run build      # build de production
 
 # test de fumée end-to-end (nécessite `npm run preview` en parallèle)
@@ -115,10 +115,20 @@ profil de démonstration, ce seul changement fait passer le panier de **105 € 
 moins de 60 €** pour la même qualité nutritionnelle.
 
 La parcimonie est ensuite **calibrée sur le budget** : le plan est construit
-plusieurs fois avec un poids du coût croissant, et le premier qui tient dans
-l'enveloppe est retenu. Un budget confortable donne un plan varié et riche ; un
-budget serré donne un plan plus répétitif et plus économe — comme dans la vraie
-vie.
+plusieurs fois avec un poids du coût croissant, puis chaque version est notée
+sur une échelle commune — dépassement du budget d'un côté, déficit protéique de
+l'autre. La mieux notée gagne. Un budget confortable donne un plan varié et
+riche ; un budget serré donne un plan plus répétitif et plus économe — comme
+dans la vraie vie.
+
+### La réparation protéique
+
+Choisir chaque repas isolément ne garantit pas que la somme atteigne la cible :
+de petits déficits s'accumulent. Une passe de réparation vérifie donc le
+**total de la journée** et remplace, tant que l'écart persiste, le repas dont
+l'échange rapporte le plus de protéines par unité de dégradation (écart
+calorique et coût marginal). Sur un profil en sèche à budget serré, cette passe
+fait passer les protéines de 96 g à 128 g pour une cible de 136 g.
 
 ---
 
@@ -143,6 +153,16 @@ vie.
   peut pas garantir la certification d'un produit en rayon.
 - **Toutes les données restent sur l'appareil** (`localStorage`). Rien n'est
   transmis à un service externe.
+- **Aucun repas n'est supprimé en silence.** Si aucune recette ne satisfait à la
+  fois le régime, les restrictions et les produits de l'enseigne, le créneau est
+  signalé à l'écran avec les leviers pour le débloquer.
+- **Les compromis sont affichés, pas masqués.** Quand le budget ne permet pas
+  d'atteindre la cible protéique, l'application dit quel pourcentage est atteint,
+  pourquoi, et quels leviers existent. Elle ne prétend jamais avoir tenu les deux
+  contraintes à la fois.
+- **Le coût des conditionnements longue durée est isolé.** Un pot de miel acheté
+  pour 12 g par jour couvre plusieurs semaines : la liste indique la couverture
+  de chaque produit et le sous-total qui ne reviendra pas la semaine suivante.
 
 ---
 
@@ -152,7 +172,7 @@ vie.
 | --- | --- |
 | Aliments | 82, avec macros, étiquettes de régime et substituts |
 | Exercices | 64, avec muscles, matériel, niveau, séries/répétitions, alternatives |
-| Recettes | 37, couvrant classique, végétarien, vegan, sans gluten, sans lactose, halal, casher |
+| Recettes | 49 ; chaque croisement régime × restrictions dispose d'au moins deux recettes par créneau |
 | Salles | 7 (Basic-Fit, Fitness Park, Keepcool, Neoness, On Air, indépendante, domicile) |
 | Enseignes | 9 (Lidl, Aldi, Leclerc, Intermarché, Carrefour, Auchan, Super U, Monoprix, autre) |
 | Produits | ~700 lignes enseigne × aliment, avec conditionnements réels |
@@ -180,9 +200,11 @@ actualisés nécessitent une source de données externe et restent à brancher.
 npm test
 ```
 
-84 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+86 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
-substitutions (dont la protection de la densité protéique), mode « il me reste
-X € », double progression conditionnée à l'exécution, moyenne glissante du poids,
-règles de check-in, et la cascade de recalcul du planificateur.
+substitutions (dont la protection de la densité protéique), couverture de tous
+les croisements régime × restrictions × enseigne, absence de créneau non pourvu,
+mode « il me reste X € », double progression conditionnée à l'exécution, moyenne
+glissante du poids, règles de check-in, et la cascade de recalcul du
+planificateur.

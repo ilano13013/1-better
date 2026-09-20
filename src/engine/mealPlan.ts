@@ -169,15 +169,33 @@ export function generateMealPlan(
   const budget = options.budget ?? profile.weeklyBudget;
   const pantry = options.pantry ?? [];
 
-  let cheapest: { plan: MealPlan; cost: number } | null = null;
+  // Chaque passe est un compromis différent entre budget et nutrition.
+  // On les note sur une échelle commune : dépassement du budget d'un côté,
+  // déficit protéique de l'autre. Parmi les passes qui tiennent dans
+  // l'enveloppe, la mieux notée est celle qui nourrit le mieux — et non
+  // simplement la moins chère, qui laisserait du budget inutilisé.
+  let best: { plan: MealPlan; score: number } | null = null;
+
   for (const thrift of THRIFT_STEPS) {
     const plan = buildPass(profile, targets, options, thrift);
     const cost = basketFromPlan(plan, profile.storeId, pantry).cost;
-    if (cost <= budget) return plan;
-    if (!cheapest || cost < cheapest.cost) cheapest = { plan, cost };
+    const avgProtein = plan.days.reduce((s, d) => s + d.totals.protein, 0) / plan.days.length;
+
+    const overrun = budget > 0 ? Math.max(0, cost - budget) / budget : 0;
+    const proteinGap = targets.protein > 0
+      ? Math.max(0, targets.protein - avgProtein) / targets.protein
+      : 0;
+    const score = overrun * 1.3 + proteinGap;
+
+    if (!best || score < best.score - 1e-9) best = { plan, score };
+    // Une passe sans dépassement ni déficit ne peut pas être battue.
+    if (score <= 0) break;
   }
-  return cheapest!.plan;
+
+  return best!.plan;
 }
+
+export { buildPass as buildPassForDiagnostics };
 
 function buildPass(
   profile: Profile,
@@ -216,6 +234,7 @@ function buildPass(
 
     const usedToday = new Set<string>();
     const meals: Meal[] = [];
+    const unmetSlots: MealSlot[] = [];
     let totals = emptyMacros();
 
     for (const share of slots) {
@@ -235,7 +254,11 @@ function buildPass(
       );
       const fallback = ranked.filter((r) => !usedToday.has(r.recipe.id));
       const chosen = varied[0] ?? fallback[0] ?? ranked[0];
-      if (!chosen) continue;
+      if (!chosen) {
+        // Aucune recette compatible : on le signale au lieu de l'escamoter.
+        unmetSlots.push(share.slot);
+        continue;
+      }
 
       commitRecipe(basket, chosen.recipe, chosen.scale);
       meals.push({
@@ -246,14 +269,26 @@ function buildPass(
       });
       totals = addMacros(totals, chosen.macros);
       usedToday.add(chosen.recipe.id);
-      weeklyUse.set(chosen.recipe.id, (weeklyUse.get(chosen.recipe.id) ?? 0) + 1);
     }
 
-    // Rééquilibrage : on ajuste les portions pour coller à la cible du jour,
-    // puis on reconstruit le panier afin que les coûts restent exacts.
-    const balanced = rebalanceDay({ day: d, meals, totals, target: dayTarget });
-    days.push(balanced);
+    // Réparation protéique : la sélection repas par repas peut accumuler de
+    // petits déficits. On vérifie donc le TOTAL du jour et on échange, si
+    // besoin, le repas dont le remplacement rapporte le plus de protéines au
+    // moindre coût calorique et budgétaire.
+    const dayPlan = repairProtein(
+      rebalanceDay({ day: d, meals, totals, target: dayTarget, unmetSlots }),
+      profile,
+      basket,
+      { weeklyUse, cap: repeatCap(plannedDays, 8, thrift), thrift },
+    );
+
+    days.push(dayPlan);
     rebuildBasket(basket, days, options.pantry ?? []);
+
+    // La variété se compte sur le plan RÉELLEMENT retenu, réparation comprise.
+    for (const meal of dayPlan.meals) {
+      weeklyUse.set(meal.recipeId, (weeklyUse.get(meal.recipeId) ?? 0) + 1);
+    }
   }
 
   return { days, generatedAt: new Date().toISOString() };
@@ -269,6 +304,89 @@ export function repeatCap(plannedDays: number, poolSize: number, thrift = 0.45):
   const base = thrift >= 4 ? 6 : thrift >= 2 ? 5 : thrift >= 1 ? 4 : 3;
   if (poolSize <= 0) return plannedDays;
   return Math.max(base, Math.ceil(plannedDays / poolSize));
+}
+
+/**
+ * Part de la cible protéique que la réparation cherche à atteindre.
+ *
+ * Elle s'abaisse quand le budget devient contraignant : à 45 €/semaine, une
+ * cible de 136 g de protéines par jour n'est tout simplement pas achetable.
+ * Forcer la cible produirait un panier au double du budget, donc inutilisable.
+ * Le moteur préfère un plan réalisable et l'écart restant est affiché à
+ * l'utilisateur plutôt que masqué.
+ */
+export function proteinFloor(thrift: number): number {
+  if (thrift <= 1) return 0.92;
+  if (thrift <= 2.2) return 0.88;
+  if (thrift <= 3.6) return 0.83;
+  return 0.75;
+}
+
+/**
+ * Corrige un déficit protéique sur la journée entière.
+ *
+ * La sélection repas par repas optimise chaque créneau isolément ; rien ne
+ * garantit que la somme atteigne la cible. Cette passe remplace, tant que le
+ * déficit persiste, le repas dont l'échange apporte le plus de protéines par
+ * unité de dégradation (écart calorique et coût marginal).
+ */
+export function repairProtein(
+  day: DayPlan,
+  profile: Profile,
+  basket: Basket,
+  opts: { weeklyUse: Map<string, number>; cap: number; thrift: number },
+): DayPlan {
+  const goal = day.target.protein * proteinFloor(opts.thrift);
+  let current = day;
+
+  for (let round = 0; round < 5 && current.totals.protein < goal; round++) {
+    let best: { index: number; recipe: Recipe; scale: number; macros: Macros } | null = null;
+    let bestRatio = 0;
+
+    const usedToday = new Set(current.meals.map((m) => m.recipeId));
+    const kcalGapBefore = Math.abs(current.totals.kcal - current.target.kcal);
+
+    for (let index = 0; index < current.meals.length; index++) {
+      const meal = current.meals[index];
+      const mealKcal = meal.macros.kcal;
+
+      for (const candidate of eligibleRecipes(profile, meal.slot)) {
+        if (usedToday.has(candidate.id)) continue;
+        if ((opts.weeklyUse.get(candidate.id) ?? 0) >= opts.cap) continue;
+
+        const scale = bestScale(candidate, mealKcal);
+        const macros = recipeMacros(candidate, scale);
+        const gain = macros.protein - meal.macros.protein;
+        if (gain < 3) continue;
+
+        const kcalAfter = current.totals.kcal - mealKcal + macros.kcal;
+        const kcalPenalty = Math.max(0, Math.abs(kcalAfter - current.target.kcal) - kcalGapBefore);
+        // Le surcoût est celui du repas entrant, le repas sortant étant retiré.
+        const costDelta = Math.max(0, marginalCost(basket, candidate, scale));
+
+        // Plus le budget est serré (parcimonie élevée), plus un échange coûteux
+        // doit rapporter de protéines pour être retenu.
+        const ratio = gain / (1 + kcalPenalty / 40 + costDelta * (0.8 + opts.thrift));
+        if (ratio > bestRatio) {
+          bestRatio = ratio;
+          best = { index, recipe: candidate, scale, macros };
+        }
+      }
+    }
+
+    if (!best) break;
+    const meals = current.meals.map((m, i) =>
+      i === best!.index
+        ? { ...m, recipeId: best!.recipe.id, scale: best!.scale, macros: best!.macros }
+        : m,
+    );
+    // Rééquilibrer ici, et non après la boucle : sinon l'ajustement des
+    // portions sur les calories reprendrait une partie du gain protéique
+    // sans que la réparation puisse le constater.
+    current = rebalanceDay({ ...current, meals });
+  }
+
+  return current;
 }
 
 /** Reconstruit le panier à partir des jours déjà planifiés. */
@@ -308,6 +426,11 @@ export function rebalanceDay(day: DayPlan): DayPlan {
   }
 
   return recomputeTotals({ ...day, meals });
+}
+
+/** Créneaux non pourvus sur l'ensemble de la semaine, sans doublon. */
+export function unmetSlots(plan: MealPlan): MealSlot[] {
+  return [...new Set(plan.days.flatMap((d) => d.unmetSlots))];
 }
 
 export function recomputeTotals(day: DayPlan): DayPlan {

@@ -23,15 +23,26 @@ describe('moteur alimentaire', () => {
     const plan = generateMealPlan(DEMO_PROFILE, targets);
     for (const day of plan.days) {
       const gap = Math.abs(day.totals.kcal - targets.kcal) / targets.kcal;
-      expect(gap).toBeLessThan(0.14);
+      expect(gap).toBeLessThan(0.1);
     }
   });
 
-  it('atteint une part substantielle de l\'objectif protéique', () => {
-    const plan = generateMealPlan(DEMO_PROFILE, targets);
+  it('atteint la cible protéique sur la semaine', () => {
+    const plan = generateMealPlan(DEMO_PROFILE, targets, { pantry: DEMO_PANTRY });
+    const avg = plan.days.reduce((s, d) => s + d.totals.protein, 0) / 7;
+    expect(avg).toBeGreaterThanOrEqual(targets.protein * 0.95);
+    // Aucune journée ne doit s'effondrer sous 80 % de la cible.
     for (const day of plan.days) {
-      expect(day.totals.protein).toBeGreaterThan(targets.protein * 0.75);
+      expect(day.totals.protein).toBeGreaterThan(targets.protein * 0.8);
     }
+  });
+
+  it('corrige un déficit protéique au niveau de la journée', () => {
+    // Sans budget contraignant, la réparation doit combler l'écart.
+    const rich: Profile = { ...DEMO_PROFILE, weeklyBudget: 160 };
+    const plan = generateMealPlan(rich, targets);
+    const avg = plan.days.reduce((s, d) => s + d.totals.protein, 0) / 7;
+    expect(avg).toBeGreaterThanOrEqual(targets.protein * 0.92);
   });
 
   it('varie les recettes et ne sert jamais deux fois le même plat par jour', () => {
@@ -106,16 +117,45 @@ describe('moteur alimentaire', () => {
     expect(needsCertification(getFood('tofu_ferme'), filter)).toBe(false);
   });
 
-  it('couvre chaque créneau pour les restrictions courantes', () => {
+  it('couvre chaque créneau pour toute combinaison régime × restrictions', () => {
+    // Verrou de couverture : c'est l'absence de petit-déjeuner vegan sans
+    // gluten qui faisait disparaître un repas du plan sans avertissement.
+    const diets: Profile['diet'][] = ['classique', 'vegetarien', 'vegan'];
     const combos: Profile['restrictions'][] = [
-      ['sans_gluten'], ['sans_lactose'], ['halal'], ['casher'],
+      [], ['sans_gluten'], ['sans_lactose'], ['halal'], ['casher'],
       ['sans_gluten', 'sans_lactose'], ['halal', 'sans_gluten'],
+      ['casher', 'sans_lactose'], ['sans_gluten', 'sans_lactose', 'halal'],
     ];
-    for (const restrictions of combos) {
-      const p: Profile = { ...DEMO_PROFILE, restrictions };
-      for (const slot of ['petit_dejeuner', 'dejeuner', 'diner', 'collation'] as const) {
-        expect(eligibleRecipes(p, slot).length, `${restrictions.join('+')} / ${slot}`)
-          .toBeGreaterThan(0);
+    for (const storeId of ['lidl', 'aldi', 'carrefour', 'monoprix']) {
+      for (const diet of diets) {
+        for (const restrictions of combos) {
+          const p: Profile = { ...DEMO_PROFILE, diet, restrictions, storeId };
+          for (const slot of ['petit_dejeuner', 'dejeuner', 'diner', 'collation'] as const) {
+            expect(
+              eligibleRecipes(p, slot).length,
+              `${storeId} / ${diet} / ${restrictions.join('+') || 'aucune'} / ${slot}`,
+            ).toBeGreaterThanOrEqual(2);
+          }
+        }
+      }
+    }
+  });
+
+  it('remplit tous les créneaux, même sous contraintes cumulées', () => {
+    const diets: Profile['diet'][] = ['classique', 'vegetarien', 'vegan'];
+    for (const diet of diets) {
+      for (const restrictions of [[], ['sans_gluten'], ['sans_gluten', 'sans_lactose']] as Profile['restrictions'][]) {
+        for (const mealsPerDay of [2, 3, 4, 5, 6]) {
+          const p: Profile = { ...DEMO_PROFILE, diet, restrictions, mealsPerDay };
+          const plan = generateMealPlan(p, computeTargets(p));
+          for (const day of plan.days) {
+            expect(
+              day.unmetSlots,
+              `${diet} / ${restrictions.join('+') || 'aucune'} / ${mealsPerDay} repas`,
+            ).toEqual([]);
+            expect(day.meals).toHaveLength(mealsPerDay);
+          }
+        }
       }
     }
   });

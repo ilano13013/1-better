@@ -5,7 +5,7 @@ import { todayIndex } from '../store/state';
 import { getStore } from '../data/stores';
 import { getRecipe } from '../data/recipes';
 import {
-  CATEGORY_LABELS, coveredItems, formatQty, groupByCategory,
+  CATEGORY_LABELS, LONG_LIFE_WEEKS, coveredItems, formatQty, groupByCategory,
   purchasableItems, shoppingListToCsv, shoppingListToText,
 } from '../engine/shopping';
 import { bestSavings, optimizeBudget } from '../engine/budget';
@@ -102,6 +102,14 @@ export default function Shopping({ go }: { go: (s: Screen) => void }) {
           <div style={{ marginTop: 14 }}>
             <Bar value={list.total} max={budget} tone={over > 0 ? 'warn' : 'accent'} />
           </div>
+
+          {list.longLifeTotal > 0 && (
+            <div className="xs dim" style={{ marginTop: 10, lineHeight: 1.5 }}>
+              Dont <strong>{eur(list.longLifeTotal)}</strong> de produits dont le
+              conditionnement couvre plusieurs semaines : ce coût ne reviendra pas
+              la semaine prochaine.
+            </div>
+          )}
 
           <div className="row-between sm" style={{ marginTop: 10 }}>
             <span className="dim">{items.length} produits</span>
@@ -281,6 +289,11 @@ function ItemRow({
         <div className="row xs dim wrap" style={{ gap: 8, marginTop: 2 }}>
           <span>besoin {formatQty(item.toBuyQty, item.unit)}</span>
           {item.pantryQty > 0 && <span className="accent">−{formatQty(item.pantryQty, item.unit)} en stock</span>}
+          {item.weeksOfSupply >= LONG_LIFE_WEEKS && (
+            <span title="Le conditionnement couvre plusieurs semaines">
+              ≈ {Math.round(item.weeksOfSupply)} semaines
+            </span>
+          )}
           <PriceBadge item={item} onClick={onPrice} />
         </div>
       </div>

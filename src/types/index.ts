@@ -307,6 +307,11 @@ export interface DayPlan {
   meals: Meal[];
   totals: Macros;
   target: Macros;
+  /**
+   * Créneaux qu'aucune recette compatible n'a pu remplir. Le moteur ne
+   * supprime jamais un repas en silence : l'écart est remonté à l'interface.
+   */
+  unmetSlots: MealSlot[];
 }
 
 export interface MealPlan {
@@ -343,6 +348,13 @@ export interface ShoppingListItem {
   totalPrice: number;
   priceStatus: PriceStatus;
   priceSource: string;
+  /**
+   * Nombre de semaines couvertes par les conditionnements achetés, au rythme
+   * de consommation du plan. Un pot de miel acheté pour 12 g par jour couvre
+   * plusieurs semaines : le signaler évite de faire porter tout son prix à la
+   * semaine en cours.
+   */
+  weeksOfSupply: number;
 }
 
 export interface ShoppingList {
@@ -352,6 +364,8 @@ export interface ShoppingList {
   storeId: string;
   /** Somme des lignes dont le prix est estimé ou inconnu. */
   uncertainTotal: number;
+  /** Somme des lignes dont le conditionnement couvre plus de trois semaines. */
+  longLifeTotal: number;
 }
 
 export interface Substitution {
