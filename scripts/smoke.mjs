@@ -1,12 +1,28 @@
+/**
+ * Test de fumée end-to-end : parcourt l'onboarding complet, puis vérifie que
+ * les interactions recalculent réellement l'état (remplacement de repas,
+ * optimisation du budget, mode « il me reste X € », remplacement d'exercice,
+ * saisie de performance, mode clair, persistance après rechargement).
+ *
+ *   npm run build && npm run preview &   # http://127.0.0.1:4173
+ *   npm run smoke
+ *
+ * PLAYWRIGHT_CHROMIUM permet de pointer un binaire Chromium déjà installé.
+ */
 import { chromium } from 'playwright';
-const out = process.argv[2];
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+const out = process.argv[2] ?? null; // dossier de captures, facultatif
+const baseUrl = process.env.SMOKE_URL ?? 'http://127.0.0.1:4173/';
+const executablePath = process.env.PLAYWRIGHT_CHROMIUM;
+const browser = await chromium.launch(executablePath ? { executablePath } : {});
 const page = await browser.newPage({ viewport: { width: 400, height: 860 }, deviceScaleFactor: 2 });
 const errors = [];
 page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message));
 page.on('console', (m) => { if (m.type() === 'error' && !m.text().includes('404')) errors.push(m.text()); });
 
-await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+/** Capture d'écran, seulement si un dossier de sortie a été fourni. */
+const shot = (name) => (out ? page.screenshot({ path: `${out}/${name}.png`, fullPage: true }) : Promise.resolve());
+
+await page.goto(baseUrl, { waitUntil: 'networkidle' });
 
 console.log('→ onboarding');
 await page.getByRole('button', { name: 'Commencer' }).click();
@@ -53,10 +69,10 @@ await page.getByRole('button', { name: 'Continuer' }).click();
 await page.locator('.checkbox').first().click();
 await page.getByRole('button', { name: 'Continuer' }).click();
 await page.waitForTimeout(300);
-await page.screenshot({ path: `${out}/e2e-recap.png`, fullPage: true });
+await shot('e2e-recap');
 await page.getByRole('button', { name: 'Générer ma semaine' }).click();
 await page.waitForTimeout(800);
-await page.screenshot({ path: `${out}/e2e-dashboard.png`, fullPage: true });
+await shot('e2e-dashboard');
 
 console.log('→ remplacement de repas');
 await page.locator('.tabbar button', { hasText: 'Nutrition' }).click();
@@ -64,7 +80,7 @@ await page.waitForTimeout(400);
 const before = await page.locator('.card.card-accent .display').first().innerText();
 await page.locator('button[aria-label="Remplacer ce repas"]').first().click();
 await page.waitForTimeout(500);
-await page.screenshot({ path: `${out}/e2e-remplacer-repas.png`, fullPage: true });
+await shot('e2e-remplacer-repas');
 await page.locator('.sheet .option').first().click();
 await page.waitForTimeout(700);
 const after = await page.locator('.card.card-accent .display').first().innerText();
@@ -74,10 +90,10 @@ console.log('→ liste de courses');
 await page.getByRole('button', { name: /Courses/ }).first().click();
 await page.waitForTimeout(600);
 const total1 = await page.locator('.display').first().innerText();
-await page.screenshot({ path: `${out}/e2e-courses.png`, fullPage: true });
+await shot('e2e-courses');
 await page.getByRole('button', { name: /Optimiser mon panier/ }).click();
 await page.waitForTimeout(900);
-await page.screenshot({ path: `${out}/e2e-optimiser.png`, fullPage: true });
+await shot('e2e-optimiser');
 const applyBtn = page.getByRole('button', { name: /Appliquer \d+ substitution/ });
 if (await applyBtn.count()) {
   await applyBtn.click();
@@ -94,7 +110,7 @@ await page.getByRole('button', { name: /Il me reste/ }).click();
 await page.waitForTimeout(400);
 await page.getByRole('button', { name: /Recalculer ma fin de semaine/ }).click();
 await page.waitForTimeout(1000);
-await page.screenshot({ path: `${out}/e2e-reste.png`, fullPage: true });
+await shot('e2e-reste');
 console.log('   courses restantes:', (await page.locator('.sheet .card .metric').first().innerText()).trim());
 await page.locator('.sheet-head button').last().click();
 
@@ -106,15 +122,18 @@ console.log('   chariot:', (await page.locator('.card.card-flat', { hasText: 'D�
 console.log('→ remplacement d\'exercice');
 await page.locator('.tabbar button', { hasText: 'Training' }).click();
 await page.waitForTimeout(500);
-const ex1 = await page.locator('.card .strong').nth(2).innerText();
+const exerciseCard = page.locator('.card')
+  .filter({ has: page.locator('button[aria-label="Remplacer"]') })
+  .first();
+const ex1 = await exerciseCard.locator('.strong').first().innerText();
 await page.locator('button[aria-label="Remplacer"]').first().click();
 await page.waitForTimeout(500);
-await page.screenshot({ path: `${out}/e2e-remplacer-exo.png`, fullPage: true });
+await shot('e2e-remplacer-exo');
 const opts = await page.locator('.sheet .option').count();
 if (opts > 0) {
   await page.locator('.sheet .option').first().click();
   await page.waitForTimeout(600);
-  console.log('   exercice:', ex1.trim(), '→', (await page.locator('.card .strong').nth(2).innerText()).trim());
+  console.log('   exercice:', ex1.trim(), '→', (await exerciseCard.locator('.strong').first().innerText()).trim());
 } else { console.log('   aucune alternative disponible'); }
 
 await page.getByRole('button', { name: /Saisir/ }).first().click();
@@ -122,14 +141,14 @@ await page.waitForTimeout(500);
 await page.locator('.sheet input[type=number]').first().fill('12');
 await page.getByRole('button', { name: /^Enregistrer$/ }).click();
 await page.waitForTimeout(700);
-await page.screenshot({ path: `${out}/e2e-training.png`, fullPage: true });
+await shot('e2e-training');
 
 console.log('→ mode clair');
 await page.locator('.tabbar button', { hasText: 'Profil' }).click();
 await page.waitForTimeout(400);
 await page.getByRole('button', { name: 'Mode clair' }).click();
 await page.waitForTimeout(600);
-await page.screenshot({ path: `${out}/e2e-profil-clair.png`, fullPage: true });
+await shot('e2e-profil-clair');
 
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(700);
@@ -137,3 +156,4 @@ console.log('   après rechargement:', (await page.locator('.screen-head h1').in
 
 console.log('ERREURS JS:', errors.length ? errors.join(' | ') : 'aucune');
 await browser.close();
+if (errors.length) process.exit(1);

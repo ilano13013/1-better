@@ -13,18 +13,31 @@ import { buildShoppingList, ShoppingOptions } from './shopping';
  * Les substitutions sont proposées, jamais imposées.
  */
 
+/** Apport pour 100 g / 100 ml, quelle que soit l'unité de l'aliment. */
+export function per100(f: Food, key: 'kcal' | 'protein' | 'fat'): number {
+  return f.unit === 'piece' ? (f[key] / (f.gramsPerPiece ?? 100)) * 100 : f[key];
+}
+
+/**
+ * Un aliment compte comme source de protéines dès 8 g pour 100 g, quelle que
+ * soit sa catégorie : un skyr ou une whey pèsent autant dans la ration qu'un
+ * blanc de poulet, et les remplacer par un produit pauvre en protéines
+ * dégraderait le plan sans que l'utilisateur en soit averti.
+ */
+export function isProteinSource(food: Food): boolean {
+  return per100(food, 'protein') >= 8;
+}
+
 /** Une substitution est acceptable si les apports restent comparables. */
 export function isCoherentSwap(from: Food, to: Food): boolean {
   if (from.id === to.id) return false;
   if (from.category !== to.category) return false;
 
-  const per100 = (f: Food, key: 'kcal' | 'protein' | 'fat') =>
-    f.unit === 'piece' ? (f[key] / (f.gramsPerPiece ?? 100)) * 100 : f[key];
-
-  if (from.category === 'proteines') {
+  if (isProteinSource(from)) {
     const fp = per100(from, 'protein');
     const tp = per100(to, 'protein');
-    if (tp < fp * 0.7) return false;
+    // On tolère une perte modérée de densité protéique, pas un effondrement.
+    if (tp < fp * 0.65) return false;
     // On évite de remplacer un aliment maigre par un aliment nettement plus gras.
     if (per100(to, 'fat') > per100(from, 'fat') + 8) return false;
     return true;
@@ -141,7 +154,7 @@ function originalFoodId(foodId: string, swaps: Record<string, string>): string {
 }
 
 function reasonFor(from: Food, to: Food): string {
-  if (from.category === 'proteines') {
+  if (isProteinSource(from)) {
     return `Apport protéique équivalent (${to.protein} g/100 g), prix au kilo plus bas.`;
   }
   if (from.category === 'laitiers') return 'Format plus économique à apport comparable.';

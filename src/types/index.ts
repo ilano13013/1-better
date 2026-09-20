@@ -54,7 +54,7 @@ export interface Profile {
   likedFoods: string[];
   /** ids d'aliments refusés — exclus. */
   dislikedFoods: string[];
-  /** ids d'aliments allergènes — exclus strictement. */
+  /** ids d'aliments allergènes ou mal tolérés — exclus strictement. */
   allergies: string[];
 }
 
@@ -283,6 +283,11 @@ export interface Performance {
   exerciseId: string;
   date: string; // ISO
   sets: PerformanceSet[];
+  /**
+   * Exécution jugée maîtrisée par l'utilisateur. La règle de double
+   * progression ne propose une augmentation de charge que dans ce cas.
+   */
+  cleanExecution?: boolean;
 }
 
 /* ------------------------------------------------------------------ */

@@ -730,7 +730,7 @@ function DietEditor() {
       </div>
       {state.profile.dislikedFoods.length + state.profile.allergies.length > 0 && (
         <Empty
-          title={`${state.profile.dislikedFoods.length} refus · ${state.profile.allergies.length} allergies`}
+          title={`${state.profile.dislikedFoods.length} refus · ${state.profile.allergies.length} allergies ou intolérances`}
           hint="Ces aliments sont exclus de toutes les recettes proposées."
         />
       )}

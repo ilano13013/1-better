@@ -71,6 +71,17 @@ export function suggestNext(
   const allAtTop = workingSets.length >= Math.max(1, we.sets - 1)
     && workingSets.every((s) => s.reps >= we.repMax);
 
+  // La borne haute atteinte avec une exécution jugée approximative ne
+  // justifie pas d'ajouter de la charge : on consolide la technique d'abord.
+  if (allAtTop && last.cleanExecution === false) {
+    return {
+      kind: 'repetitions',
+      weightKg: round(topWeight),
+      reps: we.repMax,
+      message: `${we.repMax} répétitions atteintes, mais l'exécution n'était pas maîtrisée : garde ${round(topWeight)} kg et soigne la technique avant d'ajouter de la charge.`,
+    };
+  }
+
   if (allAtTop) {
     const inc = loadIncrement(ex);
     return {

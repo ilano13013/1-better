@@ -79,21 +79,23 @@ export function recipeTimeLabel(recipe: Recipe): string {
 /* Substitutions d'aliments                                             */
 /* ------------------------------------------------------------------ */
 
+/** Apport pour 100 g / 100 ml, quelle que soit l'unité de l'aliment. */
+function per100(f: Food, key: 'kcal' | 'protein' | 'fat'): number {
+  return f.unit === 'piece' ? (f[key] / (f.gramsPerPiece ?? 100)) * 100 : f[key];
+}
+
 /**
  * Convertit une quantité d'un aliment vers un autre.
- * Pour les protéines, on conserve l'apport protéique ; sinon on conserve la
- * masse (ou le nombre de pièces converti en grammes).
+ * Dès que l'aliment d'origine est une source de protéines (≥ 8 g/100 g), on
+ * conserve l'apport protéique ; sinon on conserve la masse (ou le nombre de
+ * pièces converti en grammes).
  */
 export function convertQty(from: Food, to: Food, qty: number): number {
   const grams = from.unit === 'piece' ? qty * (from.gramsPerPiece ?? 100) : qty;
 
   let targetGrams: number;
-  if (from.category === 'proteines' && to.protein > 0) {
-    const fromProteinPer100 =
-      from.unit === 'piece' ? (from.protein / (from.gramsPerPiece ?? 100)) * 100 : from.protein;
-    const toProteinPer100 =
-      to.unit === 'piece' ? (to.protein / (to.gramsPerPiece ?? 100)) * 100 : to.protein;
-    targetGrams = grams * (fromProteinPer100 / Math.max(0.1, toProteinPer100));
+  if (per100(from, 'protein') >= 8 && to.protein > 0) {
+    targetGrams = grams * (per100(from, 'protein') / Math.max(0.1, per100(to, 'protein')));
   } else {
     targetGrams = grams;
   }

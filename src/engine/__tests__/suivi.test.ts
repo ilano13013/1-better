@@ -32,6 +32,18 @@ describe('progression', () => {
     expect(next.reps).toBe(8);
   });
 
+  it('n\'augmente pas la charge si l\'exécution n\'était pas maîtrisée', () => {
+    const perf: Performance[] = [{
+      id: '1', exerciseId: we.exerciseId, date: '2026-01-10',
+      cleanExecution: false,
+      sets: [{ weightKg: 24, reps: 10 }, { weightKg: 24, reps: 10 }, { weightKg: 24, reps: 10 }, { weightKg: 24, reps: 10 }],
+    }];
+    const next = suggestNext(we, perf);
+    expect(next.kind).toBe('repetitions');
+    expect(next.weightKg).toBe(24);
+    expect(next.message).toContain('technique');
+  });
+
   it('ajoute une répétition tant que la borne haute n\'est pas atteinte', () => {
     const perf: Performance[] = [{
       id: '1', exerciseId: we.exerciseId, date: '2026-01-10',

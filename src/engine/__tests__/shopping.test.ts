@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { buildShoppingList, aggregateNeeds, purchasableItems, shoppingListToText } from '../shopping';
 import { generateMealPlan } from '../mealPlan';
 import { computeTargets } from '../nutrition';
-import { optimizeBudget, isCoherentSwap, swapCandidates } from '../budget';
+import { optimizeBudget, isCoherentSwap, isProteinSource, per100, swapCandidates } from '../budget';
+import { convertQty } from '../recipes';
 import { planRemaining } from '../remaining';
 import { getFood } from '../../data/foods';
 import { findProduct } from '../../data/products';
@@ -86,6 +87,39 @@ describe('optimisation du budget', () => {
     expect(isCoherentSwap(getFood('saumon_frais'), getFood('poulet_filet'))).toBe(true);
     expect(isCoherentSwap(getFood('poulet_filet'), getFood('riz_blanc'))).toBe(false);
     expect(isCoherentSwap(getFood('cabillaud'), getFood('sardines_boite'))).toBe(false);
+  });
+
+  it('protège la densité protéique hors catégorie « protéines »', () => {
+    // Un laitier riche en protéines ne peut pas devenir du lait.
+    expect(isProteinSource(getFood('skyr'))).toBe(true);
+    expect(isCoherentSwap(getFood('skyr'), getFood('lait_demi'))).toBe(false);
+    // Mais le passage vers un fromage blanc grand format reste acceptable.
+    expect(isCoherentSwap(getFood('skyr'), getFood('fromage_blanc'))).toBe(true);
+    // La whey ne peut pas être remplacée par du miel.
+    expect(isCoherentSwap(getFood('whey'), getFood('miel'))).toBe(false);
+  });
+
+  it('conserve les protéines lors de la conversion des quantités', () => {
+    const skyr = getFood('skyr');
+    const fromageBlanc = getFood('fromage_blanc');
+    const qty = convertQty(skyr, fromageBlanc, 300);
+    const proteinBefore = (300 / 100) * skyr.protein;
+    const proteinAfter = (qty / 100) * fromageBlanc.protein;
+    expect(proteinAfter).toBeCloseTo(proteinBefore, 1);
+  });
+
+  it('ne dégrade jamais fortement les protéines du plan', () => {
+    const tight: Profile = { ...DEMO_PROFILE, weeklyBudget: 40, storeId: 'monoprix' };
+    const tightPlan = generateMealPlan(tight, targets);
+    const result = optimizeBudget(tightPlan, tight);
+    for (const sub of result.substitutions) {
+      const from = getFood(sub.fromFoodId);
+      const to = getFood(sub.toFoodId);
+      // Comparaison à densité égale : `oeuf` est exprimé à la pièce.
+      if (isProteinSource(from)) {
+        expect(per100(to, 'protein')).toBeGreaterThanOrEqual(per100(from, 'protein') * 0.6);
+      }
+    }
   });
 
   it('ne propose que des aliments disponibles et compatibles', () => {

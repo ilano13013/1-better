@@ -20,9 +20,17 @@ artificielle n'est utilisée : à profil identique, le plan produit est identiqu
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 80 tests des moteurs métier
+npm test           # 84 tests des moteurs métier
 npm run build      # build de production
+
+# test de fumée end-to-end (nécessite `npm run preview` en parallèle)
+npm run smoke
 ```
+
+`npm run smoke` parcourt l'onboarding complet puis vérifie que chaque
+interaction recalcule réellement l'état : remplacement de repas, optimisation du
+budget, mode « il me reste X € », remplacement d'exercice, saisie de
+performance, bascule de thème et persistance après rechargement.
 
 Au premier lancement, « Essayer avec le profil de démonstration » charge un profil
 complet (homme, 26 ans, 175 cm, 63 kg, prise de masse vers 66 kg, 4 séances par
@@ -172,8 +180,9 @@ actualisés nécessitent une source de données externe et restent à brancher.
 npm test
 ```
 
-80 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+84 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
-substitutions, mode « il me reste X € », double progression, moyenne glissante du
-poids, règles de check-in, et la cascade de recalcul du planificateur.
+substitutions (dont la protection de la densité protéique), mode « il me reste
+X € », double progression conditionnée à l'exécution, moyenne glissante du poids,
+règles de check-in, et la cascade de recalcul du planificateur.

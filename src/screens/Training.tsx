@@ -6,7 +6,7 @@ import { MUSCLE_LABELS, getExercise } from '../data/exercises';
 import { EQUIPMENT_LABELS, GYM_BY_ID } from '../data/gyms';
 import { DAY_NAMES, DAY_SHORT, findReplacements } from '../engine/training';
 import { historyFor, lastPerformance, personalRecords, suggestNext, unitLabel } from '../engine/progression';
-import { Card, Empty, Sheet, num } from '../components/ui';
+import { Card, Checkbox, Empty, Sheet, num } from '../components/ui';
 
 const LEVEL_LABELS = { debutant: 'Débutant', intermediaire: 'Intermédiaire', avance: 'Avancé' } as const;
 import {
@@ -172,12 +172,13 @@ export default function Training() {
           <LogForm
             we={logging.we}
             performances={state.performances}
-            onSave={(sets) => {
+            onSave={(sets, cleanExecution) => {
               const perf: Performance = {
                 id: `${logging.we.exerciseId}-${Date.now()}`,
                 exerciseId: logging.we.exerciseId,
                 date: new Date().toISOString().slice(0, 10),
                 sets,
+                cleanExecution,
               };
               dispatch({ type: 'logPerformance', performance: perf });
               notify('Séance enregistrée');
@@ -315,8 +316,13 @@ function ReplacementList({
 
 function LogForm({
   we, performances, onSave,
-}: { we: WorkoutExercise; performances: Performance[]; onSave: (sets: PerformanceSet[]) => void }) {
+}: {
+  we: WorkoutExercise;
+  performances: Performance[];
+  onSave: (sets: PerformanceSet[], cleanExecution: boolean) => void;
+}) {
   const suggestion = suggestNext(we, performances);
+  const [clean, setClean] = useState(true);
   const [sets, setSets] = useState<PerformanceSet[]>(() =>
     Array.from({ length: we.sets }, () => ({
       weightKg: suggestion.weightKg, reps: suggestion.reps,
@@ -357,9 +363,16 @@ function LogForm({
         <IconPlus size={14} /> Ajouter une série
       </button>
 
+      <Checkbox checked={clean} onChange={() => setClean(!clean)}>
+        <span className="sm">Exécution maîtrisée</span>
+        <span className="xs dim" style={{ display: 'block', marginTop: 2 }}>
+          La charge n'augmente que si la technique a tenu sur toutes les séries.
+        </span>
+      </Checkbox>
+
       <button type="button" className="btn btn-primary btn-block"
         disabled={sets.length === 0}
-        onClick={() => onSave(sets.filter((s) => s.reps > 0))}>
+        onClick={() => onSave(sets.filter((s) => s.reps > 0), clean)}>
         <IconCheck size={15} /> Enregistrer
       </button>
     </div>

@@ -484,14 +484,17 @@ function FoodPrefsStep({ p, patch }: StepProps) {
 
   return (
     <>
-      <Head title="Tes préférences alimentaires" hint="Facultatif — tu pourras les modifier à tout moment." />
+      <Head
+        title="Tes préférences alimentaires"
+        hint="Facultatif. Les aliments marqués comme refusés, allergènes ou mal tolérés sont exclus de toutes les recettes."
+      />
       <Segmented
         value={tab}
         onChange={setTab}
         options={[
           { value: 'likes' as const, label: `J'aime (${p.likedFoods.length})` },
           { value: 'dislikes' as const, label: `Je refuse (${p.dislikedFoods.length})` },
-          { value: 'allergies' as const, label: `Allergies (${p.allergies.length})` },
+          { value: 'allergies' as const, label: `Allergies / intolérances (${p.allergies.length})` },
         ]}
       />
       <div className="stack" style={{ marginTop: 18 }}>
