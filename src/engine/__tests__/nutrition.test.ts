@@ -30,6 +30,16 @@ describe('moteur nutritionnel', () => {
     expect(seche.protein).toBeGreaterThan(masse.protein / 63 * 63 * 0.9);
   });
 
+  it('ne descend jamais sous le métabolisme de base', () => {
+    const extreme: Profile = {
+      ...DEMO_PROFILE, sex: 'femme', age: 55, heightCm: 155, weightKg: 52,
+      targetWeightKg: 48, goal: 'seche', activity: 'sedentaire',
+      sessionsPerWeek: 2, sessionDurationMin: 30,
+    };
+    const t = computeTargets(extreme);
+    expect(t.kcal).toBeGreaterThanOrEqual(t.bmr);
+  });
+
   it('est déterministe', () => {
     expect(computeTargets(DEMO_PROFILE)).toEqual(computeTargets({ ...DEMO_PROFILE }));
   });

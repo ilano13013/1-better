@@ -49,7 +49,20 @@ export function suggestNext(
   if (!last || last.sets.length === 0) {
     return {
       kind: 'premiere_seance', weightKg: 0, reps: we.repMin,
-      message: `Première séance : trouve une charge où ${we.repMax} répétitions restent difficiles.`,
+      message: we.repUnit === 'reps'
+        ? `Première séance : trouve une charge où ${we.repMax} répétitions restent difficiles.`
+        : `Première séance : vise ${we.repMin} à ${we.repMax} ${unitLabel(we.repUnit)} en maîtrisant la position.`,
+    };
+  }
+
+  // Exercices en temps ou en distance : la charge n'est pas le levier.
+  if (we.repUnit !== 'reps') {
+    const best = Math.max(...last.sets.map((s) => s.reps));
+    return {
+      kind: 'repetitions',
+      weightKg: Math.max(...last.sets.map((s) => s.weightKg)),
+      reps: Math.min(we.repMax, best + (we.repUnit === 'sec' ? 5 : 1)),
+      message: `Dernière fois : ${best} ${unitLabel(we.repUnit)}. Vise ${Math.min(we.repMax, best + (we.repUnit === 'sec' ? 5 : 1))}.`,
     };
   }
 
@@ -90,6 +103,10 @@ export function suggestNext(
   };
 }
 
+export function unitLabel(unit: 'reps' | 'sec' | 'min'): string {
+  return unit === 'sec' ? 'secondes' : unit === 'min' ? 'minutes' : 'répétitions';
+}
+
 function bestReps(sets: PerformanceSet[], weight: number): number {
   const matching = sets.filter((s) => s.weightKg >= weight - 0.01);
   return matching.length ? Math.max(...matching.map((s) => s.reps)) : 0;
@@ -119,6 +136,8 @@ export function personalRecords(performances: Performance[]): PersonalRecord[] {
   const best = new Map<string, PersonalRecord>();
   for (const p of performances) {
     for (const set of p.sets) {
+      // Sans charge (gainage, poids du corps), il n'y a pas de record de force.
+      if (set.weightKg <= 0) continue;
       const e1rm = estimated1RM(set.weightKg, set.reps);
       const current = best.get(p.exerciseId);
       if (!current || e1rm > current.estimated1RM) {

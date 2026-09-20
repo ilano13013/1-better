@@ -148,10 +148,10 @@ function setsFor(ex: Exercise, level: TrainingLevel): number {
   return Math.round((lo + hi) / 2);
 }
 
-/** Plage de répétitions ajustée à l'objectif. */
+/** Plage de répétitions ajustée à l'objectif. Les plages en temps ne bougent pas. */
 function repsFor(ex: Exercise, goal: GoalId): [number, number] {
   const [lo, hi] = ex.reps;
-  if (ex.type === 'cardio') return [lo, hi];
+  if (ex.type === 'cardio' || (ex.repUnit && ex.repUnit !== 'reps')) return [lo, hi];
   const span = hi - lo;
   if (goal === 'masse') return [lo, Math.max(lo + 1, hi - Math.round(span * 0.25))];
   if (goal === 'seche') return [lo + Math.round(span * 0.25), hi];
@@ -166,18 +166,16 @@ function restFor(ex: Exercise, goal: GoalId): number {
 }
 
 /** Durée estimée d'un exercice, en secondes (exécution + récupération + mise en place). */
-export function exerciseDurationSec(we: WorkoutExercise, ex: Exercise): number {
-  if (ex.type === 'cardio') return we.repMax * 60;
-  const avgReps = (we.repMin + we.repMax) / 2;
-  const workPerSet = avgReps * 3;
+export function exerciseDurationSec(we: WorkoutExercise): number {
+  if (we.repUnit === 'min') return we.repMax * 60;
+  const avg = (we.repMin + we.repMax) / 2;
+  // Une répétition ≈ 3 secondes ; un maintien se compte en secondes.
+  const workPerSet = we.repUnit === 'sec' ? avg : avg * 3;
   return we.sets * (workPerSet + we.restSec) + 60;
 }
 
 export function workoutDurationMin(workout: Workout): number {
-  const total = workout.exercises.reduce(
-    (s, we) => s + exerciseDurationSec(we, getExercise(we.exerciseId)),
-    0,
-  );
+  const total = workout.exercises.reduce((s, we) => s + exerciseDurationSec(we), 0);
   return Math.round(total / 60);
 }
 
@@ -219,7 +217,14 @@ function pickForSlot(
 
 function toWorkoutExercise(ex: Exercise, level: TrainingLevel, goal: GoalId): WorkoutExercise {
   const [repMin, repMax] = repsFor(ex, goal);
-  return { exerciseId: ex.id, sets: setsFor(ex, level), repMin, repMax, restSec: restFor(ex, goal) };
+  return {
+    exerciseId: ex.id,
+    sets: setsFor(ex, level),
+    repMin,
+    repMax,
+    repUnit: ex.repUnit ?? 'reps',
+    restSec: restFor(ex, goal),
+  };
 }
 
 /** Construit le programme complet de la semaine. */
@@ -243,7 +248,7 @@ export function generateWorkoutPlan(profile: Profile): WorkoutPlan {
       const ex = pickForSlot(slot, pool, usedInSession, weeklyUse);
       if (!ex) continue;
       const we = toWorkoutExercise(ex, profile.level, profile.goal);
-      const cost = exerciseDurationSec(we, ex);
+      const cost = exerciseDurationSec(we);
       // On garde au minimum 3 exercices, puis on s'arrête au budget temps.
       if (exercises.length >= 3 && elapsed + cost > budgetSec) continue;
       exercises.push(we);

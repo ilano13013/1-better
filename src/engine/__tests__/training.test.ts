@@ -115,6 +115,21 @@ describe('moteur sportif', () => {
     expect(availableExercises(equipment, 'avance').length).toBeGreaterThanOrEqual(50);
   });
 
+  it('porte l\'unité de répétition des exercices en temps', () => {
+    const home = generateWorkoutPlan({
+      ...DEMO_PROFILE, gymId: 'domicile', customEquipment: ['halteres', 'banc'],
+      level: 'debutant', sessionDurationMin: 75,
+    });
+    const plank = home.workouts
+      .flatMap((w) => w.exercises)
+      .find((e) => e.exerciseId === 'gainage');
+    if (plank) {
+      expect(plank.repUnit).toBe('sec');
+      // La plage en temps n'est pas décalée par l'objectif.
+      expect([plank.repMin, plank.repMax]).toEqual(getExercise('gainage').reps);
+    }
+  });
+
   it('accepte une semaine sans jour déclaré', () => {
     const plan = generateWorkoutPlan({ ...DEMO_PROFILE, availableDays: [] as DayIndex[] });
     expect(plan.workouts).toHaveLength(4);

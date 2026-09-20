@@ -230,6 +230,8 @@ export interface Exercise {
   type: ExerciseType;
   sets: [number, number];
   reps: [number, number];
+  /** Unité de la plage `reps` : répétitions, secondes de maintien, minutes. */
+  repUnit?: 'reps' | 'sec' | 'min';
   restSec: number;
   /** Plus la valeur est élevée, plus l'exercice est prioritaire dans la séance. */
   priority: number;
@@ -251,6 +253,7 @@ export interface WorkoutExercise {
   sets: number;
   repMin: number;
   repMax: number;
+  repUnit: 'reps' | 'sec' | 'min';
   restSec: number;
 }
 

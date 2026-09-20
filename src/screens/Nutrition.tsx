@@ -1,0 +1,433 @@
+import { useMemo, useState } from 'react';
+import type { DayIndex, Meal, PantryItem } from '../types';
+import { useApp } from '../store/AppContext';
+import { todayIndex } from '../store/state';
+import { FOODS, getFood } from '../data/foods';
+import { getRecipe } from '../data/recipes';
+import { getStore } from '../data/stores';
+import { SLOT_LABELS } from '../engine/nutrition';
+import { DAY_NAMES, DAY_SHORT } from '../engine/training';
+import { rankRecipes } from '../engine/mealPlan';
+import { basketFromPlan } from '../engine/basket';
+import { ingredientQty, recipeCost, recipeMacros, resolveRecipe } from '../engine/recipes';
+import { filterFromProfile, needsCertification } from '../engine/filters';
+import { CATEGORY_LABELS, CATEGORY_ORDER, formatQty } from '../engine/shopping';
+import { Bar, Card, Checkbox, Empty, Sheet, eur, num } from '../components/ui';
+import { IconCart, IconChevron, IconClock, IconFlame, IconInfo, IconSwap } from '../components/icons';
+import type { Screen } from '../App';
+
+/**
+ * Écran Nutrition : repas de la journée, fiche recette complète,
+ * remplacement de repas et gestion du garde-manger.
+ */
+export default function Nutrition({ go }: { go: (s: Screen) => void }) {
+  const { state, plan, dispatch, notify } = useApp();
+  const [day, setDay] = useState<DayIndex>(todayIndex());
+  const [openMeal, setOpenMeal] = useState<number | null>(null);
+  const [replacing, setReplacing] = useState<number | null>(null);
+  const [pantryOpen, setPantryOpen] = useState(false);
+
+  const dayPlan = plan.mealPlan.days[day];
+  const store = getStore(state.profile.storeId);
+  const targets = plan.targets;
+
+  const dayCost = useMemo(() => {
+    let total = 0;
+    for (const meal of dayPlan.meals) {
+      total += recipeCost(resolveRecipe(getRecipe(meal.recipeId), state.foodSwaps), store.id, meal.scale);
+    }
+    return Math.round(total * 100) / 100;
+  }, [dayPlan, store.id, state.foodSwaps]);
+
+  return (
+    <div className="screen">
+      <div className="screen-head">
+        <div>
+          <div className="eyebrow">{DAY_NAMES[day]}</div>
+          <h1>Nutrition</h1>
+        </div>
+        <button type="button" className="btn btn-sm btn-primary" onClick={() => go('shopping')}>
+          <IconCart size={15} /> Courses
+        </button>
+      </div>
+
+      <div className="scroller" style={{ marginBottom: 16 }}>
+        {DAY_SHORT.map((label, i) => (
+          <button
+            key={label} type="button" className="card"
+            onClick={() => setDay(i as DayIndex)}
+            style={{
+              width: 62, padding: '11px 6px', textAlign: 'center', cursor: 'pointer',
+              borderColor: day === i ? 'var(--accent)' : undefined,
+              background: day === i ? 'var(--accent-soft)' : undefined,
+            }}
+          >
+            <div className="xs dim">{label}</div>
+            <div className="sm strong num" style={{ marginTop: 3 }}>
+              {Math.round(plan.mealPlan.days[i].totals.kcal / 100) / 10}k
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="stack">
+        {/* Totaux du jour */}
+        <Card className="card-accent">
+          <div className="row-between" style={{ alignItems: 'baseline' }}>
+            <div>
+              <div className="card-title" style={{ margin: 0 }}>Total de la journée</div>
+              <div className="display num" style={{ fontSize: 34, marginTop: 4 }}>
+                {num(dayPlan.totals.kcal)} <span style={{ fontSize: 16 }}>kcal</span>
+              </div>
+            </div>
+            <div className="center">
+              <div className="sm num strong">{eur(dayCost)}</div>
+              <div className="xs dim">coût estimé</div>
+            </div>
+          </div>
+          <div className="xs dim" style={{ marginTop: 2 }}>objectif {num(targets.kcal)} kcal</div>
+
+          <div className="macro-grid" style={{ marginTop: 18 }}>
+            <MacroCell label="Protéines" value={dayPlan.totals.protein} target={targets.protein} />
+            <MacroCell label="Glucides" value={dayPlan.totals.carbs} target={targets.carbs} tone="violet" />
+            <MacroCell label="Lipides" value={dayPlan.totals.fat} target={targets.fat} tone="warn" />
+          </div>
+        </Card>
+
+        {/* Repas */}
+        {dayPlan.meals.map((meal, index) => (
+          <MealCard
+            key={`${meal.recipeId}-${index}`}
+            meal={meal}
+            swaps={state.foodSwaps}
+            storeId={store.id}
+            onOpen={() => setOpenMeal(index)}
+            onReplace={() => setReplacing(index)}
+          />
+        ))}
+
+        <button type="button" className="btn btn-ghost btn-block" onClick={() => setPantryOpen(true)}>
+          J'ai déjà ça chez moi ({state.pantry.length})
+        </button>
+      </div>
+
+      {/* Fiche recette */}
+      <Sheet
+        open={openMeal !== null}
+        onClose={() => setOpenMeal(null)}
+        title={openMeal !== null ? (
+          <>
+            <div className="card-title" style={{ margin: 0 }}>{SLOT_LABELS[dayPlan.meals[openMeal].slot]}</div>
+            <div className="strong">{getRecipe(dayPlan.meals[openMeal].recipeId).name}</div>
+          </>
+        ) : ''}
+      >
+        {openMeal !== null && (
+          <RecipeSheet
+            meal={dayPlan.meals[openMeal]}
+            onReplace={() => { setReplacing(openMeal); setOpenMeal(null); }}
+          />
+        )}
+      </Sheet>
+
+      {/* Remplacement de repas */}
+      <Sheet
+        open={replacing !== null}
+        onClose={() => setReplacing(null)}
+        title={<><div className="card-title" style={{ margin: 0 }}>Remplacer ce repas</div>
+          <div className="strong">
+            {replacing !== null ? SLOT_LABELS[dayPlan.meals[replacing].slot] : ''}
+          </div></>}
+      >
+        {replacing !== null && (
+          <MealAlternatives
+            day={day}
+            index={replacing}
+            onPick={(recipeId) => {
+              dispatch({ type: 'replaceMeal', day, index: replacing, recipeId });
+              notify('Repas remplacé — macros et courses recalculées');
+              setReplacing(null);
+            }}
+          />
+        )}
+      </Sheet>
+
+      {/* Garde-manger */}
+      <Sheet
+        open={pantryOpen}
+        onClose={() => setPantryOpen(false)}
+        title={<div className="strong">J'ai déjà ça chez moi</div>}
+      >
+        <PantryEditor />
+      </Sheet>
+    </div>
+  );
+}
+
+function MacroCell({
+  label, value, target, tone = 'accent',
+}: { label: string; value: number; target: number; tone?: 'accent' | 'violet' | 'warn' }) {
+  const gap = value - target;
+  return (
+    <div>
+      <div className="strong num">{Math.round(value)}<span className="xs dim"> / {target} g</span></div>
+      <div className="xs dim" style={{ marginBottom: 5 }}>{label}</div>
+      <Bar value={value} max={target} tone={tone} />
+      {Math.abs(gap) > target * 0.12 && (
+        <div className={`xs ${gap < 0 ? 'warn' : 'dim'}`} style={{ marginTop: 4 }}>
+          {gap > 0 ? '+' : ''}{Math.round(gap)} g
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MealCard({
+  meal, swaps, storeId, onOpen, onReplace,
+}: {
+  meal: Meal; swaps: Record<string, string>; storeId: string;
+  onOpen: () => void; onReplace: () => void;
+}) {
+  const recipe = resolveRecipe(getRecipe(meal.recipeId), swaps);
+  const cost = recipeCost(recipe, storeId, meal.scale);
+
+  return (
+    <Card>
+      <div className="row-between" style={{ alignItems: 'flex-start' }}>
+        <button type="button" onClick={onOpen} className="grow"
+          style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', minWidth: 0 }}>
+          <div className="row" style={{ gap: 8, marginBottom: 6 }}>
+            <span className="badge">{SLOT_LABELS[meal.slot]}</span>
+            {meal.scale !== 1 && <span className="badge badge-violet">×{meal.scale.toString().replace('.', ',')}</span>}
+          </div>
+          <div className="strong" style={{ fontSize: 17 }}>{recipe.name}</div>
+          <div className="row xs dim wrap" style={{ marginTop: 8, gap: 12 }}>
+            <span className="row" style={{ gap: 5 }}><IconFlame size={13} />{num(meal.macros.kcal)} kcal</span>
+            <span>{meal.macros.protein} g P</span>
+            <span>{meal.macros.carbs} g G</span>
+            <span>{meal.macros.fat} g L</span>
+          </div>
+          <div className="row xs dim" style={{ marginTop: 6, gap: 12 }}>
+            <span className="row" style={{ gap: 5 }}><IconClock size={12} />{recipe.prepTimeMin} min</span>
+            <span>{eur(cost)} / portion</span>
+          </div>
+        </button>
+        <div className="stack-sm" style={{ flex: 'none' }}>
+          <button type="button" className="icon-btn" onClick={onReplace} aria-label="Remplacer ce repas">
+            <IconSwap />
+          </button>
+          <button type="button" className="icon-btn" onClick={onOpen} aria-label="Voir la recette">
+            <IconChevron size={14} />
+          </button>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function RecipeSheet({ meal, onReplace }: { meal: Meal; onReplace: () => void }) {
+  const { state } = useApp();
+  const recipe = resolveRecipe(getRecipe(meal.recipeId), state.foodSwaps);
+  const macros = recipeMacros(recipe, meal.scale);
+  const cost = recipeCost(recipe, state.profile.storeId, meal.scale);
+  const filter = filterFromProfile(state.profile);
+
+  return (
+    <div className="stack">
+      <div className="row wrap" style={{ gap: 8 }}>
+        <span className="badge"><IconClock size={12} /> {recipe.prepTimeMin} min</span>
+        <span className="badge"><IconFlame size={12} /> {num(macros.kcal)} kcal</span>
+        <span className="badge">{eur(cost)} / portion</span>
+      </div>
+
+      <div className="macro-grid">
+        {[['Protéines', macros.protein], ['Glucides', macros.carbs], ['Lipides', macros.fat]].map(([label, v]) => (
+          <div key={label as string} className="card card-flat" style={{ padding: 12 }}>
+            <div className="metric num" style={{ fontSize: 20 }}>{v as number} g</div>
+            <div className="xs dim">{label as string}</div>
+          </div>
+        ))}
+      </div>
+
+      <div>
+        <div className="card-title">Ingrédients — portion ×{meal.scale.toString().replace('.', ',')}</div>
+        <Card className="card-flat">
+          {recipe.ingredients.map((ing) => {
+            const food = getFood(ing.foodId);
+            const qty = ingredientQty(ing, meal.scale);
+            return (
+              <div key={ing.foodId} className="list-row">
+                <span className="grow sm">{food.name}</span>
+                {needsCertification(food, filter) && (
+                  <span className="badge badge-warn">à certifier</span>
+                )}
+                <span className="sm strong num">{formatQty(qty, food.unit)}</span>
+              </div>
+            );
+          })}
+        </Card>
+      </div>
+
+      <div>
+        <div className="card-title">Préparation</div>
+        <div className="stack-sm">
+          {recipe.steps.map((step, i) => (
+            <div key={i} className="row" style={{ gap: 12, alignItems: 'flex-start' }}>
+              <span className="badge badge-accent" style={{ flex: 'none' }}>{i + 1}</span>
+              <span className="sm muted">{step}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <button type="button" className="btn btn-block" onClick={onReplace}>
+        <IconSwap size={15} /> Remplacer ce repas
+      </button>
+    </div>
+  );
+}
+
+function MealAlternatives({
+  day, index, onPick,
+}: { day: DayIndex; index: number; onPick: (id: string) => void }) {
+  const { state, plan } = useApp();
+  const dayPlan = plan.mealPlan.days[day];
+  const meal = dayPlan.meals[index];
+
+  const options = useMemo(() => {
+    // Panier reconstruit sans ce repas : le coût affiché est le coût réel
+    // de l'échange, conditionnements compris.
+    const basket = basketFromPlan(
+      plan.mealPlan, state.profile.storeId, state.pantry, state.foodSwaps, { day, index },
+    );
+    const usedToday = new Set(dayPlan.meals.filter((_, i) => i !== index).map((m) => m.recipeId));
+    return rankRecipes(state.profile, meal.slot, meal.macros, {
+      basket,
+      budget: state.profile.weeklyBudget,
+      mealBudget: (state.profile.weeklyBudget / 7) / Math.max(1, dayPlan.meals.length),
+    })
+      .filter((r) => r.recipe.id !== meal.recipeId && !usedToday.has(r.recipe.id))
+      .slice(0, 10);
+  }, [plan.mealPlan, state.profile, state.pantry, state.foodSwaps, day, index, meal, dayPlan.meals]);
+
+  if (options.length === 0) {
+    return <Empty title="Aucune alternative" hint="Assouplis tes restrictions ou change d'enseigne." />;
+  }
+
+  return (
+    <div className="stack-sm">
+      <p className="sm dim" style={{ marginBottom: 6 }}>
+        Recettes proches en calories et en protéines, compatibles avec tes
+        restrictions et disponibles dans ton enseigne. Le coût indiqué est ce que
+        l'échange ajoute réellement à ton panier.
+      </p>
+      {options.map((o) => {
+        const deltaKcal = o.macros.kcal - meal.macros.kcal;
+        const deltaP = o.macros.protein - meal.macros.protein;
+        return (
+          <button key={o.recipe.id} type="button" className="option" aria-pressed={false}
+            onClick={() => onPick(o.recipe.id)}>
+            <span className="grow">
+              <span className="strong" style={{ display: 'block' }}>{o.recipe.name}</span>
+              <span className="row xs dim wrap" style={{ marginTop: 4, gap: 10 }}>
+                <span>{num(o.macros.kcal)} kcal ({deltaKcal >= 0 ? '+' : ''}{deltaKcal})</span>
+                <span>{o.macros.protein} g P ({deltaP >= 0 ? '+' : ''}{deltaP})</span>
+                <span>{o.recipe.prepTimeMin} min</span>
+              </span>
+            </span>
+            <span className={`badge ${o.cost === 0 ? 'badge-accent' : ''}`}>
+              {o.cost === 0 ? 'déjà au panier' : `+${eur(o.cost)}`}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function PantryEditor() {
+  const { state, plan, dispatch } = useApp();
+  const [query, setQuery] = useState('');
+
+  const needed = new Set(plan.shoppingList.items.map((i) => i.foodId));
+  const pantryMap = new Map(state.pantry.map((p) => [p.foodId, p.qty]));
+
+  const setQty = (foodId: string, qty: number) => {
+    const next: PantryItem[] = state.pantry.filter((p) => p.foodId !== foodId);
+    if (qty > 0) next.push({ foodId, qty });
+    dispatch({ type: 'setPantry', pantry: next });
+  };
+
+  const toggle = (foodId: string) => {
+    if (pantryMap.has(foodId)) setQty(foodId, 0);
+    else {
+      const food = getFood(foodId);
+      setQty(foodId, food.unit === 'piece' ? 6 : 500);
+    }
+  };
+
+  const foods = FOODS.filter((f) =>
+    query.trim() === ''
+      ? needed.has(f.id) || pantryMap.has(f.id)
+      : f.name.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+
+  return (
+    <div className="stack">
+      <div className="card card-flat" style={{ padding: 12 }}>
+        <div className="row xs" style={{ gap: 8, alignItems: 'flex-start' }}>
+          <span className="accent" style={{ flex: 'none', marginTop: 1 }}><IconInfo size={13} /></span>
+          <span className="muted">
+            Ces quantités sont consommées en priorité : elles sont déduites de la
+            liste de courses avant tout nouvel achat.
+          </span>
+        </div>
+      </div>
+
+      <input type="text" value={query} placeholder="Chercher un aliment…"
+        onChange={(e) => setQuery(e.target.value)} />
+
+      {CATEGORY_ORDER.map((cat) => {
+        const inCat = foods.filter((f) => f.category === cat);
+        if (!inCat.length) return null;
+        return (
+          <div key={cat}>
+            <div className="card-title">{CATEGORY_LABELS[cat]}</div>
+            <div className="stack-sm">
+              {inCat.map((food) => {
+                const checked = pantryMap.has(food.id);
+                return (
+                  <div key={food.id}>
+                    <Checkbox checked={checked} onChange={() => toggle(food.id)}>
+                      <span className="row-between">
+                        <span className="sm">{food.name}</span>
+                        {needed.has(food.id) && !checked && (
+                          <span className="xs dim">
+                            besoin {formatQty(
+                              plan.shoppingList.items.find((i) => i.foodId === food.id)?.neededQty ?? 0,
+                              food.unit,
+                            )}
+                          </span>
+                        )}
+                      </span>
+                    </Checkbox>
+                    {checked && (
+                      <div className="row" style={{ marginTop: 8, marginLeft: 14, marginBottom: 6 }}>
+                        <input type="number" inputMode="numeric" min={0} value={pantryMap.get(food.id) ?? 0}
+                          onChange={(e) => setQty(food.id, Number(e.target.value))}
+                          style={{ maxWidth: 130 }} />
+                        <span className="sm dim">{food.unit === 'piece' ? 'pièces' : food.unit}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
+      {foods.length === 0 && <Empty title="Aucun aliment trouvé" />}
+    </div>
+  );
+}

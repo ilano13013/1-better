@@ -1,4 +1,19 @@
-import type { Exercise } from '../types';
+import type { Exercise, MuscleGroup } from '../types';
+
+export const MUSCLE_LABELS: Record<MuscleGroup, string> = {
+  pectoraux: 'Pectoraux',
+  dos: 'Dos',
+  epaules: 'Épaules',
+  biceps: 'Biceps',
+  triceps: 'Triceps',
+  quadriceps: 'Quadriceps',
+  ischios: 'Ischio-jambiers',
+  fessiers: 'Fessiers',
+  mollets: 'Mollets',
+  abdos: 'Abdominaux',
+  avant_bras: 'Avant-bras',
+  cardio: 'Cardio',
+};
 
 /**
  * Base d'exercices. `priority` classe les exercices au sein d'un groupe :
@@ -262,7 +277,7 @@ export const EXERCISES: Exercise[] = [
   /* ---------------- Abdos & cardio ---------------- */
   { id: 'gainage', name: 'Gainage planche', primary: 'abdos', secondary: [],
     equipment: ['poids_corps'], minLevel: 'debutant', type: 'isolation',
-    sets: [3, 3], reps: [30, 60], restSec: 60, priority: 45,
+    sets: [3, 3], reps: [30, 60], repUnit: 'sec', restSec: 60, priority: 45,
     alternatives: ['crunch_poulie', 'releve_jambes'] },
   { id: 'crunch_poulie', name: 'Crunch à la poulie', primary: 'abdos', secondary: [],
     equipment: ['poulie'], minLevel: 'debutant', type: 'isolation',
@@ -274,15 +289,15 @@ export const EXERCISES: Exercise[] = [
     alternatives: ['gainage', 'crunch_poulie'] },
   { id: 'cardio_velo', name: 'Vélo (intensité modérée)', primary: 'cardio', secondary: [],
     equipment: ['velo'], minLevel: 'debutant', type: 'cardio',
-    sets: [1, 1], reps: [10, 20], restSec: 0, priority: 20,
+    sets: [1, 1], reps: [10, 20], repUnit: 'min', restSec: 0, priority: 20,
     alternatives: ['cardio_tapis', 'cardio_rameur'] },
   { id: 'cardio_tapis', name: 'Tapis — marche inclinée', primary: 'cardio', secondary: [],
     equipment: ['tapis'], minLevel: 'debutant', type: 'cardio',
-    sets: [1, 1], reps: [10, 20], restSec: 0, priority: 22,
+    sets: [1, 1], reps: [10, 20], repUnit: 'min', restSec: 0, priority: 22,
     alternatives: ['cardio_velo', 'cardio_rameur'] },
   { id: 'cardio_rameur', name: 'Rameur', primary: 'cardio', secondary: ['dos'],
     equipment: ['rameur'], minLevel: 'debutant', type: 'cardio',
-    sets: [1, 1], reps: [10, 15], restSec: 0, priority: 21,
+    sets: [1, 1], reps: [10, 15], repUnit: 'min', restSec: 0, priority: 21,
     alternatives: ['cardio_velo', 'cardio_tapis'] },
 ];
 

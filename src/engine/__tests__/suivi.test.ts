@@ -9,10 +9,13 @@ import { computeTargets } from '../nutrition';
 import { getExercise } from '../../data/exercises';
 import { buildShoppingList, purchasableItems } from '../shopping';
 import { createInitialState, demoState } from '../../store/state';
-import type { Performance, WeeklyCheckIn, WeightEntry } from '../../types';
+import type { Performance, WeeklyCheckIn, WeightEntry, WorkoutExercise } from '../../types';
 
 describe('progression', () => {
-  const we = { exerciseId: 'developpe_incline_halteres', sets: 4, repMin: 8, repMax: 10, restSec: 120 };
+  const we: WorkoutExercise = {
+    exerciseId: 'developpe_incline_halteres', sets: 4, repMin: 8, repMax: 10,
+    repUnit: 'reps', restSec: 120,
+  };
 
   it('propose une charge de départ à la première séance', () => {
     expect(suggestNext(we, []).kind).toBe('premiere_seance');
@@ -48,6 +51,20 @@ describe('progression', () => {
       { id: '1', exerciseId: we.exerciseId, date: '2026-01-09', sets },
     ];
     expect(suggestNext(we, perf).kind).toBe('stagnation');
+  });
+
+  it('gère les exercices comptés en temps sans toucher à la charge', () => {
+    const plank: WorkoutExercise = {
+      exerciseId: 'gainage', sets: 3, repMin: 30, repMax: 60, repUnit: 'sec', restSec: 60,
+    };
+    const first = suggestNext(plank, []);
+    expect(first.message).toContain('secondes');
+    const next = suggestNext(plank, [{
+      id: 'p', exerciseId: 'gainage', date: '2026-01-10',
+      sets: [{ weightKg: 0, reps: 40 }, { weightKg: 0, reps: 38 }],
+    }]);
+    expect(next.reps).toBe(45);
+    expect(next.weightKg).toBe(0);
   });
 
   it('charge les incréments par type d\'exercice', () => {

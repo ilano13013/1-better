@@ -36,7 +36,10 @@ export function computeTargets(p: Profile): NutritionTargets {
   const tdee = computeTDEE(p);
   const goal = GOALS[p.goal];
 
-  const kcal = Math.round((tdee * goal.kcalFactor) / 10) * 10;
+  // Garde-fou : l'objectif calorique ne descend jamais sous le métabolisme de
+  // base, même pour un déficit agressif.
+  const raw = Math.round((tdee * goal.kcalFactor) / 10) * 10;
+  const kcal = Math.max(raw, Math.ceil(bmr / 10) * 10);
 
   // Les protéines sont calculées sur le poids objectif lorsqu'il est plus bas
   // (sèche) afin de ne pas surestimer les besoins.
