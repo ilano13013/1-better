@@ -432,6 +432,12 @@ export interface AppState {
   driveAdded: string[];
   /** Gabarits de recherche corrigés par l'utilisateur, par enseigne. */
   driveTemplates: Record<string, string>;
+  /**
+   * Logos déposés par l'utilisateur, en data URI, indexés par identifiant
+   * d'enseigne ou de salle. Ils restent sur l'appareil et ne sont jamais
+   * redistribués avec l'application.
+   */
+  brandLogos: Record<string, string>;
   performances: Performance[];
   weightEntries: WeightEntry[];
   checkIns: WeeklyCheckIn[];

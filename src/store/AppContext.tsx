@@ -36,6 +36,7 @@ type Action =
   | { type: 'toggleDriveAdded'; id: string }
   | { type: 'resetDrive' }
   | { type: 'setDriveTemplate'; storeId: string; template: string }
+  | { type: 'setBrandLogo'; brandId: string; dataUrl: string | null }
   | { type: 'logPerformance'; performance: Performance }
   | { type: 'deletePerformance'; id: string }
   | { type: 'logWeight'; entry: WeightEntry }
@@ -134,6 +135,13 @@ function reducer(state: AppState, action: Action): AppState {
       if (value) driveTemplates[action.storeId] = value;
       else delete driveTemplates[action.storeId];
       return { ...state, driveTemplates };
+    }
+
+    case 'setBrandLogo': {
+      const brandLogos = { ...state.brandLogos };
+      if (action.dataUrl) brandLogos[action.brandId] = action.dataUrl;
+      else delete brandLogos[action.brandId];
+      return { ...state, brandLogos };
     }
 
     case 'logPerformance': {

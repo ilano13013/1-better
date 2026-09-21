@@ -7,7 +7,7 @@ import { EQUIPMENT_LABELS, GYM_BY_ID } from '../data/gyms';
 import { DAY_NAMES, DAY_SHORT, findReplacements } from '../engine/training';
 import { historyFor, lastPerformance, personalRecords, suggestNext, unitLabel } from '../engine/progression';
 import { Card, Checkbox, Empty, Sheet, num } from '../components/ui';
-import { BrandMark } from '../components/BrandMark';
+import { GymMark } from '../components/BrandMark';
 
 const LEVEL_LABELS = { debutant: 'Débutant', intermediaire: 'Intermédiaire', avance: 'Avancé' } as const;
 import {
@@ -44,7 +44,7 @@ export default function Training() {
         </div>
         {gym && (
           <span className="row" style={{ gap: 8 }}>
-            <BrandMark name={gym.name} color={gym.color} logo={gym.logo} size={24} quiet={gym.custom} />
+            <GymMark gym={gym} size={24} />
             <span className="sm strong">{gym.name}</span>
           </span>
         )}

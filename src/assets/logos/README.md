@@ -9,9 +9,19 @@ produirait des visuels approximatifs présentés comme authentiques, et les
 redistribuer sans autorisation poserait un problème de droits.
 
 En attendant, `<BrandMark>` affiche un **monogramme** sur la couleur de la
-marque. L'emplacement est prêt.
+marque. Deux façons d'y mettre les vrais fichiers.
 
-## Ajouter les fichiers officiels
+## A. Sur ton appareil, sans toucher au code
+
+**Profil → Logos des enseignes.** Glisse-dépose un fichier par marque. Les
+images sont réduites à 128 px et plafonnées à 60 Ko, pour ne pas saturer le
+stockage local — ce qui ferait échouer l'enregistrement du profil entier.
+
+Les fichiers restent dans le navigateur de l'appareil : ils ne sont ni envoyés
+ailleurs, ni publiés avec l'application. C'est la voie à privilégier si tu n'es
+pas certain de tes droits de redistribution.
+
+## B. Dans le projet, livré avec l'application
 
 1. Dépose les fichiers ici, de préférence en SVG, sinon en PNG transparent :
 

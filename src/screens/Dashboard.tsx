@@ -14,7 +14,7 @@ import { isCheckInDue } from '../engine/checkin';
 import { sessionCount, weekStreak } from '../engine/gamification';
 import { Bar, Card, Ring, eur, kg, num, type BarTone } from '../components/ui';
 import { IconCart, IconChevron, IconClock, IconFlame, IconMedal, IconRest, IconWallet } from '../components/icons';
-import { BrandMark } from '../components/BrandMark';
+import { StoreMark } from '../components/BrandMark';
 import type { Screen } from '../App';
 
 /**
@@ -135,8 +135,7 @@ export default function Dashboard({ go }: { go: (s: Screen) => void }) {
         <Card onClick={() => go('shopping')} className={overBudget > 0 ? 'card-notice' : ''}>
           <div className="row-between" style={{ marginBottom: 12 }}>
             <span className="row" style={{ gap: 9 }}>
-              <BrandMark name={store.name} color={store.color} logo={store.logo}
-                size={22} quiet={store.id === 'autre'} />
+              <StoreMark store={store} size={22} />
               <span className="card-title" style={{ margin: 0 }}>Budget semaine</span>
             </span>
             <IconChevron />

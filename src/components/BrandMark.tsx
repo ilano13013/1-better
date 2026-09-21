@@ -12,6 +12,9 @@
  * mémoire produirait un visuel faux présenté comme authentique. Voir
  * `src/assets/logos/README.md` pour ajouter les fichiers officiels.
  */
+import type { Gym, Store } from '../types';
+import { useApp } from '../store/AppContext';
+
 export interface BrandMarkProps {
   name: string;
   color: string;
@@ -61,5 +64,43 @@ export function BrandMark({ name, color, logo, size = 36, quiet = false }: Brand
     <span className="brand" style={style} aria-hidden="true" title={name}>
       {logo ? <img src={logo} alt="" /> : monogram(name)}
     </span>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Variantes branchées sur l'état                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Un logo déposé par l'utilisateur prime sur celui livré avec l'application.
+ * Passer par ces variantes évite d'oublier cette règle sur un écran.
+ */
+export function StoreMark({
+  store, size, quiet,
+}: { store: Store; size?: number; quiet?: boolean }) {
+  const { state } = useApp();
+  return (
+    <BrandMark
+      name={store.name}
+      color={store.color}
+      logo={state.brandLogos[store.id] ?? store.logo}
+      size={size}
+      quiet={quiet ?? (store.id === 'autre' && !state.brandLogos[store.id])}
+    />
+  );
+}
+
+export function GymMark({
+  gym, size, quiet,
+}: { gym: Gym; size?: number; quiet?: boolean }) {
+  const { state } = useApp();
+  return (
+    <BrandMark
+      name={gym.name}
+      color={gym.color}
+      logo={state.brandLogos[gym.id] ?? gym.logo}
+      size={size}
+      quiet={quiet ?? (gym.custom && !state.brandLogos[gym.id])}
+    />
   );
 }

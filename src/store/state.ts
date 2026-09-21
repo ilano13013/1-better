@@ -73,6 +73,7 @@ export function createInitialState(): AppState {
     packOverrides: {},
     driveAdded: [],
     driveTemplates: {},
+    brandLogos: {},
     performances: [],
     weightEntries: [],
     checkIns: [],

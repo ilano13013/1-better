@@ -12,7 +12,8 @@ import { evaluateCheckIn, isCheckInDue } from '../engine/checkin';
 import { buildBadges, sessionCount, weekStreak, progressToGoal } from '../engine/gamification';
 import { personalRecords } from '../engine/progression';
 import { Bar, Card, Chip, Empty, Field, Segmented, Sheet, eur, kg, num } from '../components/ui';
-import { BrandMark } from '../components/BrandMark';
+import { GymMark, StoreMark } from '../components/BrandMark';
+import { LogoUploader } from '../components/LogoUploader';
 import { IconCheck, IconMedal, IconSpark, IconTrend } from '../components/icons';
 
 /**
@@ -22,8 +23,10 @@ import { IconCheck, IconMedal, IconSpark, IconTrend } from '../components/icons'
 export default function ProfileScreen() {
   const { state, plan, dispatch, notify } = useApp();
   const [sheet, setSheet] = useState<
-    null | 'weight' | 'checkin' | 'macros' | 'goal' | 'gym' | 'store' | 'budget' | 'diet' | 'schedule'
+    null | 'weight' | 'checkin' | 'macros' | 'goal' | 'gym' | 'store' | 'budget'
+    | 'diet' | 'schedule' | 'logos'
   >(null);
+  const logoCount = Object.keys(state.brandLogos).length;
 
   const entries = sortedEntries(state.weightEntries);
   const current = entries.length ? entries[entries.length - 1].weightKg : state.profile.weightKg;
@@ -120,12 +123,16 @@ export default function ProfileScreen() {
           <Card className="card-flat">
             <SettingRow label="Objectif" value={GOAL_LIST.find((g) => g.id === state.profile.goal)!.label} onClick={() => setSheet('goal')} />
             <SettingRow label="Salle" value={gym?.name ?? '—'} onClick={() => setSheet('gym')}
-              mark={gym && <BrandMark name={gym.name} color={gym.color} logo={gym.logo} size={20} quiet={gym.custom} />} />
+              mark={gym && <GymMark gym={gym} size={20} />} />
             <SettingRow label="Disponibilités" value={`${state.profile.sessionsPerWeek} × ${state.profile.sessionDurationMin} min`} onClick={() => setSheet('schedule')} />
             <SettingRow label="Supermarché" value={store?.name ?? '—'} onClick={() => setSheet('store')}
-              mark={store && <BrandMark name={store.name} color={store.color} logo={store.logo} size={20} quiet={store.id === 'autre'} />} />
+              mark={store && <StoreMark store={store} size={20} />} />
             <SettingRow label="Budget" value={`${eur(state.profile.weeklyBudget)} / sem.`} onClick={() => setSheet('budget')} />
             <SettingRow label="Alimentation" value={DIET_LABELS[state.profile.diet]} onClick={() => setSheet('diet')} />
+            <SettingRow
+              label="Logos des enseignes"
+              value={logoCount > 0 ? `${logoCount} déposé${logoCount > 1 ? 's' : ''}` : 'Monogrammes'}
+              onClick={() => setSheet('logos')} />
           </Card>
         </div>
 
@@ -258,7 +265,7 @@ export default function ProfileScreen() {
           {STORES.map((s) => (
             <button key={s.id} type="button" className="option" aria-pressed={state.profile.storeId === s.id}
               onClick={() => { dispatch({ type: 'patchProfile', patch: { storeId: s.id } }); notify('Prix et liste recalculés'); setSheet(null); }}>
-              <BrandMark name={s.name} color={s.color} logo={s.logo} quiet={s.id === 'autre'} />
+              <StoreMark store={s} />
               <span className="grow strong">{s.name}</span>
               <span className="option-mark">{state.profile.storeId === s.id && <IconCheck />}</span>
             </button>
@@ -272,6 +279,11 @@ export default function ProfileScreen() {
 
       <Sheet open={sheet === 'diet'} onClose={() => setSheet(null)} title={<div className="strong">Alimentation</div>}>
         <DietEditor />
+      </Sheet>
+
+      <Sheet open={sheet === 'logos'} onClose={() => setSheet(null)}
+        title={<div className="strong">Logos des enseignes</div>}>
+        <LogoUploader />
       </Sheet>
     </div>
   );
@@ -590,7 +602,7 @@ function GymEditor({ onDone }: { onDone: () => void }) {
               notify('Exercices incompatibles remplacés');
               if (!g.custom) onDone();
             }}>
-            <BrandMark name={g.name} color={g.color} logo={g.logo} quiet={g.custom} />
+            <GymMark gym={g} />
             <span className="grow strong">{g.name}</span>
             <span className="option-mark">{state.profile.gymId === g.id && <IconCheck />}</span>
           </button>

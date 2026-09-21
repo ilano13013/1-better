@@ -19,7 +19,7 @@ import {
   IconBack, IconCheck, IconCopy, IconDownload, IconInfo, IconMinus, IconPlus,
   IconShare, IconSpark, IconSwap, IconWallet,
 } from '../components/icons';
-import { BrandMark } from '../components/BrandMark';
+import { StoreMark } from '../components/BrandMark';
 import type { Screen } from '../App';
 
 /**
@@ -99,8 +99,7 @@ export default function Shopping({ go }: { go: (s: Screen) => void }) {
             <IconBack />
           </button>
           <div className="row" style={{ gap: 10 }}>
-            <BrandMark name={store.name} color={store.color} logo={store.logo}
-              size={34} quiet={store.id === 'autre'} />
+            <StoreMark store={store} size={34} />
             <div>
               <div className="eyebrow">{store.name}</div>
               <h1>Liste de courses</h1>

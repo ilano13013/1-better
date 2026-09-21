@@ -11,7 +11,7 @@ import { CATEGORY_LABELS, CATEGORY_ORDER, formatQty } from '../engine/shopping';
 import { DIET_LABELS, RESTRICTION_LABELS } from '../engine/filters';
 import { DAY_NAMES } from '../engine/training';
 import { Card, Checkbox, Chip, Field, Option, Segmented, eur, num } from '../components/ui';
-import { BrandMark } from '../components/BrandMark';
+import { GymMark, StoreMark } from '../components/BrandMark';
 import { IconBack, IconSpark } from '../components/icons';
 
 /**
@@ -283,7 +283,7 @@ function GymStep({ p, patch }: StepProps) {
             onClick={() => patch({ gymId: g.id, customEquipment: g.custom ? p.customEquipment : [] })}
             title={g.name}
             subtitle={g.custom ? 'Tu choisis ton matériel à l\'étape suivante' : `${g.equipment.length} équipements référencés`}
-            leading={<BrandMark name={g.name} color={g.color} logo={g.logo} quiet={g.custom} />}
+            leading={<GymMark gym={g} />}
           />
         ))}
       </div>
@@ -374,7 +374,7 @@ function StoreStep({ p, patch }: StepProps) {
           <Option key={s.id} selected={p.storeId === s.id} onClick={() => patch({ storeId: s.id })}
             title={s.name}
             subtitle={s.id === 'autre' ? 'Prix de référence, sans indice d\'enseigne' : undefined}
-            leading={<BrandMark name={s.name} color={s.color} logo={s.logo} quiet={s.id === 'autre'} />}
+            leading={<StoreMark store={s} />}
           />
         ))}
       </div>
@@ -608,7 +608,7 @@ function RecapStep({ p, pantry }: { p: Profile; pantry: PantryItem[] }) {
           <div className="row-between">
             <span className="dim">Salle</span>
             <span className="row" style={{ gap: 8 }}>
-              {gym && <BrandMark name={gym.name} color={gym.color} logo={gym.logo} size={22} quiet={gym.custom} />}
+              {gym && <GymMark gym={gym} size={22} />}
               <span className="strong">{gym?.name}</span>
             </span>
           </div>
@@ -616,7 +616,7 @@ function RecapStep({ p, pantry }: { p: Profile; pantry: PantryItem[] }) {
           <div className="row-between">
             <span className="dim">Magasin</span>
             <span className="row" style={{ gap: 8 }}>
-              {store && <BrandMark name={store.name} color={store.color} logo={store.logo} size={22} quiet={store.id === 'autre'} />}
+              {store && <StoreMark store={store} size={22} />}
               <span className="strong">{store?.name}</span>
             </span>
           </div>
