@@ -33,6 +33,9 @@ type Action =
   | { type: 'clearChecked' }
   | { type: 'setManualPrice'; productId: string; price: number }
   | { type: 'setPacks'; foodId: string; packs: number | null }
+  | { type: 'toggleDriveAdded'; id: string }
+  | { type: 'resetDrive' }
+  | { type: 'setDriveTemplate'; storeId: string; template: string }
   | { type: 'logPerformance'; performance: Performance }
   | { type: 'deletePerformance'; id: string }
   | { type: 'logWeight'; entry: WeightEntry }
@@ -113,6 +116,24 @@ function reducer(state: AppState, action: Action): AppState {
       if (action.packs === null) delete packOverrides[action.foodId];
       else packOverrides[action.foodId] = Math.max(0, action.packs);
       return { ...state, packOverrides };
+    }
+
+    case 'toggleDriveAdded': {
+      const set = new Set(state.driveAdded);
+      if (set.has(action.id)) set.delete(action.id);
+      else set.add(action.id);
+      return { ...state, driveAdded: [...set] };
+    }
+
+    case 'resetDrive':
+      return { ...state, driveAdded: [] };
+
+    case 'setDriveTemplate': {
+      const driveTemplates = { ...state.driveTemplates };
+      const value = action.template.trim();
+      if (value) driveTemplates[action.storeId] = value;
+      else delete driveTemplates[action.storeId];
+      return { ...state, driveTemplates };
     }
 
     case 'logPerformance': {

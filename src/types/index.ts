@@ -428,6 +428,10 @@ export interface AppState {
   manualPrices: Record<string, number>;
   /** Nombre de conditionnements forcé par l'utilisateur. */
   packOverrides: Record<string, number>;
+  /** Lignes déjà déposées dans le panier de l'enseigne. */
+  driveAdded: string[];
+  /** Gabarits de recherche corrigés par l'utilisateur, par enseigne. */
+  driveTemplates: Record<string, string>;
   performances: Performance[];
   weightEntries: WeightEntry[];
   checkIns: WeeklyCheckIn[];

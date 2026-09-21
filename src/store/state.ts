@@ -71,6 +71,8 @@ export function createInitialState(): AppState {
     checkedItems: [],
     manualPrices: {},
     packOverrides: {},
+    driveAdded: [],
+    driveTemplates: {},
     performances: [],
     weightEntries: [],
     checkIns: [],
@@ -100,5 +102,6 @@ export function clearPlanOverrides(state: AppState): AppState {
     foodSwaps: {},
     checkedItems: [],
     packOverrides: {},
+    driveAdded: [],
   };
 }

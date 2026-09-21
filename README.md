@@ -33,7 +33,7 @@ sur n'importe quel hébergeur statique.
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 86 tests des moteurs métier
+npm test           # 92 tests des moteurs métier
 npm run build      # build de production
 
 npm run bundle     # assemble dist/1-better.html, fichier unique autonome
@@ -204,9 +204,7 @@ fait passer les protéines de 96 g à 128 g pour une cible de 136 g.
   est réservé à une source réelle branchée dans l'application.
 - **Un prix peut être inconnu.** L'utilisateur saisit alors le sien ; il est
   présenté comme une estimation de sa part, jamais comme vérifié.
-- **Aucune API Drive n'est inventée.** `engine/drive.ts` définit uniquement le
-  contrat qu'un connecteur devra respecter et le pipeline de préparation de panier.
-  Aucun achat ne peut être déclenché automatiquement.
+- **Aucune API Drive n'est inventée.** Voir la section ci-dessous.
 - **Les calculs nutritionnels sont des estimations** issues de formules de
   référence. L'application le rappelle à l'écran : elles ne remplacent pas l'avis
   d'un professionnel de santé ou de nutrition.
@@ -228,6 +226,46 @@ fait passer les protéines de 96 g à 128 g pour une cible de 136 g.
   de chaque produit et le sous-total qui ne reviendra pas la semaine suivante.
 
 ---
+
+## Le bouton « Préparer mon Drive »
+
+**Aucune enseigne française ne publie d'API permettant à une application tierce
+de remplir le panier d'un client.** Les seules façons de « remplir
+automatiquement » seraient de détenir les identifiants de l'utilisateur et de
+piloter le site de l'enseigne : cela contrevient à leurs conditions
+d'utilisation, casse à la moindre évolution de leur interface, et expose le
+compte de l'utilisateur. L'application ne fait rien de tel.
+
+Ce qu'elle fait, et qui fonctionne aujourd'hui : une **préparation assistée**.
+
+1. La liste est ordonnée par rayon, avec quantités et formats d'achat.
+2. Produit par produit, l'application copie le nom dans le presse-papiers et
+   ouvre le site de l'enseigne.
+3. L'utilisateur ajoute le produit dans **sa propre session**, puis revient :
+   l'avancement est suivi, repris là où il s'était arrêté, et le montant déjà
+   au panier est affiché.
+4. À la fin, l'application rappelle de vérifier le panier chez l'enseigne.
+   Aucun achat n'est déclenché.
+
+### Liens de recherche
+
+Par défaut, l'application ouvre la **page d'accueil** des courses en ligne. Les
+gabarits de recherche profonde ne sont pas codés en dur : les enseignes
+modifient leurs URL sans préavis, et une adresse inventée enverrait
+l'utilisateur sur une page d'erreur — pire que l'accueil avec le nom déjà
+copié.
+
+L'écran de préparation permet de **saisir et tester** le gabarit relevé sur le
+site de l'enseigne (`https://…/recherche?q={q}`). Il est alors mémorisé, et
+chaque produit s'ouvre directement sur sa recherche. Les gabarits validés
+peuvent être remontés en dur dans `STORE_HANDOFFS`, dans `engine/drive.ts`.
+
+### Le jour où une enseigne ouvre un accès officiel
+
+`DriveConnector` définit le contrat : catalogue, correspondance liste ↔
+catalogue, sélection des formats, panier préparé. `registerDriveConnector()`
+suffit à le brancher, et l'étape manuelle disparaît. Le contrat s'arrête
+délibérément à un panier **préparé** : la validation reste à l'utilisateur.
 
 ## Contenu des bases
 
@@ -252,8 +290,10 @@ courses, dashboard. ✅
 remplacement d'exercices, remplacement de repas, optimisation du budget. ✅
 
 **Priorité 3** — inventaire maison ✅, architecture catalogues magasins et prix ✅,
-contrat d'intégration Drive ✅. Le scan de code-barres et les prix réellement
-actualisés nécessitent une source de données externe et restent à brancher.
+contrat d'intégration Drive ✅, préparation de panier assistée ✅. Le scan de
+code-barres, les prix réellement actualisés et le remplissage automatique du
+panier nécessitent respectivement une caméra, une source de prix et un accès
+officiel d'enseigne : aucun des trois ne peut être simulé honnêtement.
 
 ---
 
@@ -263,7 +303,7 @@ actualisés nécessitent une source de données externe et restent à brancher.
 npm test
 ```
 
-86 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+92 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
 substitutions (dont la protection de la densité protéique), couverture de tous

@@ -10,9 +10,11 @@ import {
 } from '../engine/shopping';
 import { bestSavings, optimizeBudget } from '../engine/budget';
 import { planRemaining } from '../engine/remaining';
-import { driveStatus } from '../engine/drive';
+import {
+  buildSearchUrl, driveStatus, getHandoff, handoffPlan, handoffProgress,
+} from '../engine/drive';
 import { DAY_NAMES } from '../engine/training';
-import { Bar, Card, Empty, Sheet, eur, num } from '../components/ui';
+import { Bar, Card, Empty, Field, Sheet, eur, num } from '../components/ui';
 import {
   IconBack, IconCheck, IconCopy, IconDownload, IconInfo, IconMinus, IconPlus,
   IconShare, IconSpark, IconSwap, IconWallet,
@@ -617,51 +619,271 @@ function RemainingMode({ onClose }: { onClose: () => void }) {
 }
 
 function DrivePanel() {
-  const { state, plan } = useApp();
+  const { state, plan, dispatch, notify } = useApp();
   const store = getStore(state.profile.storeId);
   const status = driveStatus(store.id);
+  const handoff = getHandoff(store.id);
   const items = purchasableItems(plan.shoppingList);
+  const template = state.driveTemplates[store.id] ?? '';
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [blockedUrl, setBlockedUrl] = useState<string | null>(null);
+
+  const steps = useMemo(
+    () => handoffPlan(items, state.driveAdded),
+    [items, state.driveAdded],
+  );
+  const progress = handoffProgress(steps);
+  const current = progress.nextIndex >= 0 ? steps[progress.nextIndex] : null;
+
+  const urlFor = (term: string) =>
+    handoff ? buildSearchUrl(handoff, term, template || undefined) : null;
+
+  /**
+   * Ouvre l'enseigne dans un onglet et dépose le terme dans le presse-papiers.
+   * Certains conteneurs (aperçu intégré) bloquent l'ouverture : on le dit au
+   * lieu de laisser croire que rien ne s'est passé.
+   */
+  const openStore = async (term: string) => {
+    const url = urlFor(term);
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(term);
+    } catch {
+      /* presse-papiers indisponible */
+    }
+    let win: Window | null = null;
+    try {
+      win = window.open(url, '_blank', 'noopener,noreferrer');
+    } catch {
+      win = null;
+    }
+    if (win) {
+      setBlockedUrl(null);
+      notify(`« ${term} » copié — cherche-le chez ${store.name}`);
+    } else {
+      setBlockedUrl(url);
+    }
+  };
+
+  if (!handoff) {
+    return (
+      <div className="stack">
+        <Card className="card-notice">
+          <div className="strong">Pas de courses en ligne pour cette enseigne</div>
+          <p className="sm muted" style={{ marginTop: 8 }}>
+            Choisis une enseigne disposant d'un Drive depuis ton profil, ou utilise
+            l'export de la liste.
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="stack">
+      {/* Ce que fait — et ne fait pas — cette préparation */}
       <Card className="card-flat">
-        <div className="card-title">Étapes prévues</div>
-        <ol className="sm muted" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8 }}>
-          <li>Récupération des produits compatibles</li>
-          <li>Correspondance entre ta liste et le catalogue</li>
-          <li>Sélection des formats appropriés</li>
-          <li>Préparation du panier</li>
-          <li>Vérification par toi, avant toute commande</li>
-        </ol>
+        <div className="row" style={{ gap: 8, alignItems: 'flex-start' }}>
+          <span className="dim" style={{ flex: 'none', marginTop: 1 }}><IconInfo size={14} /></span>
+          <div className="xs muted">
+            Aucune enseigne ne permet à une application tierce de remplir ton panier.
+            L'application ouvre donc {store.name} produit par produit, avec le nom
+            déjà copié, et suit ton avancement. <strong>Le panier se construit dans
+            ta propre session</strong> : rien n'est commandé ici.
+          </div>
+        </div>
       </Card>
 
-      {status.state === 'connecteur_absent' ? (
+      {/* Avancement */}
+      <Card className={progress.done === progress.total ? 'card-ink' : ''}>
+        <div className="row-between" style={{ alignItems: 'baseline' }}>
+          <div>
+            <div className="card-title" style={{ margin: 0 }}>Avancement</div>
+            <div className="display num" style={{ fontSize: 30, marginTop: 4 }}>
+              {progress.done} <span style={{ fontSize: 16 }}>/ {progress.total}</span>
+            </div>
+          </div>
+          <div className="center">
+            <div className="sm num strong">{eur(progress.doneTotal)}</div>
+            <div className="xs dim">au panier</div>
+          </div>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <Bar value={progress.done} max={progress.total} />
+        </div>
+      </Card>
+
+      {blockedUrl && (
         <Card className="card-notice">
-          <div className="strong">Aucun connecteur disponible</div>
-          <p className="sm muted" style={{ marginTop: 8 }}>{status.message}</p>
-        </Card>
-      ) : (
-        <Card className="card-ink">
-          <div className="strong">Connecteur {status.connector.label} disponible</div>
+          <div className="strong">Ouverture d'onglet bloquée</div>
+          <p className="sm muted" style={{ marginTop: 8 }}>
+            Ce conteneur empêche la page d'ouvrir un onglet. Copie l'adresse et
+            ouvre-la toi-même — ou lance l'application depuis ton navigateur.
+          </p>
+          <div className="row" style={{ marginTop: 10, gap: 8 }}>
+            <code className="xs grow truncate" style={{ opacity: 0.8 }}>{blockedUrl}</code>
+            <button type="button" className="btn btn-sm"
+              onClick={() => { navigator.clipboard?.writeText(blockedUrl); notify('Adresse copiée'); }}>
+              <IconCopy size={13} /> Copier
+            </button>
+          </div>
         </Card>
       )}
 
-      <Card className="card-flat">
-        <div className="row-between sm"><span className="dim">Produits à transmettre</span>
-          <span className="strong num">{items.length}</span></div>
-        <div className="row-between sm" style={{ marginTop: 6 }}><span className="dim">Montant estimé</span>
-          <span className="strong num">{eur(plan.shoppingList.total)}</span></div>
-      </Card>
+      {/* Produit en cours */}
+      {current ? (
+        <Card>
+          <div className="row-between" style={{ marginBottom: 10 }}>
+            <span className="card-title" style={{ margin: 0 }}>
+              Produit {progress.nextIndex + 1} sur {progress.total}
+            </span>
+            <span className="badge">{CATEGORY_LABELS[current.item.category]}</span>
+          </div>
+          <div className="strong" style={{ fontSize: 18 }}>{current.term}</div>
+          <div className="row xs dim wrap" style={{ marginTop: 6, gap: 10 }}>
+            <span className="num">{current.item.packs} × {formatQty(current.item.packSize, current.item.unit)}</span>
+            <span className="num">{eur(current.item.totalPrice)}</span>
+            <span>besoin {formatQty(current.item.toBuyQty, current.item.unit)}</span>
+          </div>
+
+          <div className="stack-sm" style={{ marginTop: 14 }}>
+            <button type="button" className="btn btn-primary btn-block"
+              onClick={() => openStore(current.term)}>
+              <IconShare size={15} /> Ouvrir chez {store.name}
+            </button>
+            <div className="grid-2">
+              <button type="button" className="btn"
+                onClick={() => dispatch({ type: 'toggleDriveAdded', id: current.item.id })}>
+                <IconCheck size={14} /> Mis au panier
+              </button>
+              <button type="button" className="btn btn-ghost"
+                onClick={() => dispatch({ type: 'toggleDriveAdded', id: current.item.id })}>
+                Passer
+              </button>
+            </div>
+          </div>
+        </Card>
+      ) : (
+        <Card className="card-flat">
+          <div className="strong">Tous les produits sont traités</div>
+          <p className="sm muted" style={{ marginTop: 8 }}>
+            Vérifie ton panier chez {store.name} — quantités, formats et
+            substitutions proposées par l'enseigne — avant de valider. Aucun achat
+            n'a été déclenché depuis cette application.
+          </p>
+          <button type="button" className="btn btn-block" style={{ marginTop: 12 }}
+            onClick={() => { dispatch({ type: 'resetDrive' }); notify('Préparation réinitialisée'); }}>
+            Recommencer
+          </button>
+        </Card>
+      )}
+
+      {/* Toute la liste, pour revenir en arrière */}
+      <div>
+        <div className="card-title">Tous les produits</div>
+        <Card className="card-flat">
+          {steps.map((step, index) => (
+            <div key={step.item.id} className="list-row" style={{ opacity: step.done ? 0.5 : 1 }}>
+              <button type="button" className="option-mark"
+                aria-label={step.done ? 'Retirer du panier' : 'Marquer comme mis au panier'}
+                onClick={() => dispatch({ type: 'toggleDriveAdded', id: step.item.id })}
+                style={{
+                  borderRadius: 6, cursor: 'pointer',
+                  background: step.done ? 'var(--ink)' : 'transparent',
+                  borderColor: step.done ? 'var(--ink)' : undefined,
+                  color: step.done ? 'var(--ground)' : 'transparent',
+                }}>
+                {step.done && <IconCheck size={11} />}
+              </button>
+              <button type="button" onClick={() => openStore(step.term)} className="grow"
+                style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', minWidth: 0 }}>
+                <div className="sm truncate" style={{ textDecoration: step.done ? 'line-through' : undefined }}>
+                  {step.item.packs} × {step.term}
+                </div>
+                <div className="xs dim num">{eur(step.item.totalPrice)}</div>
+              </button>
+              {index === progress.nextIndex && <span className="badge badge-ink">en cours</span>}
+            </div>
+          ))}
+        </Card>
+      </div>
+
+      <button type="button" className="btn btn-ghost btn-block" onClick={() => setSettingsOpen(true)}>
+        Lien de recherche {store.name}
+      </button>
 
       <p className="xs dim">
-        Aucun achat n'est jamais déclenché automatiquement. L'architecture est en
-        place pour brancher une enseigne disposant d'un accès officiel ; aucune API
-        n'est simulée ni supposée.
+        {status.state === 'connecteur_absent'
+          ? `Aucun accès officiel n'est connecté pour ${store.name}. Le jour où l'enseigne en ouvre un, il se branche sur le contrat défini dans engine/drive.ts et cette étape devient automatique.`
+          : `Connecteur ${status.connector.label} disponible.`}
       </p>
 
-      <button type="button" className="btn btn-block" disabled>
-        Préparer mon panier
-      </button>
+      <Sheet open={settingsOpen} onClose={() => setSettingsOpen(false)}
+        title={<div className="strong">Lien de recherche</div>}>
+        <TemplateEditor
+          storeName={store.name}
+          homeUrl={handoff.homeUrl}
+          value={template}
+          onTest={(v) => {
+            const url = buildSearchUrl(handoff, 'poulet', v || undefined);
+            try {
+              if (!window.open(url, '_blank', 'noopener,noreferrer')) setBlockedUrl(url);
+            } catch {
+              setBlockedUrl(url);
+            }
+          }}
+          onSave={(v) => {
+            dispatch({ type: 'setDriveTemplate', storeId: store.id, template: v });
+            notify(v ? 'Lien de recherche enregistré' : 'Retour à la page d\'accueil');
+            setSettingsOpen(false);
+          }}
+        />
+      </Sheet>
+    </div>
+  );
+}
+
+function TemplateEditor({
+  storeName, homeUrl, value, onSave, onTest,
+}: {
+  storeName: string; homeUrl: string; value: string;
+  onSave: (v: string) => void; onTest: (v: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  return (
+    <div className="stack">
+      <p className="sm muted">
+        Par défaut, l'application ouvre simplement la page d'accueil de {storeName}
+        avec le nom du produit dans le presse-papiers. C'est le seul comportement
+        qu'elle peut garantir : les enseignes changent leurs adresses de recherche
+        sans préavis, et rien ici ne permet de le vérifier.
+      </p>
+      <p className="sm muted">
+        Si tu relèves le format sur leur site, colle-le ici et chaque produit
+        s'ouvrira directement sur sa recherche.
+      </p>
+
+      <Field label="Gabarit de recherche" hint="Remplace le terme recherché par {q}.">
+        <input type="text" value={draft} placeholder={`${homeUrl}/recherche?q={q}`}
+          onChange={(e) => setDraft(e.target.value)} />
+      </Field>
+
+      <div className="grid-2">
+        <button type="button" className="btn" onClick={() => onTest(draft)}
+          disabled={!draft.includes('{q}')}>
+          Tester
+        </button>
+        <button type="button" className="btn btn-primary" onClick={() => onSave(draft)}>
+          Enregistrer
+        </button>
+      </div>
+
+      {value && (
+        <button type="button" className="btn btn-ghost btn-block" onClick={() => onSave('')}>
+          Revenir à la page d'accueil
+        </button>
+      )}
     </div>
   );
 }

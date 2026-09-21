@@ -111,3 +111,122 @@ export async function prepareCart(
     requiresUserReview: true,
   };
 }
+
+/* ------------------------------------------------------------------ */
+/* Préparation assistée (voie disponible aujourd'hui)                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Aucune enseigne française ne publie d'API permettant à une application
+ * tierce de remplir le panier d'un client. Les seules façons de « remplir
+ * automatiquement » seraient de détenir les identifiants de l'utilisateur et
+ * de piloter le site de l'enseigne — ce qui contrevient à leurs conditions
+ * d'utilisation, casse à la moindre évolution de leur interface et expose le
+ * compte de l'utilisateur. L'application ne fait donc rien de tel.
+ *
+ * La voie praticable est une PRÉPARATION ASSISTÉE : l'application ordonne la
+ * liste, ouvre la recherche de l'enseigne produit par produit et suit
+ * l'avancement. Le panier reste construit et validé par l'utilisateur, sur le
+ * site de l'enseigne, avec sa propre session.
+ */
+
+export interface StoreHandoff {
+  storeId: string;
+  /** Point d'entrée des courses en ligne. Toujours valable. */
+  homeUrl: string;
+  /**
+   * Gabarit de recherche produit, `{q}` recevant le terme encodé.
+   *
+   * ⚠️ Ces gabarits ne sont PAS vérifiés par l'application : les enseignes
+   * modifient leurs URL sans préavis et rien ici ne peut le détecter. En cas
+   * d'échec, l'application retombe sur `homeUrl` et l'utilisateur peut
+   * corriger le gabarit depuis l'écran de préparation.
+   */
+  searchTemplate?: string;
+}
+
+/**
+ * Gabarits par défaut. Volontairement limités à la page d'accueil des courses
+ * en ligne : un lien de recherche inventé enverrait l'utilisateur sur une page
+ * d'erreur, ce qui est pire que de le déposer à l'accueil avec le nom du
+ * produit déjà dans le presse-papiers. Renseigne `searchTemplate` une fois le
+ * format relevé sur le site de l'enseigne — l'écran de préparation permet de
+ * le saisir et de le tester.
+ */
+export const STORE_HANDOFFS: Record<string, StoreHandoff> = {
+  lidl: { storeId: 'lidl', homeUrl: 'https://www.lidl.fr' },
+  aldi: { storeId: 'aldi', homeUrl: 'https://www.aldi.fr' },
+  leclerc: { storeId: 'leclerc', homeUrl: 'https://www.leclercdrive.fr' },
+  intermarche: { storeId: 'intermarche', homeUrl: 'https://www.intermarche.com' },
+  carrefour: { storeId: 'carrefour', homeUrl: 'https://www.carrefour.fr' },
+  auchan: { storeId: 'auchan', homeUrl: 'https://www.auchan.fr' },
+  superu: { storeId: 'superu', homeUrl: 'https://www.coursesu.com' },
+  monoprix: { storeId: 'monoprix', homeUrl: 'https://courses.monoprix.fr' },
+};
+
+export function getHandoff(storeId: string): StoreHandoff | null {
+  return STORE_HANDOFFS[storeId] ?? null;
+}
+
+/**
+ * Terme de recherche déduit du libellé produit : on retire le
+ * conditionnement, qui varie d'une enseigne à l'autre et fait échouer la
+ * recherche (« Filets de poulet 1 kg » → « Filets de poulet »).
+ */
+export function searchTerm(item: ShoppingListItem): string {
+  const cleaned = item.productLabel
+    .replace(/\b\d+\s*[x×]\s*\d+\s*(g|kg|ml|cl|l)\b/gi, ' ')
+    .replace(/\b\d+[.,]?\d*\s*(g|kg|ml|cl|l)\b/gi, ' ')
+    .replace(/\b[x×]\s*\d+\b/gi, ' ')
+    .replace(/\(.*?\)/g, ' ')
+    .replace(/\d+\s*%/g, ' ')
+    .replace(/[,;]/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  return cleaned.length >= 3 ? cleaned : item.foodName;
+}
+
+/** URL à ouvrir pour un produit : recherche si un gabarit existe, sinon accueil. */
+export function buildSearchUrl(handoff: StoreHandoff, term: string, template?: string): string {
+  const pattern = template ?? handoff.searchTemplate;
+  if (!pattern || !pattern.includes('{q}')) return handoff.homeUrl;
+  try {
+    const url = pattern.replace('{q}', encodeURIComponent(term));
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') return handoff.homeUrl;
+    return parsed.toString();
+  } catch {
+    return handoff.homeUrl;
+  }
+}
+
+export interface HandoffStep {
+  item: ShoppingListItem;
+  term: string;
+  done: boolean;
+}
+
+/** Étapes de préparation, dans l'ordre de la liste (donc par rayon). */
+export function handoffPlan(items: ShoppingListItem[], done: string[]): HandoffStep[] {
+  const doneSet = new Set(done);
+  return items.map((item) => ({ item, term: searchTerm(item), done: doneSet.has(item.id) }));
+}
+
+export interface HandoffProgress {
+  total: number;
+  done: number;
+  /** Montant des lignes déjà mises au panier chez l'enseigne. */
+  doneTotal: number;
+  /** Index de la première étape restante, -1 si tout est fait. */
+  nextIndex: number;
+}
+
+export function handoffProgress(steps: HandoffStep[]): HandoffProgress {
+  const done = steps.filter((s) => s.done);
+  return {
+    total: steps.length,
+    done: done.length,
+    doneTotal: Math.round(done.reduce((s, x) => s + x.item.totalPrice, 0) * 100) / 100,
+    nextIndex: steps.findIndex((s) => !s.done),
+  };
+}

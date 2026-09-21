@@ -3,7 +3,10 @@ import { estimated1RM, loadIncrement, personalRecords, suggestNext, lastPerforma
 import { movingAverage, weeklyTrendPct, latestWeight } from '../weight';
 import { evaluateCheckIn, isCheckInDue } from '../checkin';
 import { buildBadges, sessionCount, weekStreak } from '../gamification';
-import { driveStatus, prepareCart } from '../drive';
+import {
+  buildSearchUrl, driveStatus, getHandoff, handoffPlan, handoffProgress,
+  prepareCart, searchTerm,
+} from '../drive';
 import { buildPlan, resolveTargets, workoutForDay } from '../planner';
 import { computeTargets } from '../nutrition';
 import { getExercise } from '../../data/exercises';
@@ -234,6 +237,67 @@ describe('intégration Drive', () => {
     const plan = buildPlan(demoState());
     const cart = await prepareCart(plan.shoppingList, purchasableItems(plan.shoppingList));
     expect(cart).toBeNull();
+  });
+
+  it('retombe sur la page d\'accueil tant qu\'aucun gabarit n\'est renseigné', () => {
+    const handoff = getHandoff('carrefour')!;
+    expect(handoff.searchTemplate).toBeUndefined();
+    // Un lien de recherche inventé enverrait sur une page d'erreur : mieux vaut
+    // l'accueil, avec le nom du produit dans le presse-papiers.
+    expect(buildSearchUrl(handoff, 'poulet')).toBe(handoff.homeUrl);
+  });
+
+  it('construit une recherche dès qu\'un gabarit valide est fourni', () => {
+    const handoff = getHandoff('carrefour')!;
+    const url = buildSearchUrl(handoff, 'filets de poulet', 'https://www.carrefour.fr/s?q={q}');
+    expect(url).toBe('https://www.carrefour.fr/s?q=filets%20de%20poulet');
+  });
+
+  it('refuse un gabarit non https ou malformé', () => {
+    const handoff = getHandoff('carrefour')!;
+    expect(buildSearchUrl(handoff, 'riz', 'http://exemple.fr/?q={q}')).toBe(handoff.homeUrl);
+    expect(buildSearchUrl(handoff, 'riz', 'pas une url {q}')).toBe(handoff.homeUrl);
+    expect(buildSearchUrl(handoff, 'riz', 'https://exemple.fr/sans-jeton')).toBe(handoff.homeUrl);
+  });
+
+  it('nettoie le conditionnement du terme recherché', () => {
+    const plan = buildPlan(demoState());
+    const items = purchasableItems(plan.shoppingList);
+    for (const item of items) {
+      const term = searchTerm(item);
+      expect(term.length).toBeGreaterThanOrEqual(3);
+      // Ni unité de conditionnement, ni multiplicateur.
+      expect(term).not.toMatch(/\d+\s*(g|kg|ml|cl|l)\b/i);
+      expect(term).not.toMatch(/[x×]\s*\d+/i);
+    }
+    const eggs = items.find((i) => i.foodId === 'oeuf');
+    if (eggs) expect(searchTerm(eggs)).toBe('Œufs frais');
+  });
+
+  it('suit l\'avancement et reprend au premier produit restant', () => {
+    const plan = buildPlan(demoState());
+    const items = purchasableItems(plan.shoppingList).slice(0, 5);
+
+    const fresh = handoffProgress(handoffPlan(items, []));
+    expect(fresh.done).toBe(0);
+    expect(fresh.nextIndex).toBe(0);
+
+    // On saute le premier : la reprise doit pointer sur le deuxième.
+    const partial = handoffProgress(handoffPlan(items, [items[0].id]));
+    expect(partial.done).toBe(1);
+    expect(partial.nextIndex).toBe(1);
+    expect(partial.doneTotal).toBeCloseTo(items[0].totalPrice, 2);
+
+    const all = handoffProgress(handoffPlan(items, items.map((i) => i.id)));
+    expect(all.done).toBe(items.length);
+    expect(all.nextIndex).toBe(-1);
+  });
+
+  it('conserve l\'ordre par rayon de la liste de courses', () => {
+    const plan = buildPlan(demoState());
+    const items = purchasableItems(plan.shoppingList);
+    const steps = handoffPlan(items, []);
+    expect(steps.map((s) => s.item.id)).toEqual(items.map((i) => i.id));
   });
 });
 
