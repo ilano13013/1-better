@@ -1,4 +1,5 @@
 import type { AppState, Profile } from '../types';
+import { startSubscription } from '../engine/entitlements';
 import { DEMO_PANTRY, DEMO_PERFORMANCES, DEMO_PROFILE, DEMO_WEIGHTS } from '../data/demo';
 
 export const STATE_VERSION = 1;
@@ -63,6 +64,7 @@ export function createInitialState(): AppState {
     version: STATE_VERSION,
     onboarded: false,
     plan: 'free',
+    subscription: null,
     profile: { ...EMPTY_PROFILE },
     targetsOverride: null,
     pantry: [],
@@ -91,6 +93,7 @@ export function demoState(): AppState {
     // La démonstration montre le produit entier : sept jours, quatre séances,
     // liste complète. C'est ce que décrit le cahier des charges.
     plan: 'plus',
+    subscription: startSubscription('yearly'),
     profile: { ...DEMO_PROFILE },
     pantry: DEMO_PANTRY.map((p) => ({ ...p })),
     performances: DEMO_PERFORMANCES.map((p) => ({ ...p })),

@@ -9,12 +9,12 @@ import { DIET_LABELS, RESTRICTION_LABELS } from '../engine/filters';
 import { DAY_NAMES } from '../engine/training';
 import { movingAverage, sortedEntries, weeklyTrendPct } from '../engine/weight';
 import { providerLabel } from '../engine/auth';
-import { PLAN_LABELS, withinHistory } from '../engine/entitlements';
+import { PLAN_LABELS, effectivePlan, withinHistory } from '../engine/entitlements';
 import { PlanSheet } from '../components/Plus';
 import { evaluateCheckIn, isCheckInDue } from '../engine/checkin';
 import { buildBadges, sessionCount, weekStreak, progressToGoal } from '../engine/gamification';
 import { personalRecords } from '../engine/progression';
-import { Bar, Card, Chip, Empty, Field, Option, Segmented, Sheet, eur, kg, num } from '../components/ui';
+import { Bar, Card, Chip, Empty, Field, Option, Segmented, Sheet, day, eur, kg, num } from '../components/ui';
 import { GymMark, StoreMark } from '../components/BrandMark';
 import { IconCheck, IconMedal, IconSpark, IconTrend } from '../components/icons';
 
@@ -189,15 +189,16 @@ export default function ProfileScreen() {
           <Card className="card-flat">
             <div className="row-between">
               <div style={{ minWidth: 0 }}>
-                <div className="strong">{PLAN_LABELS[state.plan]}</div>
+                <div className="strong">{PLAN_LABELS[effectivePlan(state)]}</div>
                 <div className="xs dim">
-                  {state.plan === 'plus'
-                    ? 'Toutes les fonctions sont ouvertes.'
+                  {effectivePlan(state) === 'plus' && state.subscription
+                    ? `${state.subscription.period === 'yearly' ? '39,00 € / an' : '4,99 € / mois'}`
+                      + ` — échéance le ${day(state.subscription.renewsAt)}`
                     : '3 séances, 3 jours de repas, liste basique.'}
                 </div>
               </div>
               <button type="button" className="btn btn-sm" onClick={() => setPlans(true)}>
-                {state.plan === 'plus' ? 'Gérer' : 'Comparer'}
+                {effectivePlan(state) === 'plus' ? 'Gérer' : 'Comparer'}
               </button>
             </div>
           </Card>

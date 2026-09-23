@@ -10,7 +10,7 @@ import { recipeMacros, resolveRecipe } from './recipes';
 import { getRecipe } from '../data/recipes';
 import { getExercise } from '../data/exercises';
 import { resolveEquipment } from '../data/gyms';
-import { BASIC_EQUIPMENT, limitsFor, type Limits } from './entitlements';
+import { BASIC_EQUIPMENT, effectivePlan, limitsFor, type Limits } from './entitlements';
 
 /**
  * MOTEUR DE PLANIFICATION — cœur déterministe de l'application.
@@ -113,7 +113,8 @@ export function applySwapsToPlan(plan: MealPlan, swaps: Record<string, string>):
 
 /** Recalcule l'intégralité du plan à partir de l'état. */
 export function buildPlan(state: AppState): PlanResult {
-  const limits = limitsFor(state.plan);
+  // Un abonnement échu retombe en gratuit sans qu'aucun écran n'ait à y penser.
+  const limits = limitsFor(effectivePlan(state));
   const targets = resolveTargets(state);
   // Le matériel affiché suit celui qui a servi à construire le programme.
   const equipment = limits.gymEquipment

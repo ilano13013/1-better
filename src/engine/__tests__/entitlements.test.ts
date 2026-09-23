@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { buildPlan } from '../planner';
 import { eligibleRecipes } from '../mealPlan';
 import { suggestNext } from '../progression';
-import { LIMITS, limitsFor, withinHistory } from '../entitlements';
+import {
+  LIMITS, PRICES, daysLeft, effectivePlan, isSubscriptionActive, limitsFor,
+  monthlyEquivalent, renewalDate, startSubscription, withinHistory, yearlySavings,
+  yearlySavingsPct,
+} from '../entitlements';
 import { demoState } from '../../store/state';
 import type { AppState, Performance } from '../../types';
 
@@ -102,5 +106,62 @@ describe('formules', () => {
 
   it('retombe sur la formule gratuite pour une valeur inconnue', () => {
     expect(limitsFor('inconnue' as never)).toEqual(LIMITS.free);
+  });
+});
+
+describe('abonnement', () => {
+  it('chiffre correctement les deux formules', () => {
+    expect(PRICES.monthly).toBe(499);
+    expect(PRICES.yearly).toBe(3900);
+    // 4,99 × 12 = 59,88 ; l'annuel économise 20,88 €, soit 35 %.
+    expect(yearlySavings()).toBe(2088);
+    expect(yearlySavingsPct()).toBe(35);
+    expect(monthlyEquivalent('yearly')).toBe(325);
+    expect(monthlyEquivalent('monthly')).toBe(499);
+  });
+
+  it('calcule une échéance mensuelle sans déborder sur le mois suivant', () => {
+    // Le piège classique : `setMonth` sur un 31 renvoie le 3 mars.
+    expect(renewalDate('2026-01-31', 'monthly')).toBe('2026-02-28');
+    expect(renewalDate('2024-01-31', 'monthly')).toBe('2024-02-29'); // bissextile
+    expect(renewalDate('2026-03-31', 'monthly')).toBe('2026-04-30');
+    expect(renewalDate('2026-09-23', 'monthly')).toBe('2026-10-23');
+    expect(renewalDate('2026-12-15', 'monthly')).toBe('2027-01-15');
+  });
+
+  it('calcule une échéance annuelle, 29 février compris', () => {
+    expect(renewalDate('2026-09-23', 'yearly')).toBe('2027-09-23');
+    expect(renewalDate('2024-02-29', 'yearly')).toBe('2025-02-28');
+  });
+
+  it('ouvre les fonctions jusqu\'à l\'échéance, pas au-delà', () => {
+    const sub = startSubscription('monthly', new Date(2026, 8, 23));
+    expect(sub.renewsAt).toBe('2026-10-23');
+    expect(isSubscriptionActive(sub, new Date(2026, 9, 23))).toBe(true);  // le jour même
+    expect(isSubscriptionActive(sub, new Date(2026, 9, 24))).toBe(false);
+    expect(isSubscriptionActive(null)).toBe(false);
+  });
+
+  it('retombe en gratuit quand l\'abonnement est échu', () => {
+    // Rien ne renouvelle : une période échue doit refermer les fonctions,
+    // sans qu'aucun écran n'ait à y penser.
+    const sub = startSubscription('monthly', new Date(2026, 8, 23));
+    const state = { plan: 'plus' as const, subscription: sub };
+    expect(effectivePlan(state, new Date(2026, 9, 1))).toBe('plus');
+    expect(effectivePlan(state, new Date(2026, 10, 1))).toBe('free');
+    // Sans abonnement, « plus » ne vaut rien.
+    expect(effectivePlan({ plan: 'plus', subscription: null })).toBe('free');
+  });
+
+  it('referme réellement les moteurs à l\'échéance', () => {
+    const state = { ...demoState(), subscription: startSubscription('monthly', new Date(2020, 0, 1)) };
+    // L'abonnement de 2020 est échu depuis longtemps.
+    expect(buildPlan(state).mealPlan.days).toHaveLength(3);
+  });
+
+  it('ne compte jamais de jours restants négatifs', () => {
+    const sub = startSubscription('monthly', new Date(2026, 8, 23));
+    expect(daysLeft(sub, new Date(2026, 8, 23))).toBe(30);
+    expect(daysLeft(sub, new Date(2027, 0, 1))).toBe(0);
   });
 });

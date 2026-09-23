@@ -116,7 +116,10 @@ await page.waitForTimeout(400);
 await page.getByRole('button', { name: 'Comparer' }).click();
 await page.waitForTimeout(500);
 await shot('e2e-formules');
-await page.getByRole('button', { name: 'Activer 1% Better+' }).click();
+// Deux tarifs proposés ; on prend l'annuel, sélectionné par défaut.
+const tarifs = await page.locator('.price-option .price-amount').allInnerTexts();
+console.log('   tarifs proposés :', tarifs.map((t) => t.replace(/\s+/g, ' ').trim()).join(' · '));
+await page.getByRole('button', { name: /^Activer — / }).click();
 await page.waitForTimeout(900);
 await page.locator('.tabbar button', { hasText: 'Nutrition' }).click();
 await page.waitForTimeout(600);

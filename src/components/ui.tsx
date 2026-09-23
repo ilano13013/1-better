@@ -15,6 +15,12 @@ export function kg(n: number): string {
   return `${n.toFixed(1).replace('.', ',')} kg`;
 }
 
+/** `2027-09-23` → `23/09/2027`. Une date d'échéance se lit, elle ne se décode pas. */
+export function day(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+}
+
 /* ------------------------------------------------------------ primitives */
 
 export function Card({

@@ -461,17 +461,43 @@ Deux garde-fous portés par les tests :
 La fenêtre d'historique **borne la lecture, elle ne supprime rien** : repasser
 en formule complète fait réapparaître les données.
 
+### Tarifs
+
+| | Prix | Par mois | Économie |
+| --- | --- | --- | --- |
+| Mensuel | 4,99 € / mois | 4,99 € | — |
+| Annuel | 39,00 € / an | 3,25 € | 20,88 €, soit 35 % |
+
+Les montants sont stockés **en centimes**, jamais en flottants : `4.99 * 12` ne
+vaut pas exactement `59.88` en virgule flottante, et une remise calculée dessus
+afficherait un centime de travers.
+
+Souscrire enregistre une période et son échéance. Deux choses méritaient d'être
+traitées pour de bon plutôt qu'approximées :
+
+- **L'échéance d'un mois.** Le 31 janvier plus un mois, avec `setMonth`, donne
+  le 3 mars. `renewalDate` ramène au dernier jour du mois visé — 28 ou 29
+  février — comme le fait toute facturation mensuelle. Idem pour un 29 février
+  reconduit d'un an.
+- **L'échéance tout court.** Rien ne renouvelle quoi que ce soit ici, donc une
+  période échue doit refermer les fonctions. `effectivePlan` le fait : `plan`
+  enregistre l'intention, l'abonnement décide, et les moteurs repassent à trois
+  jours sans qu'aucun écran n'ait à y penser.
+
 ### Ce qui manque pour vendre
 
-**Aucun paiement n'est branché**, et c'est structurel : sans serveur, il n'y a
-ni encaissement ni vérification d'abonnement. Le bouton d'activation bascule la
+**Aucun paiement n'est encaissé**, et c'est structurel : sans serveur, il n'y a
+ni encaissement ni vérification d'abonnement. Le bouton d'activation ouvre la
 formule sur cet appareil, et n'importe qui peut en faire autant depuis la
-console. C'est de quoi développer et essayer, pas de quoi facturer.
+console. Les tarifs affichés sont l'offre prévue, pas une transaction — c'est
+écrit dans l'écran, pas seulement ici. **Aucun champ de carte bancaire n'est
+demandé nulle part**, puisqu'il n'y aurait rien pour les traiter.
 
 Vendre demanderait, dans l'ordre : un backend, un processeur de paiement
 (Stripe, ou les achats intégrés Apple et Google si l'application est
-distribuée sur leurs magasins), et une vérification du droit d'accès côté
-serveur — puisqu'un client ne peut pas s'auto-certifier abonné.
+distribuée sur leurs magasins), une vérification du droit d'accès côté serveur
+— puisqu'un client ne peut pas s'auto-certifier abonné — et des conditions
+générales de vente, qui restent à écrire.
 
 ### Deux lignes annoncées, pas encore construites
 
@@ -557,7 +583,7 @@ officiel d'enseigne : aucun des trois ne peut être simulé honnêtement.
 npm test
 ```
 
-122 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+129 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
 substitutions (dont la protection de la densité protéique), couverture de tous
@@ -569,7 +595,9 @@ autre application, chiffrement des comptes e-mail (aller-retour, refus d'une
 mauvaise clé, sel distinct par compte, absence de trace du mot de passe), et la
 cascade de recalcul du planificateur, et les limites de formule vérifiées sur
 la sortie des moteurs — trois jours planifiés, séances plafonnées sans devenir
-un plancher, matériel de base, créneaux tous pourvus, calories intactes.
+un plancher, matériel de base, créneaux tous pourvus, calories intactes — et
+l'arithmétique de l'abonnement : remise annuelle au centime, échéance d'un
+31 janvier, d'un 29 février, et fermeture effective des moteurs à échéance.
 
 Le test de fumée `npm run smoke` va plus loin : il compte les jours réellement
 planifiés en gratuit (3) puis après activation (7), crée un compte e-mail, vérifie

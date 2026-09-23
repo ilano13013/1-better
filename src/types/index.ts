@@ -414,14 +414,16 @@ export interface CheckInAdjustment {
 /* État applicatif                                                      */
 /* ------------------------------------------------------------------ */
 
-export type { Plan } from '../engine/entitlements';
-import type { Plan } from '../engine/entitlements';
+export type { Plan, Subscription } from '../engine/entitlements';
+import type { Plan, Subscription } from '../engine/entitlements';
 
 export interface AppState {
   version: number;
   onboarded: boolean;
   /** Formule active. Voir `src/engine/entitlements.ts`. */
   plan: Plan;
+  /** Abonnement en cours, `null` en formule gratuite. */
+  subscription: Subscription | null;
   profile: Profile;
   targetsOverride: Macros | null;
   pantry: PantryItem[];

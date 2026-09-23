@@ -12,7 +12,7 @@ import {
 } from './persistence';
 import { loadSession, saveSession } from './session';
 import type { Session } from '../engine/auth';
-import type { Plan } from '../engine/entitlements';
+import { startSubscription, type BillingPeriod } from '../engine/entitlements';
 
 /**
  * État global et cascade de recalcul.
@@ -47,7 +47,8 @@ type Action =
   | { type: 'logWeight'; entry: WeightEntry }
   | { type: 'logCheckIn'; checkIn: WeeklyCheckIn }
   | { type: 'setTheme'; theme: 'light' | 'dark' }
-  | { type: 'setPlan'; plan: Plan }
+  | { type: 'subscribe'; period: BillingPeriod }
+  | { type: 'unsubscribe' }
   | { type: 'regeneratePlan' };
 
 /** Champs du profil dont la modification invalide les choix manuels. */
@@ -61,10 +62,17 @@ function reducer(state: AppState, action: Action): AppState {
     case 'reset':
       return createInitialState();
 
-    case 'setPlan':
-      // Changer de formule change ce que les moteurs calculent : tout repasse
-      // par `buildPlan`, comme n'importe quelle autre modification structurelle.
-      return { ...clearPlanOverrides(state), plan: action.plan };
+    // Changer de formule change ce que les moteurs calculent : tout repasse par
+    // `buildPlan`, comme n'importe quelle autre modification structurelle.
+    case 'subscribe':
+      return {
+        ...clearPlanOverrides(state),
+        plan: 'plus',
+        subscription: startSubscription(action.period),
+      };
+
+    case 'unsubscribe':
+      return { ...clearPlanOverrides(state), plan: 'free', subscription: null };
 
     case 'loadDemo':
       return demoState();

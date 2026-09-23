@@ -800,6 +800,26 @@ input[type='range']::-moz-range-thumb {
   font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
 }
 
+/* Tarifs */
+.price-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.price-option {
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 14px; text-align: left; cursor: pointer;
+  background: var(--paper); color: var(--ink);
+  border: 1px solid var(--line-strong); border-radius: var(--radius);
+  font: inherit; -webkit-tap-highlight-color: transparent;
+  transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
+}
+.price-option[aria-pressed="true"] {
+  border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink);
+}
+.price-option:active { transform: scale(.99); }
+.price-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.price-amount {
+  font-size: 22px; font-weight: 680; letter-spacing: -.03em; line-height: 1.1;
+}
+.price-unit { font-size: var(--fs-xs); font-weight: 560; color: var(--ink-3); margin-left: 3px; }
+
 /* Déroulé d'un mouvement : étapes numérotées, erreurs à éviter. */
 .move-list { list-style: none; margin: 0; padding: 0; }
 .move-list > li {

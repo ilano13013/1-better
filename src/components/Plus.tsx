@@ -1,15 +1,22 @@
-import type { ReactNode } from 'react';
-import { PLAN_TABLE, PLAN_LABELS, type Plan } from '../engine/entitlements';
+import { useState, type ReactNode } from 'react';
+import {
+  PERIOD_LABELS, PLAN_LABELS, PLAN_TABLE, PRICES, daysLeft, effectivePlan,
+  isSubscriptionActive, monthlyEquivalent, renewalDate, yearlySavings, yearlySavingsPct,
+  type BillingPeriod,
+} from '../engine/entitlements';
 import { useApp } from '../store/AppContext';
-import { Sheet } from './ui';
+import { Sheet, day, eur } from './ui';
 
 /**
- * Formules — présentation et verrous.
+ * Formules — présentation, tarifs et verrous.
  *
  * Un verrou n'est jamais un mur muet : il dit ce qu'il retient et ouvre le
  * comparatif. Et comme les limites sont appliquées dans les moteurs, ce que
  * l'écran cache n'a pas été calculé.
  */
+
+/** Les centimes des tarifs deviennent des euros pour l'affichage. */
+const price = (cents: number) => eur(cents / 100);
 
 export function PlusBadge({ children = '1% Better+' }: { children?: ReactNode }) {
   return <span className="plus-badge">{children}</span>;
@@ -35,14 +42,51 @@ function Mark({ value }: { value: string }) {
   return <span className="plan-value">{value}</span>;
 }
 
-/** Comparatif des deux formules, et changement de formule. */
+function PriceOption({
+  period, selected, onSelect,
+}: { period: BillingPeriod; selected: boolean; onSelect: () => void }) {
+  const yearly = period === 'yearly';
+  return (
+    <button
+      type="button"
+      className="price-option"
+      aria-pressed={selected}
+      onClick={onSelect}
+    >
+      <span className="price-head">
+        <span className="strong">{PERIOD_LABELS[period]}</span>
+        {yearly && <PlusBadge>−{yearlySavingsPct()} %</PlusBadge>}
+      </span>
+      <span className="price-amount num">
+        {price(PRICES[period])}
+        <span className="price-unit">{yearly ? '/ an' : '/ mois'}</span>
+      </span>
+      <span className="xs dim">
+        {yearly
+          ? `${price(monthlyEquivalent('yearly'))} par mois — ${price(yearlySavings())} économisés`
+          : 'Sans engagement'}
+      </span>
+    </button>
+  );
+}
+
+/** Comparatif des deux formules, tarifs, et souscription. */
 export function PlanSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { state, dispatch, notify } = useApp();
-  const current = state.plan;
+  const [period, setPeriod] = useState<BillingPeriod>('yearly');
+  const active = effectivePlan(state);
+  const sub = state.subscription;
 
-  const choose = (plan: Plan) => {
-    dispatch({ type: 'setPlan', plan });
-    notify(plan === 'plus' ? '1% Better+ activé' : 'Retour à la formule gratuite');
+  const subscribe = () => {
+    dispatch({ type: 'subscribe', period });
+    notify(`1% Better+ activé — ${PERIOD_LABELS[period].toLowerCase()}`);
+    onClose();
+  };
+
+  const cancel = () => {
+    if (!window.confirm('Revenir à la formule gratuite ? Le plan repasse à 3 jours et 3 séances.')) return;
+    dispatch({ type: 'unsubscribe' });
+    notify('Retour à la formule gratuite');
     onClose();
   };
 
@@ -78,26 +122,64 @@ export function PlanSheet({ open, onClose }: { open: boolean; onClose: () => voi
 
         <div className="divider" />
 
-        <div className="card card-notice">
-          <div className="card-title">Aucun paiement n'est branché</div>
-          <p className="sm muted">
-            Il n'y a pas de serveur, donc ni encaissement ni vérification
-            d'abonnement : le bouton ci-dessous bascule simplement la formule sur
-            cet appareil. C'est de quoi essayer et développer, pas de quoi
-            vendre.
-          </p>
-        </div>
-
-        {current === 'free' ? (
-          <button type="button" className="btn btn-primary btn-block" onClick={() => choose('plus')}>
-            Activer 1% Better+
-          </button>
+        {active === 'plus' && sub ? (
+          <>
+            <div className="card card-ink">
+              <div className="card-title" style={{ margin: 0 }}>Abonnement en cours</div>
+              <div className="metric num" style={{ marginTop: 4 }}>
+                {price(PRICES[sub.period])}
+                <span className="sm"> {sub.period === 'yearly' ? '/ an' : '/ mois'}</span>
+              </div>
+              <div className="sm" style={{ marginTop: 8 }}>
+                Échéance le {day(sub.renewsAt)} — {daysLeft(sub)} jour
+                {daysLeft(sub) > 1 ? 's' : ''} restant{daysLeft(sub) > 1 ? 's' : ''}.
+              </div>
+            </div>
+            <button type="button" className="btn btn-ghost btn-block" onClick={cancel}>
+              Revenir à la formule gratuite
+            </button>
+          </>
         ) : (
-          <button type="button" className="btn btn-ghost btn-block" onClick={() => choose('free')}>
-            Revenir à la formule gratuite
-          </button>
+          <>
+            {state.plan === 'plus' && !isSubscriptionActive(sub) && (
+              <div className="card card-alert">
+                <p className="sm notice">
+                  Ton abonnement est arrivé à échéance : la formule gratuite
+                  s'applique à nouveau.
+                </p>
+              </div>
+            )}
+
+            <div className="card-title" style={{ margin: 0 }}>1% Better+</div>
+            <div className="price-grid">
+              <PriceOption period="monthly" selected={period === 'monthly'}
+                onSelect={() => setPeriod('monthly')} />
+              <PriceOption period="yearly" selected={period === 'yearly'}
+                onSelect={() => setPeriod('yearly')} />
+            </div>
+
+            <div className="card card-notice">
+              <div className="card-title">Aucun paiement n'est encaissé</div>
+              <p className="sm muted">
+                Il n'y a pas de serveur, donc ni encaissement ni vérification
+                d'abonnement : le bouton active la formule sur cet appareil
+                jusqu'au {day(renewalDate(new Date().toISOString().slice(0, 10), period))},
+                sans rien débiter. Les tarifs ci-dessus sont l'offre prévue, pas
+                une transaction.
+              </p>
+            </div>
+
+            <button type="button" className="btn btn-primary btn-block" onClick={subscribe}>
+              Activer — {price(PRICES[period])}{period === 'yearly' ? ' / an' : ' / mois'}
+            </button>
+            <p className="xs dim center">
+              Prix TTC annoncés. Les conditions de vente restent à écrire avec le
+              prestataire de paiement.
+            </p>
+          </>
         )}
-        <p className="xs dim center">Formule active : {PLAN_LABELS[current]}</p>
+
+        <p className="xs dim center">Formule active : {PLAN_LABELS[active]}</p>
       </div>
     </Sheet>
   );
