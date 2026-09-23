@@ -1,0 +1,67 @@
+# Publie l'application sur GitHub Pages à chaque poussée.
+#
+# Le site déployé est le fichier unique autonome (`npm run bundle`) : CSS et
+# JavaScript inclus, aucune requête réseau. Servi tel quel en index.html, il
+# n'a aucun chemin d'asset à résoudre, ce qui le rend insensible au
+# sous-chemin sur lequel Pages l'héberge.
+name: Publier sur GitHub Pages
+
+on:
+  push:
+    branches: [claude/fitness-nutrition-app-5e6h93]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un seul déploiement à la fois ; les poussées suivantes remplacent la précédente.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  construire:
+    runs-on: ubuntu-latest
+    env:
+      # Playwright n'est utilisé que par le test de fumée, en local.
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Tests des moteurs métier
+        run: npm test
+
+      - name: Construire le fichier unique
+        run: |
+          npm run build
+          npm run bundle
+
+      - name: Préparer le site
+        run: |
+          mkdir -p site
+          cp dist/1-better.html site/index.html
+          # Empêche Jekyll d'ignorer d'éventuels fichiers commençant par un underscore.
+          touch site/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deployer:
+    needs: construire
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - id: deploiement
+        uses: actions/deploy-pages@v4
