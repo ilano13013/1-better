@@ -62,6 +62,7 @@ export function createInitialState(): AppState {
   return {
     version: STATE_VERSION,
     onboarded: false,
+    plan: 'free',
     profile: { ...EMPTY_PROFILE },
     targetsOverride: null,
     pantry: [],
@@ -87,6 +88,9 @@ export function demoState(): AppState {
   return {
     ...createInitialState(),
     onboarded: true,
+    // La démonstration montre le produit entier : sept jours, quatre séances,
+    // liste complète. C'est ce que décrit le cahier des charges.
+    plan: 'plus',
     profile: { ...DEMO_PROFILE },
     pantry: DEMO_PANTRY.map((p) => ({ ...p })),
     performances: DEMO_PERFORMANCES.map((p) => ({ ...p })),

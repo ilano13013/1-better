@@ -4,6 +4,7 @@ import type {
 } from '../types';
 import { EXERCISES, getExercise } from '../data/exercises';
 import { resolveEquipment } from '../data/gyms';
+import { BASIC_EQUIPMENT, LIMITS, capped, type Limits } from './entitlements';
 
 /**
  * Moteur de programmation sportive, déterministe.
@@ -228,10 +229,17 @@ function toWorkoutExercise(ex: Exercise, level: TrainingLevel, goal: GoalId): Wo
 }
 
 /** Construit le programme complet de la semaine. */
-export function generateWorkoutPlan(profile: Profile): WorkoutPlan {
-  const equipment = resolveEquipment(profile.gymId, profile.customEquipment);
+export function generateWorkoutPlan(
+  profile: Profile, limits: Limits = LIMITS.plus,
+): WorkoutPlan {
+  // Sans l'option « machines de ta salle », le programme se limite au matériel
+  // qu'on trouve partout : il reste exécutable, il ignore juste l'inventaire
+  // particulier de l'enseigne.
+  const equipment = limits.gymEquipment
+    ? resolveEquipment(profile.gymId, profile.customEquipment)
+    : [...BASIC_EQUIPMENT];
   const pool = availableExercises(equipment, profile.level);
-  const split = pickSplit(profile.sessionsPerWeek, profile.level);
+  const split = pickSplit(capped(profile.sessionsPerWeek, limits.maxSessionsPerWeek), profile.level);
   const days = assignDays(profile.availableDays, split.sessions.length);
   const budgetSec = profile.sessionDurationMin * 60;
 

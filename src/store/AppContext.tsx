@@ -12,6 +12,7 @@ import {
 } from './persistence';
 import { loadSession, saveSession } from './session';
 import type { Session } from '../engine/auth';
+import type { Plan } from '../engine/entitlements';
 
 /**
  * État global et cascade de recalcul.
@@ -46,6 +47,7 @@ type Action =
   | { type: 'logWeight'; entry: WeightEntry }
   | { type: 'logCheckIn'; checkIn: WeeklyCheckIn }
   | { type: 'setTheme'; theme: 'light' | 'dark' }
+  | { type: 'setPlan'; plan: Plan }
   | { type: 'regeneratePlan' };
 
 /** Champs du profil dont la modification invalide les choix manuels. */
@@ -58,6 +60,11 @@ function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'reset':
       return createInitialState();
+
+    case 'setPlan':
+      // Changer de formule change ce que les moteurs calculent : tout repasse
+      // par `buildPlan`, comme n'importe quelle autre modification structurelle.
+      return { ...clearPlanOverrides(state), plan: action.plan };
 
     case 'loadDemo':
       return demoState();

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { DayIndex, ShoppingListItem, Substitution } from '../types';
 import { useApp } from '../store/AppContext';
+import { PlanSheet, PlusBadge } from '../components/Plus';
 import { todayIndex } from '../store/state';
 import { getStore } from '../data/stores';
 import { getRecipe } from '../data/recipes';
@@ -36,6 +37,8 @@ export default function Shopping({ go }: { go: (s: Screen) => void }) {
   const [optimizeOpen, setOptimizeOpen] = useState(false);
   const [remainingOpen, setRemainingOpen] = useState(false);
   const [driveOpen, setDriveOpen] = useState(false);
+  const [plans, setPlans] = useState(false);
+  const limits = plan.limits;
   const [priceFor, setPriceFor] = useState<ShoppingListItem | null>(null);
 
   const items = purchasableItems(list);
@@ -145,11 +148,14 @@ export default function Shopping({ go }: { go: (s: Screen) => void }) {
 
           <div className="stack-sm" style={{ marginTop: 14 }}>
             <button type="button" className={`btn btn-block ${over > 0 ? 'btn-primary' : ''}`}
-              onClick={() => setOptimizeOpen(true)}>
+              onClick={() => (limits.foodAlternatives ? setOptimizeOpen(true) : setPlans(true))}>
               <IconSpark size={15} /> Optimiser mon panier
+              {!limits.foodAlternatives && <PlusBadge>+</PlusBadge>}
             </button>
-            <button type="button" className="btn btn-ghost btn-block" onClick={() => setRemainingOpen(true)}>
+            <button type="button" className="btn btn-ghost btn-block"
+              onClick={() => (limits.detailedShoppingList ? setRemainingOpen(true) : setPlans(true))}>
               <IconWallet size={15} /> Il me reste … €
+              {!limits.detailedShoppingList && <PlusBadge>+</PlusBadge>}
             </button>
           </div>
         </Card>
@@ -237,19 +243,29 @@ export default function Shopping({ go }: { go: (s: Screen) => void }) {
             <IconShare size={15} /> Partager
           </button>
           <button type="button" className="btn btn-ghost"
-            onClick={() => download(shoppingListToCsv(list), 'liste-de-courses.csv', 'text/csv;charset=utf-8')}>
+            onClick={() => (limits.exportShoppingList
+              ? download(shoppingListToCsv(list), 'liste-de-courses.csv', 'text/csv;charset=utf-8')
+              : setPlans(true))}>
             <IconDownload size={15} /> Exporter CSV
+            {!limits.exportShoppingList && <PlusBadge>+</PlusBadge>}
           </button>
           <button type="button" className="btn btn-ghost"
-            onClick={() => download(shoppingListToText(list, store.name), 'liste-de-courses.txt', 'text/plain;charset=utf-8')}>
+            onClick={() => (limits.exportShoppingList
+              ? download(shoppingListToText(list, store.name), 'liste-de-courses.txt', 'text/plain;charset=utf-8')
+              : setPlans(true))}>
             <IconDownload size={15} /> Notes (.txt)
+            {!limits.exportShoppingList && <PlusBadge>+</PlusBadge>}
           </button>
         </div>
 
-        <button type="button" className="btn btn-block" onClick={() => setDriveOpen(true)}>
+        <button type="button" className="btn btn-block"
+          onClick={() => (limits.drivePrep ? setDriveOpen(true) : setPlans(true))}>
           Préparer mon Drive
+          {!limits.drivePrep && <PlusBadge>+</PlusBadge>}
         </button>
       </div>
+
+      <PlanSheet open={plans} onClose={() => setPlans(false)} />
 
       <Sheet open={optimizeOpen} onClose={() => setOptimizeOpen(false)}
         title={<div className="strong">Optimiser mon panier</div>}>

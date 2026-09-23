@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import type { DayIndex, Meal, PantryItem } from '../types';
 import { useApp } from '../store/AppContext';
+import { PlanSheet, PlusLock } from '../components/Plus';
 import { todayIndex } from '../store/state';
 import { FOODS, getFood } from '../data/foods';
 import { getRecipe } from '../data/recipes';
 import { getStore } from '../data/stores';
 import { SLOT_LABELS } from '../engine/nutrition';
 import { DAY_NAMES, DAY_SHORT } from '../engine/training';
-import { rankRecipes } from '../engine/mealPlan';
+import { dayPlanFor, rankRecipes } from '../engine/mealPlan';
 import { basketFromPlan } from '../engine/basket';
 import { ingredientQty, recipeCost, recipeMacros, resolveRecipe } from '../engine/recipes';
 import { filterFromProfile, needsCertification } from '../engine/filters';
@@ -27,8 +28,9 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
   const [openMeal, setOpenMeal] = useState<number | null>(null);
   const [replacing, setReplacing] = useState<number | null>(null);
   const [pantryOpen, setPantryOpen] = useState(false);
+  const [plans, setPlans] = useState(false);
 
-  const dayPlan = plan.mealPlan.days[day];
+  const dayPlan = dayPlanFor(plan.mealPlan, day);
   const store = getStore(state.profile.storeId);
   const targets = plan.targets;
 
@@ -40,7 +42,7 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
 
   const dayCost = useMemo(() => {
     let total = 0;
-    for (const meal of dayPlan.meals) {
+    for (const meal of dayPlan?.meals ?? []) {
       total += recipeCost(resolveRecipe(getRecipe(meal.recipeId), state.foodSwaps), store.id, meal.scale);
     }
     return Math.round(total * 100) / 100;
@@ -72,12 +74,21 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
           >
             <div className="xs dim">{label}</div>
             <div className="sm strong num" style={{ marginTop: 3 }}>
-              {Math.round(plan.mealPlan.days[i].totals.kcal / 100) / 10}k
+              {dayPlanFor(plan.mealPlan, i as DayIndex)
+                ? `${Math.round(dayPlanFor(plan.mealPlan, i as DayIndex)!.totals.kcal / 100) / 10}k`
+                : '—'}
             </div>
           </button>
         ))}
       </div>
 
+      {!dayPlan ? (
+        <PlusLock
+          title={`${DAY_NAMES[day]} n'est pas planifié`}
+          hint="La formule gratuite planifie les trois premiers jours de la semaine."
+          onOpen={() => setPlans(true)}
+        />
+      ) : (
       <div className="stack">
         {/* Totaux du jour */}
         <Card className="card-ink">
@@ -150,21 +161,22 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
           J'ai déjà ça chez moi ({state.pantry.length})
         </button>
       </div>
+      )}
 
       {/* Fiche recette */}
       <Sheet
-        open={openMeal !== null}
+        open={openMeal !== null && dayPlan !== null}
         onClose={() => setOpenMeal(null)}
-        title={openMeal !== null ? (
+        title={openMeal !== null && dayPlan ? (
           <>
-            <div className="card-title" style={{ margin: 0 }}>{SLOT_LABELS[dayPlan.meals[openMeal].slot]}</div>
-            <div className="strong">{getRecipe(dayPlan.meals[openMeal].recipeId).name}</div>
+            <div className="card-title" style={{ margin: 0 }}>{SLOT_LABELS[dayPlan!.meals[openMeal].slot]}</div>
+            <div className="strong">{getRecipe(dayPlan!.meals[openMeal].recipeId).name}</div>
           </>
         ) : ''}
       >
-        {openMeal !== null && (
+        {openMeal !== null && dayPlan && (
           <RecipeSheet
-            meal={dayPlan.meals[openMeal]}
+            meal={dayPlan!.meals[openMeal]}
             onReplace={() => { setReplacing(openMeal); setOpenMeal(null); }}
           />
         )}
@@ -172,14 +184,14 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
 
       {/* Remplacement de repas */}
       <Sheet
-        open={replacing !== null}
+        open={replacing !== null && dayPlan !== null}
         onClose={() => setReplacing(null)}
         title={<><div className="card-title" style={{ margin: 0 }}>Remplacer ce repas</div>
           <div className="strong">
-            {replacing !== null ? SLOT_LABELS[dayPlan.meals[replacing].slot] : ''}
+            {replacing !== null && dayPlan ? SLOT_LABELS[dayPlan.meals[replacing].slot] : ''}
           </div></>}
       >
-        {replacing !== null && (
+        {replacing !== null && dayPlan && (
           <MealAlternatives
             day={day}
             index={replacing}
@@ -191,6 +203,8 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
           />
         )}
       </Sheet>
+
+      <PlanSheet open={plans} onClose={() => setPlans(false)} />
 
       {/* Garde-manger */}
       <Sheet
@@ -334,7 +348,7 @@ function MealAlternatives({
   day, index, onPick,
 }: { day: DayIndex; index: number; onPick: (id: string) => void }) {
   const { state, plan } = useApp();
-  const dayPlan = plan.mealPlan.days[day];
+  const dayPlan = dayPlanFor(plan.mealPlan, day)!;
   const meal = dayPlan.meals[index];
 
   const options = useMemo(() => {

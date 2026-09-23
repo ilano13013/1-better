@@ -4,6 +4,8 @@ import { useApp } from '../store/AppContext';
 import { todayIndex } from '../store/state';
 import { getRecipe } from '../data/recipes';
 import { getExercise } from '../data/exercises';
+import { dayPlanFor } from '../engine/mealPlan';
+import { PlanSheet, PlusLock } from '../components/Plus';
 import { SLOT_LABELS } from '../engine/nutrition';
 import { DAY_NAMES } from '../engine/training';
 import { workoutForDay } from '../engine/planner';
@@ -94,11 +96,20 @@ function DayDetail({
   day, go, onClose,
 }: { day: DayIndex; go: (s: Screen) => void; onClose: () => void }) {
   const { plan } = useApp();
-  const dayPlan = plan.mealPlan.days[day];
+  const [plans, setPlans] = useState(false);
+  const dayPlan = dayPlanFor(plan.mealPlan, day);
   const workout = workoutForDay(plan.workoutPlan, day);
 
   return (
     <div className="stack">
+      {!dayPlan ? (
+        <PlusLock
+          title="Journée non planifiée"
+          hint="La formule gratuite planifie les repas des trois premiers jours."
+          onOpen={() => setPlans(true)}
+        />
+      ) : (
+      <>
       <Card className="card-ink">
         <div className="row-between" style={{ alignItems: 'baseline' }}>
           <div>
@@ -129,6 +140,10 @@ function DayDetail({
           ))}
         </Card>
       </div>
+      </>
+      )}
+
+      <PlanSheet open={plans} onClose={() => setPlans(false)} />
 
       <div>
         <div className="card-title">Entraînement</div>

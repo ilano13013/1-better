@@ -9,6 +9,8 @@ import { DIET_LABELS, RESTRICTION_LABELS } from '../engine/filters';
 import { DAY_NAMES } from '../engine/training';
 import { movingAverage, sortedEntries, weeklyTrendPct } from '../engine/weight';
 import { providerLabel } from '../engine/auth';
+import { PLAN_LABELS, withinHistory } from '../engine/entitlements';
+import { PlanSheet } from '../components/Plus';
 import { evaluateCheckIn, isCheckInDue } from '../engine/checkin';
 import { buildBadges, sessionCount, weekStreak, progressToGoal } from '../engine/gamification';
 import { personalRecords } from '../engine/progression';
@@ -26,13 +28,19 @@ export default function ProfileScreen() {
     null | 'weight' | 'checkin' | 'macros' | 'goal' | 'gym' | 'store' | 'budget'
     | 'diet' | 'schedule'
   >(null);
+  const [plans, setPlans] = useState(false);
 
-  const entries = sortedEntries(state.weightEntries);
+  // La fenêtre d'historique de la formule ne supprime rien : elle borne la
+  // lecture, et tout réapparaît si la formule change.
+  const entries = withinHistory(sortedEntries(state.weightEntries), plan.limits);
   const current = entries.length ? entries[entries.length - 1].weightKg : state.profile.weightKg;
   const trend = weeklyTrendPct(state.weightEntries);
   const badges = useMemo(() => buildBadges(state), [state]);
   const unlocked = badges.filter((b) => b.unlocked).length;
-  const records = useMemo(() => personalRecords(state.performances), [state.performances]);
+  const records = useMemo(
+    () => personalRecords(withinHistory(state.performances, plan.limits)),
+    [state.performances, plan.limits],
+  );
   const gym = GYMS.find((g) => g.id === state.profile.gymId);
   const store = STORES.find((s) => s.id === state.profile.storeId);
 
@@ -174,6 +182,28 @@ export default function ProfileScreen() {
             ))}
           </div>
         </div>
+
+        {/* Formule */}
+        <div>
+          <div className="card-title">Formule</div>
+          <Card className="card-flat">
+            <div className="row-between">
+              <div style={{ minWidth: 0 }}>
+                <div className="strong">{PLAN_LABELS[state.plan]}</div>
+                <div className="xs dim">
+                  {state.plan === 'plus'
+                    ? 'Toutes les fonctions sont ouvertes.'
+                    : '3 séances, 3 jours de repas, liste basique.'}
+                </div>
+              </div>
+              <button type="button" className="btn btn-sm" onClick={() => setPlans(true)}>
+                {state.plan === 'plus' ? 'Gérer' : 'Comparer'}
+              </button>
+            </div>
+          </Card>
+        </div>
+
+        <PlanSheet open={plans} onClose={() => setPlans(false)} />
 
         {/* Compte */}
         <div>
@@ -357,7 +387,7 @@ function WeightChart({ entries }: { entries: { date: string; weightKg: number }[
 }
 
 function WeightForm({ onDone }: { onDone: () => void }) {
-  const { state, dispatch, notify } = useApp();
+  const { state, plan, dispatch, notify } = useApp();
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [weight, setWeight] = useState(
     state.weightEntries.length
@@ -387,7 +417,8 @@ function WeightForm({ onDone }: { onDone: () => void }) {
         <>
           <div className="card-title" style={{ marginTop: 10 }}>Historique</div>
           <Card className="card-flat">
-            {sortedEntries(state.weightEntries).slice().reverse().slice(0, 12).map((e) => (
+            {withinHistory(sortedEntries(state.weightEntries), plan.limits)
+              .slice().reverse().slice(0, 12).map((e) => (
               <div key={e.date} className="list-row">
                 <span className="grow sm dim">{e.date}</span>
                 <span className="sm strong num">{kg(e.weightKg)}</span>

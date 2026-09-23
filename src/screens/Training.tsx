@@ -7,6 +7,8 @@ import { EQUIPMENT_LABELS, GYM_BY_ID } from '../data/gyms';
 import { DAY_NAMES, DAY_SHORT, findReplacements } from '../engine/training';
 import { historyFor, lastPerformance, personalRecords, suggestNext, unitLabel } from '../engine/progression';
 import { Card, Checkbox, Disclaimer, Empty, Sheet, num } from '../components/ui';
+import { PlanSheet, PlusLock } from '../components/Plus';
+import type { Limits } from '../engine/entitlements';
 import { GymMark } from '../components/BrandMark';
 
 const LEVEL_LABELS = { debutant: 'Débutant', intermediaire: 'Intermédiaire', avance: 'Avancé' } as const;
@@ -31,6 +33,7 @@ export default function Training() {
   const [replacing, setReplacing] = useState<{ workout: Workout; index: number } | null>(null);
   const [logging, setLogging] = useState<{ workout: Workout; we: WorkoutExercise } | null>(null);
   const [detail, setDetail] = useState<string | null>(null);
+  const [plans, setPlans] = useState(false);
 
   const gym = GYM_BY_ID[state.profile.gymId];
   const records = useMemo(() => personalRecords(state.performances), [state.performances]);
@@ -117,6 +120,7 @@ export default function Training() {
               we={we}
               index={index}
               performances={state.performances}
+              limits={plan.limits}
               onReplace={() => setReplacing({ workout, index })}
               onLog={() => setLogging({ workout, we })}
               onDetail={() => setDetail(we.exerciseId)}
@@ -124,6 +128,19 @@ export default function Training() {
           ))}
         </div>
       )}
+
+      {(!plan.limits.gymEquipment || plan.limits.maxSessionsPerWeek !== null) && (
+        <div style={{ marginTop: 20 }}>
+          <PlusLock
+            title="Programme complet"
+            hint={`Séances illimitées, exercices choisis d'après le matériel réel de ${gym.name}, `
+              + 'et charges ajustées à partir de tes séances enregistrées.'}
+            onOpen={() => setPlans(true)}
+          />
+        </div>
+      )}
+
+      <PlanSheet open={plans} onClose={() => setPlans(false)} />
 
       {records.length > 0 && (
         <>
@@ -177,6 +194,7 @@ export default function Training() {
       >
         {logging && (
           <LogForm
+            limits={plan.limits}
             we={logging.we}
             performances={state.performances}
             onSave={(sets, cleanExecution) => {
@@ -208,14 +226,14 @@ export default function Training() {
 }
 
 function ExerciseCard({
-  we, index, performances, onReplace, onLog, onDetail,
+  we, index, performances, limits, onReplace, onLog, onDetail,
 }: {
-  we: WorkoutExercise; index: number; performances: Performance[];
+  we: WorkoutExercise; index: number; performances: Performance[]; limits: Limits;
   onReplace: () => void; onLog: () => void; onDetail: () => void;
 }) {
   const ex = getExercise(we.exerciseId);
   const last = lastPerformance(we.exerciseId, performances);
-  const suggestion = suggestNext(we, performances);
+  const suggestion = suggestNext(we, performances, limits);
 
   return (
     <Card>
@@ -328,13 +346,14 @@ function ReplacementList({
 }
 
 function LogForm({
-  we, performances, onSave,
+  we, performances, limits, onSave,
 }: {
   we: WorkoutExercise;
   performances: Performance[];
+  limits: Limits;
   onSave: (sets: PerformanceSet[], cleanExecution: boolean) => void;
 }) {
-  const suggestion = suggestNext(we, performances);
+  const suggestion = suggestNext(we, performances, limits);
   const [clean, setClean] = useState(true);
   const [sets, setSets] = useState<PerformanceSet[]>(() =>
     Array.from({ length: we.sets }, () => ({

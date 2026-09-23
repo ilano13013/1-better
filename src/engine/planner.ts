@@ -10,6 +10,7 @@ import { recipeMacros, resolveRecipe } from './recipes';
 import { getRecipe } from '../data/recipes';
 import { getExercise } from '../data/exercises';
 import { resolveEquipment } from '../data/gyms';
+import { BASIC_EQUIPMENT, limitsFor, type Limits } from './entitlements';
 
 /**
  * MOTEUR DE PLANIFICATION — cœur déterministe de l'application.
@@ -26,6 +27,8 @@ import { resolveEquipment } from '../data/gyms';
  */
 
 export interface PlanResult {
+  /** Limites de la formule active, pour que l'interface s'aligne sur les moteurs. */
+  limits: Limits;
   targets: NutritionTargets;
   equipment: EquipmentId[];
   workoutPlan: WorkoutPlan;
@@ -110,10 +113,14 @@ export function applySwapsToPlan(plan: MealPlan, swaps: Record<string, string>):
 
 /** Recalcule l'intégralité du plan à partir de l'état. */
 export function buildPlan(state: AppState): PlanResult {
+  const limits = limitsFor(state.plan);
   const targets = resolveTargets(state);
-  const equipment = resolveEquipment(state.profile.gymId, state.profile.customEquipment);
+  // Le matériel affiché suit celui qui a servi à construire le programme.
+  const equipment = limits.gymEquipment
+    ? resolveEquipment(state.profile.gymId, state.profile.customEquipment)
+    : [...BASIC_EQUIPMENT];
 
-  let workoutPlan = generateWorkoutPlan(state.profile);
+  let workoutPlan = generateWorkoutPlan(state.profile, limits);
   workoutPlan = applyExerciseOverrides(workoutPlan, state.exerciseOverrides, state);
   // Garde-fou : un changement de salle ne doit jamais laisser d'exercice impossible.
   workoutPlan = repairPlanForEquipment(
@@ -123,6 +130,7 @@ export function buildPlan(state: AppState): PlanResult {
   let mealPlan = generateMealPlan(state.profile, targets, {
     pantry: state.pantry,
     swaps: state.foodSwaps,
+    limits,
   });
   mealPlan = applyMealOverrides(mealPlan, state.mealOverrides);
   mealPlan = applySwapsToPlan(mealPlan, state.foodSwaps);
@@ -135,7 +143,7 @@ export function buildPlan(state: AppState): PlanResult {
     budget: state.profile.weeklyBudget,
   });
 
-  return { targets, equipment, workoutPlan, mealPlan, shoppingList };
+  return { limits, targets, equipment, workoutPlan, mealPlan, shoppingList };
 }
 
 /** Séance programmée un jour donné, s'il y en a une. */

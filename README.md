@@ -412,6 +412,76 @@ navigateur. Ce ne sont pas des secrets.
 
 ---
 
+## Formules
+
+Deux formules, dont la table de vérité vit dans `src/engine/entitlements.ts`.
+
+| Fonction | Gratuit | 1% Better+ |
+| --- | :---: | :---: |
+| Profil, salle, supermarché, budget | ✅ | ✅ |
+| Calcul calories & macros | ✅ | ✅ |
+| Programme d'entraînement | 3 séances/sem. | Illimité |
+| Plan alimentaire | 3 jours | 7 jours |
+| Liste de courses | Basique | Complète |
+| Recettes adaptées aux macros | 6 par créneau | Toute la base |
+| Alternatives aux aliments | ❌ | ✅ |
+| Adaptation aux machines de sa salle | ❌ | ✅ |
+| Ajustement automatique selon progression | ❌ | ✅ |
+| Historique poids / charges | 30 jours | Illimité |
+| Export de la liste de courses | ❌ | ✅ |
+| Préparation d'un panier Drive | ❌ | ✅ |
+
+### La règle qui tient tout
+
+**Une limite qui n'existe que dans l'interface n'est pas une limite.** Masquer
+un bouton tout en calculant sept jours de repas laisserait le contenu à portée
+de la console du navigateur, et ferait du gratuit une version complète mal
+affichée.
+
+Les limites sont donc appliquées **dans les moteurs**, et `buildPlan` les
+transmet à chacun :
+
+- `generateWorkoutPlan` plafonne les séances et, sans l'option « machines de ta
+  salle », travaille sur `BASIC_EQUIPMENT` — poids du corps, haltères, banc,
+  élastiques — au lieu de l'inventaire de l'enseigne.
+- `generateMealPlan` construit trois jours, pas sept jours dont quatre cachés.
+  La liste de courses qui en découle couvre donc bien trois jours.
+- `eligibleRecipes` retient les six premières recettes par créneau, toujours les
+  mêmes pour un profil donné : la restriction reste reproductible.
+- `suggestNext` ne calcule rien à partir de l'historique et renvoie les
+  répétitions du programme.
+
+Deux garde-fous portés par les tests :
+
+- **Le calcul nutritionnel n'est jamais entamé.** Un plan gratuit qui minorerait
+  les calories serait dangereux, pas limité.
+- **Un plafond n'est pas un plancher.** Deux séances demandées restent deux
+  séances, et aucune journée du plan gratuit ne comporte de créneau non pourvu.
+
+La fenêtre d'historique **borne la lecture, elle ne supprime rien** : repasser
+en formule complète fait réapparaître les données.
+
+### Ce qui manque pour vendre
+
+**Aucun paiement n'est branché**, et c'est structurel : sans serveur, il n'y a
+ni encaissement ni vérification d'abonnement. Le bouton d'activation bascule la
+formule sur cet appareil, et n'importe qui peut en faire autant depuis la
+console. C'est de quoi développer et essayer, pas de quoi facturer.
+
+Vendre demanderait, dans l'ordre : un backend, un processeur de paiement
+(Stripe, ou les achats intégrés Apple et Google si l'application est
+distribuée sur leurs magasins), et une vérification du droit d'accès côté
+serveur — puisqu'un client ne peut pas s'auto-certifier abonné.
+
+### Deux lignes annoncées, pas encore construites
+
+Le comparatif marque « à venir » le **scanner code-barres** et l'**historique
+des mensurations** : ces fonctions n'existent pas dans l'application, donc elles
+ne sont bridées ni dans un cas ni dans l'autre. Les annoncer comme livrées
+aurait été vendre du vide.
+
+---
+
 ## Le bouton « Préparer mon Drive »
 
 **Aucune enseigne française ne publie d'API permettant à une application tierce
@@ -487,7 +557,7 @@ officiel d'enseigne : aucun des trois ne peut être simulé honnêtement.
 npm test
 ```
 
-112 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+122 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
 substitutions (dont la protection de la densité protéique), couverture de tous
@@ -497,8 +567,11 @@ glissante du poids, règles de check-in, exécution renseignée pour chaque
 mouvement, cloisonnement des comptes, refus d'un jeton d'identité périmé ou destiné à une
 autre application, chiffrement des comptes e-mail (aller-retour, refus d'une
 mauvaise clé, sel distinct par compte, absence de trace du mot de passe), et la
-cascade de recalcul du planificateur.
+cascade de recalcul du planificateur, et les limites de formule vérifiées sur
+la sortie des moteurs — trois jours planifiés, séances plafonnées sans devenir
+un plancher, matériel de base, créneaux tous pourvus, calories intactes.
 
-Le test de fumée `npm run smoke` va plus loin : il crée un compte e-mail, vérifie
+Le test de fumée `npm run smoke` va plus loin : il compte les jours réellement
+planifiés en gratuit (3) puis après activation (7), crée un compte e-mail, vérifie
 que l'état stocké est bien chiffré, recharge la page, constate que le mot de
 passe est redemandé, en essaie un mauvais puis le bon.

@@ -1,5 +1,6 @@
 import type { Exercise, Performance, PerformanceSet, WorkoutExercise } from '../types';
 import { getExercise } from '../data/exercises';
+import { LIMITS, type Limits } from './entitlements';
 
 /**
  * Suivi de progression — règle de double progression.
@@ -32,7 +33,7 @@ export function loadIncrement(ex: Exercise): number {
 }
 
 export interface ProgressionSuggestion {
-  kind: 'charge' | 'repetitions' | 'premiere_seance' | 'stagnation';
+  kind: 'charge' | 'repetitions' | 'premiere_seance' | 'stagnation' | 'formule';
   weightKg: number;
   reps: number;
   message: string;
@@ -41,7 +42,16 @@ export interface ProgressionSuggestion {
 export function suggestNext(
   we: WorkoutExercise,
   performances: Performance[],
+  limits: Limits = LIMITS.plus,
 ): ProgressionSuggestion {
+  // Sans l'ajustement automatique, rien n'est calculé à partir de l'historique :
+  // la séance reste celle du programme, aux répétitions prévues.
+  if (!limits.autoProgression) {
+    return {
+      kind: 'formule', weightKg: 0, reps: we.repMin,
+      message: `Vise ${we.repMin} à ${we.repMax} ${unitLabel(we.repUnit)} en maîtrisant l'exécution.`,
+    };
+  }
   const ex = getExercise(we.exerciseId);
   const history = historyFor(we.exerciseId, performances);
   const last = history[0];

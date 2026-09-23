@@ -91,6 +91,40 @@ await page.locator('.building').click();
 await page.waitForTimeout(600);
 await shot('e2e-dashboard');
 
+console.log('→ formule gratuite');
+// Les limites sont appliquées dans les moteurs : on vérifie donc ce que
+// l'application calcule vraiment, pas seulement ce qu'elle affiche.
+await page.locator('.tabbar button', { hasText: 'Nutrition' }).click();
+await page.waitForTimeout(500);
+const kcalParJour = await page.locator('.scroller button .num').allInnerTexts();
+const planifies = kcalParJour.filter((t) => t.trim() !== '—').length;
+console.log('   jours planifiés :', planifies, '/ 7');
+if (planifies !== 3) errors.push(`gratuit : ${planifies} jours planifiés au lieu de 3`);
+await page.locator('.scroller button').nth(5).click();
+await page.waitForTimeout(400);
+await page.locator('.plus-lock').waitFor({ timeout: 5000 });
+await shot('e2e-gratuit-jour');
+
+await page.locator('.tabbar button', { hasText: 'Training' }).click();
+await page.waitForTimeout(500);
+await page.locator('.plus-lock').first().waitFor({ timeout: 5000 });
+await shot('e2e-gratuit-training');
+
+console.log('→ passage en 1% Better+');
+await page.locator('.tabbar button', { hasText: 'Profil' }).click();
+await page.waitForTimeout(400);
+await page.getByRole('button', { name: 'Comparer' }).click();
+await page.waitForTimeout(500);
+await shot('e2e-formules');
+await page.getByRole('button', { name: 'Activer 1% Better+' }).click();
+await page.waitForTimeout(900);
+await page.locator('.tabbar button', { hasText: 'Nutrition' }).click();
+await page.waitForTimeout(600);
+const apres = (await page.locator('.scroller button .num').allInnerTexts())
+  .filter((t) => t.trim() !== '—').length;
+console.log('   jours planifiés après activation :', apres, '/ 7');
+if (apres !== 7) errors.push(`plus : ${apres} jours planifiés au lieu de 7`);
+
 console.log('→ remplacement de repas');
 await page.locator('.tabbar button', { hasText: 'Nutrition' }).click();
 await page.waitForTimeout(400);

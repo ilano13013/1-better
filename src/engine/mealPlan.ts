@@ -8,6 +8,7 @@ import { filterFromProfile, isRecipeAllowed } from './filters';
 import { bestScale, recipeCost, recipeMacros } from './recipes';
 import { addMacros, buildDaySlots, emptyMacros, slotTarget } from './nutrition';
 import { Basket, basketFromPlan, commitRecipe, createBasket, marginalCost } from './basket';
+import { LIMITS, type Limits } from './entitlements';
 
 /**
  * Moteur de planification alimentaire, déterministe.
@@ -36,6 +37,8 @@ export interface MealPlanOptions {
   pantry?: PantryItem[];
   /** Substitutions d'aliments déjà validées. */
   swaps?: Record<string, string>;
+  /** Limites de la formule active. Par défaut, aucune. */
+  limits?: Limits;
 }
 
 /** Une recette n'est retenue que si chacun de ses ingrédients est achetable. */
@@ -43,11 +46,17 @@ export function isRecipePurchasable(recipe: Recipe, storeId: string): boolean {
   return recipe.ingredients.every((ing) => findProduct(storeId, ing.foodId) !== null);
 }
 
-export function eligibleRecipes(profile: Profile, slot: MealSlot): Recipe[] {
+export function eligibleRecipes(
+  profile: Profile, slot: MealSlot, limits: Limits = LIMITS.plus,
+): Recipe[] {
   const filter = filterFromProfile(profile);
-  return RECIPES.filter(
+  const all = RECIPES.filter(
     (r) => r.slots.includes(slot) && isRecipeAllowed(r, filter) && isRecipePurchasable(r, profile.storeId),
   );
+  // Le plafond du plan gratuit retient toujours les mêmes recettes pour un
+  // profil donné : la restriction reste reproductible, comme le reste.
+  if (limits.recipesPerSlot === null || all.length <= limits.recipesPerSlot) return all;
+  return all.slice(0, limits.recipesPerSlot);
 }
 
 export interface ScoreContext {
@@ -135,6 +144,7 @@ export function rankRecipes(
   slot: MealSlot,
   target: Macros,
   ctx: Partial<ScoreContext> = {},
+  limits: Limits = LIMITS.plus,
 ): ScoredRecipe[] {
   const full: ScoreContext = {
     target,
@@ -147,7 +157,7 @@ export function rankRecipes(
     usedToday: ctx.usedToday ?? new Set(),
     basket: ctx.basket ?? null,
   };
-  return eligibleRecipes(profile, slot)
+  return eligibleRecipes(profile, slot, limits)
     .map((r) => scoreRecipe(r, full))
     .sort((a, b) => a.score - b.score || a.recipe.id.localeCompare(b.recipe.id));
 }
@@ -209,8 +219,10 @@ function buildPass(
   };
   const budget = options.budget ?? profile.weeklyBudget;
   const exclude = new Set(options.exclude ?? []);
+  const limits = options.limits ?? LIMITS.plus;
+  const horizon = Math.max(1, Math.min(7, limits.mealPlanDays));
   const regenerate = options.days ? new Set(options.days) : null;
-  const plannedDays = regenerate ? Math.max(1, regenerate.size) : 7;
+  const plannedDays = regenerate ? Math.max(1, regenerate.size) : horizon;
 
   const weeklyUse = new Map<string, number>();
   const basket = createBasket(profile.storeId, options.pantry ?? []);
@@ -226,7 +238,7 @@ function buildPass(
     }
   }
 
-  for (let d = 0 as DayIndex; d < 7; d = (d + 1) as DayIndex) {
+  for (let d = 0 as DayIndex; d < horizon; d = (d + 1) as DayIndex) {
     if (regenerate && !regenerate.has(d)) {
       const kept = options.base?.days.find((x) => x.day === d);
       if (kept) { days.push(kept); continue; }
@@ -242,7 +254,7 @@ function buildPass(
       const mealBudget = (budget / plannedDays) * share.ratio;
       const ranked = rankRecipes(profile, share.slot, target, {
         mealBudget, weeklyUse, usedToday, basket, budget, thrift,
-      }).filter((r) => !exclude.has(r.recipe.id));
+      }, limits).filter((r) => !exclude.has(r.recipe.id));
 
       // Limite dure de répétitions : personne ne veut sept fois le même plat.
       // Le plafond s'assouplit quand le choix disponible est trop étroit.
@@ -279,7 +291,7 @@ function buildPass(
       rebalanceDay({ day: d, meals, totals, target: dayTarget, unmetSlots }),
       profile,
       basket,
-      { weeklyUse, cap: repeatCap(plannedDays, 8, thrift), thrift },
+      { weeklyUse, cap: repeatCap(plannedDays, 8, thrift), thrift, limits },
     );
 
     days.push(dayPlan);
@@ -334,8 +346,9 @@ export function repairProtein(
   day: DayPlan,
   profile: Profile,
   basket: Basket,
-  opts: { weeklyUse: Map<string, number>; cap: number; thrift: number },
+  opts: { weeklyUse: Map<string, number>; cap: number; thrift: number; limits?: Limits },
 ): DayPlan {
+  const limits = opts.limits ?? LIMITS.plus;
   const goal = day.target.protein * proteinFloor(opts.thrift);
   let current = day;
 
@@ -350,7 +363,7 @@ export function repairProtein(
       const meal = current.meals[index];
       const mealKcal = meal.macros.kcal;
 
-      for (const candidate of eligibleRecipes(profile, meal.slot)) {
+      for (const candidate of eligibleRecipes(profile, meal.slot, limits)) {
         if (usedToday.has(candidate.id)) continue;
         if ((opts.weeklyUse.get(candidate.id) ?? 0) >= opts.cap) continue;
 
@@ -429,6 +442,16 @@ export function rebalanceDay(day: DayPlan): DayPlan {
 }
 
 /** Créneaux non pourvus sur l'ensemble de la semaine, sans doublon. */
+/**
+ * Jour du plan, ou `null` si la formule ne le planifie pas.
+ *
+ * L'accès positionnel `days[jour]` n'est plus sûr : un plan de trois jours n'a
+ * pas d'entrée pour jeudi. Tout l'affichage passe donc par ici.
+ */
+export function dayPlanFor(plan: MealPlan, day: DayIndex): DayPlan | null {
+  return plan.days.find((d) => d.day === day) ?? null;
+}
+
 export function unmetSlots(plan: MealPlan): MealSlot[] {
   return [...new Set(plan.days.flatMap((d) => d.unmetSlots))];
 }

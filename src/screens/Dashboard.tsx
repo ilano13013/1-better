@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useApp } from '../store/AppContext';
+import { dayPlanFor } from '../engine/mealPlan';
 import { todayIndex } from '../store/state';
 import { GOALS } from '../data/goals';
 import { getStore } from '../data/stores';
@@ -25,7 +26,7 @@ import type { Screen } from '../App';
 export default function Dashboard({ go }: { go: (s: Screen) => void }) {
   const { state, plan } = useApp();
   const today = todayIndex();
-  const day = plan.mealPlan.days[today];
+  const day = dayPlanFor(plan.mealPlan, today);
   const workout = workoutForDay(plan.workoutPlan, today);
   const goal = GOALS[state.profile.goal];
   const store = getStore(state.profile.storeId);
@@ -45,10 +46,11 @@ export default function Dashboard({ go }: { go: (s: Screen) => void }) {
 
   // « Consommé » = repas de la journée déjà passés, estimés par l'heure.
   const hour = new Date().getHours();
-  const passedMeals = day.meals.filter((_, i) => hour >= mealHour(i, day.meals.length));
+  const meals = day?.meals ?? [];
+  const passedMeals = meals.filter((_, i) => hour >= mealHour(i, meals.length));
   const eaten = passedMeals.reduce((s, m) => s + m.macros.kcal, 0);
   const eatenProtein = passedMeals.reduce((s, m) => s + m.macros.protein, 0);
-  const nextMeal = day.meals[passedMeals.length] ?? null;
+  const nextMeal = meals[passedMeals.length] ?? null;
 
   const nextWorkout = useMemo(() => {
     const upcoming = plan.workoutPlan.workouts.find((w) => w.day >= today);
