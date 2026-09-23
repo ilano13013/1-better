@@ -24,10 +24,17 @@ export interface Coach {
   /** Intitulé exact du diplôme. Vide tant qu'il n'est pas confirmé. */
   credential: string;
   photo: string;
+  /** Identifiant Instagram, sans l'arobase. */
+  instagram: string;
   /** Ce que sa validation couvre. */
   scope: string[];
   /** Ce qu'elle ne couvre pas, dit aussi clairement. */
   outOfScope: string;
+}
+
+/** Lien public du compte, construit à partir de l'identifiant. */
+export function instagramUrl(handle: string): string {
+  return `https://www.instagram.com/${handle.replace(/^@/, '')}/`;
 }
 
 export const COACH: Coach = {
@@ -36,6 +43,7 @@ export const COACH: Coach = {
   role: 'Coach sportif diplômé',
   credential: '',
   photo,
+  instagram: 'ddm_personal_trainer',
   scope: [
     "La base d'exercices et les consignes d'exécution.",
     'La construction des séances et leur répartition sur la semaine.',

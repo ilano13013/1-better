@@ -511,8 +511,16 @@ aurait été vendre du vide.
 ## Caution professionnelle
 
 La méthode d'entraînement est validée par **Damien Phelipon**, 27 ans, coach
-sportif diplômé. Sa carte apparaît sur l'écran d'accueil et sur l'écran
-Training ; la fiche détaille le périmètre.
+sportif diplômé — Instagram [@ddm_personal_trainer](https://www.instagram.com/ddm_personal_trainer/).
+
+Sa fiche a son propre onglet, **Coach**, à côté de Nutrition : portrait,
+identité, lien vers son compte, périmètre de validation. Une carte d'appel
+mène à cet onglet depuis l'écran Training, et l'ouvre en feuille sur l'écran
+d'accueil, où la navigation n'existe pas encore. Les deux affichent le même
+composant : il n'y a pas deux versions du texte à tenir à jour.
+
+La barre passe donc de cinq à six onglets ; sous 400 px les libellés se
+resserrent au lieu de se tronquer.
 
 Les données vivent dans `src/data/coach.ts`, source unique. Deux règles y sont
 tenues, parce qu'une caution mal formulée est pire que pas de caution :
@@ -615,7 +623,7 @@ officiel d'enseigne : aucun des trois ne peut être simulé honnêtement.
 npm test
 ```
 
-132 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+134 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
 substitutions (dont la protection de la densité protéique), couverture de tous
@@ -631,7 +639,8 @@ un plancher, matériel de base, créneaux tous pourvus, calories intactes — et
 l'arithmétique de l'abonnement : remise annuelle au centime, échéance d'un
 31 janvier, d'un 29 février, fermeture effective des moteurs à échéance, et la
 caution professionnelle — aucun diplôme inventé, périmètre non vide, exclusion
-explicite de la nutrition et de la santé.
+explicite de la nutrition et de la santé, adresse Instagram construite sans
+arobase parasite.
 
 Le test de fumée `npm run smoke` va plus loin : il compte les jours réellement
 planifiés en gratuit (3) puis après activation (7), crée un compte e-mail, vérifie

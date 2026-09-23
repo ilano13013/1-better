@@ -85,3 +85,21 @@ export const IconEdit = ({ size = 15, strokeWidth = 1.8 }: P) => (
 export const IconWallet = ({ size = 16, strokeWidth = 1.7 }: P) => (
   <svg {...base(size, strokeWidth)}><rect x="3" y="6" width="18" height="13" rx="3" /><path d="M3 10h18M16.5 14.5h.01" /></svg>
 );
+
+/** Sifflet — l'écran Coach. */
+export const IconWhistle = ({ size = 22, strokeWidth = 1.7 }: P) => (
+  <svg {...base(size, strokeWidth)}>
+    <path d="M13 8h7a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-7" />
+    <circle cx="8" cy="12" r="5" />
+    <path d="M13 8V6.5a1.5 1.5 0 0 0-3 0V8" />
+  </svg>
+);
+
+/** Instagram. */
+export const IconInstagram = ({ size = 16, strokeWidth = 1.7 }: P) => (
+  <svg {...base(size, strokeWidth)}>
+    <rect x="3" y="3" width="18" height="18" rx="5" />
+    <circle cx="12" cy="12" r="4" />
+    <path d="M17.5 6.5h.01" />
+  </svg>
+);

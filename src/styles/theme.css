@@ -564,7 +564,7 @@ input[type='range']::-moz-range-thumb {
   -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--line);
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   z-index: 40;
 }
 .tabbar button {
@@ -581,6 +581,11 @@ input[type='range']::-moz-range-thumb {
   position: relative;
 }
 .tabbar button svg { width: 20px; height: 20px; }
+/* Six onglets : les libellés se resserrent plutôt que de se tronquer. */
+@media (max-width: 400px) {
+  .tabbar button { font-size: 9px; letter-spacing: 0; }
+  .tabbar button svg { width: 19px; height: 19px; }
+}
 .tabbar button[aria-current='true'] { color: var(--ink); font-weight: 640; }
 .tabbar button[aria-current='true']::before {
   content: '';

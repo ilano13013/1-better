@@ -10,15 +10,17 @@ import Training from './screens/Training';
 import Nutrition from './screens/Nutrition';
 import Shopping from './screens/Shopping';
 import ProfileScreen from './screens/Profile';
-import { IconBowl, IconCalendar, IconDumbbell, IconHome, IconUser } from './components/icons';
+import Coach from './screens/Coach';
+import { IconBowl, IconCalendar, IconDumbbell, IconHome, IconUser, IconWhistle } from './components/icons';
 
-export type Screen = 'home' | 'week' | 'training' | 'nutrition' | 'shopping' | 'profile';
+export type Screen = 'home' | 'week' | 'training' | 'nutrition' | 'shopping' | 'coach' | 'profile';
 
 const TABS: { id: Screen; label: string; icon: JSX.Element }[] = [
   { id: 'home', label: 'Accueil', icon: <IconHome /> },
   { id: 'week', label: 'Semaine', icon: <IconCalendar /> },
   { id: 'training', label: 'Training', icon: <IconDumbbell /> },
   { id: 'nutrition', label: 'Nutrition', icon: <IconBowl /> },
+  { id: 'coach', label: 'Coach', icon: <IconWhistle /> },
   { id: 'profile', label: 'Profil', icon: <IconUser /> },
 ];
 
@@ -63,9 +65,10 @@ export default function App() {
     <div className="app">
       {screen === 'home' && <Dashboard go={setScreen} />}
       {screen === 'week' && <Week go={setScreen} />}
-      {screen === 'training' && <Training />}
+      {screen === 'training' && <Training go={setScreen} />}
       {screen === 'nutrition' && <Nutrition go={setScreen} />}
       {screen === 'shopping' && <Shopping go={setScreen} />}
+      {screen === 'coach' && <Coach />}
       {screen === 'profile' && <ProfileScreen />}
 
       <nav className="tabbar">

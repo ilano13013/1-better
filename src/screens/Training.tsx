@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { DayIndex, Performance, PerformanceSet, Workout, WorkoutExercise } from '../types';
 import { useApp } from '../store/AppContext';
+import type { Screen } from '../App';
 import { todayIndex } from '../store/state';
 import { MUSCLE_LABELS, getExercise } from '../data/exercises';
 import { EQUIPMENT_LABELS, GYM_BY_ID } from '../data/gyms';
@@ -21,7 +22,7 @@ import {
  * Écran Training : planning de la semaine, détail de séance, remplacement
  * d'exercice et enregistrement des performances (double progression).
  */
-export default function Training() {
+export default function Training({ go }: { go: (s: Screen) => void }) {
   const { state, plan, dispatch, notify } = useApp();
   const today = todayIndex();
 
@@ -131,7 +132,7 @@ export default function Training() {
       )}
 
       <div style={{ marginTop: 20 }}>
-        <CoachCard />
+        <CoachCard onOpen={() => go('coach')} />
       </div>
 
       {(!plan.limits.gymEquipment || plan.limits.maxSessionsPerWeek !== null) && (
