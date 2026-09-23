@@ -24,6 +24,14 @@ const shot = (name) => (out ? page.screenshot({ path: `${out}/${name}.png`, full
 
 await page.goto(baseUrl, { waitUntil: 'networkidle' });
 
+console.log('→ connexion');
+// Apple et Google exigent une origine déclarée : le parcours automatisé passe
+// par le mode sans compte, le seul qui ne dépende d'aucun service externe.
+await page.getByRole('button', { name: 'Continuer sans compte' }).waitFor();
+await shot('e2e-connexion');
+await page.getByRole('button', { name: 'Continuer sans compte' }).click();
+await page.waitForTimeout(350);
+
 console.log('→ onboarding');
 await page.getByRole('button', { name: 'Commencer' }).click();
 await page.getByText('Perte de poids / sèche').click();

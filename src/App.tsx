@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from './store/AppContext';
+import SignIn from './screens/SignIn';
 import Onboarding from './screens/Onboarding';
 import BuildingWeek from './screens/BuildingWeek';
 import Dashboard from './screens/Dashboard';
@@ -21,7 +22,7 @@ const TABS: { id: Screen; label: string; icon: JSX.Element }[] = [
 ];
 
 export default function App() {
-  const { state, toast } = useApp();
+  const { state, toast, session, signIn } = useApp();
   const [screen, setScreen] = useState<Screen>('home');
   const [building, setBuilding] = useState(false);
 
@@ -33,6 +34,11 @@ export default function App() {
     if (!wasOnboarded.current && state.onboarded) setBuilding(true);
     wasOnboarded.current = state.onboarded;
   }, [state.onboarded]);
+
+  // Personne n'a encore choisi entre un compte et l'usage local.
+  if (!session) {
+    return <div className="app"><SignIn onSignIn={signIn} /></div>;
+  }
 
   if (!state.onboarded) {
     return <div className="app"><Onboarding /></div>;

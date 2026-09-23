@@ -679,6 +679,58 @@ input[type='range']::-moz-range-thumb {
 }
 .list-row:last-child { border-bottom: none; }
 
+/* --- Marque « 1% Better » --- */
+.logo { display: inline-flex; align-items: center; gap: 10px; }
+.logo-mark {
+  /* Flex et non grid : en grid, le « 1 » et le « % » deviennent deux lignes. */
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--invert-bg); color: var(--invert-fg);
+  border-radius: var(--radius-sm);
+  font-weight: 700; letter-spacing: -.05em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  /* Le « 1% » tient sur une ligne : la pastille s'élargit, elle ne casse pas. */
+  white-space: nowrap; padding: 0 .3em;
+}
+.logo-pct { font-size: .56em; letter-spacing: -.02em; margin-left: .03em; align-self: center; }
+.logo-word { font-weight: 660; letter-spacing: -.035em; line-height: 1; }
+.logo-sm .logo-mark { min-width: 26px; height: 26px; font-size: 14px; }
+.logo-sm .logo-word { font-size: 16px; }
+.logo-md .logo-mark { min-width: 36px; height: 36px; font-size: 19px; }
+.logo-md .logo-word { font-size: 22px; }
+.logo-lg .logo-mark { min-width: 54px; height: 54px; font-size: 28px; border-radius: var(--radius); }
+.logo-lg .logo-word { font-size: 33px; }
+
+/* --- Écran de connexion --- */
+.signin {
+  min-height: 100%;
+  display: grid; place-items: center;
+  padding: 40px var(--pad) calc(40px + env(safe-area-inset-bottom, 0px));
+  animation: screen-in .3s var(--ease);
+}
+.signin-inner { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 14px; }
+.signin-head { text-align: center; margin-bottom: 10px; }
+.signin-head .logo { margin-bottom: 18px; }
+.signin-promise {
+  font-size: var(--fs-body); color: var(--ink-2);
+  text-wrap: balance; line-height: 1.45;
+}
+/* Le SDK Google injecte son propre bouton : on ne lui impose que la largeur. */
+.signin-google { display: flex; justify-content: center; min-height: 44px; }
+.signin-google > div { width: 100% !important; }
+.btn-apple {
+  background: var(--invert-bg); border-color: var(--invert-bg); color: var(--invert-fg);
+}
+.signin-sep {
+  display: flex; align-items: center; gap: 12px;
+  color: var(--ink-3); font-size: var(--fs-xs);
+  text-transform: uppercase; letter-spacing: .14em;
+}
+.signin-sep::before, .signin-sep::after {
+  content: ""; flex: 1; height: 1px; background: var(--line);
+}
+.signin-note { line-height: 1.55; margin-top: 6px; }
+
 /* Déroulé d'un mouvement : étapes numérotées, erreurs à éviter. */
 .move-list { list-style: none; margin: 0; padding: 0; }
 .move-list > li {

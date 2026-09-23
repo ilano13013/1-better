@@ -84,6 +84,7 @@ Rien n'est une maquette statique. Toutes les interactions recalculent l'état :
 | Remplacer un exercice | Le moteur ne propose que des exercices faisables |
 | Cocher « j'ai déjà ça » | La quantité est déduite avant tout achat |
 | Panier au-dessus du budget | Substitutions cohérentes proposées, jamais imposées |
+| Changer de compte | La semaine, les performances et les images du compte chargé remplacent les précédentes |
 
 ---
 
@@ -281,6 +282,71 @@ fait passer les protéines de 96 g à 128 g pour une cible de 136 g.
 
 ---
 
+## Comptes Apple et Google
+
+L'application s'ouvre sur un écran de connexion proposant **Google**, **Apple**
+et **« continuer sans compte »**. Les deux premiers sont intégrés pour de vrai
+— Google Identity Services et Sign in with Apple JS — mais ne peuvent pas
+fonctionner sans identifiant client déclaré chez le fournisseur. Sans
+configuration, les boutons sont désactivés et l'écran l'explique, plutôt que
+d'échouer au clic.
+
+### Ce qu'un compte fait, et ce qu'il ne fait pas
+
+Le site est statique : **il n'y a pas de serveur**. Par conséquent :
+
+| | |
+| --- | --- |
+| Reconnaître la personne | ✅ le jeton d'identité porte un identifiant stable |
+| Séparer deux personnes sur le même appareil | ✅ chaque compte a sa propre clé de stockage |
+| Retrouver sa semaine après déconnexion | ✅ les données du compte restent en place |
+| Synchroniser entre téléphone et ordinateur | ❌ rien ne quitte le navigateur |
+| Protéger les données | ❌ elles sont lisibles localement, compte ou pas |
+
+La signature du jeton **n'est pas vérifiée** : seul un serveur peut le faire.
+Elle sert à identifier, pas à autoriser — ce qui suffit ici, puisqu'il n'y a
+aucune ressource distante à protéger. Une vraie synchronisation demanderait un
+backend (Supabase, Firebase, un service maison) ; ce serait un autre chantier,
+et il n'est pas commencé.
+
+### Configurer Google
+
+1. [Google Cloud Console](https://console.cloud.google.com/apis/credentials) →
+   créer un **ID client OAuth 2.0**, type « Application Web ».
+2. Ajouter l'origine autorisée : `https://<compte>.github.io`
+   (et `http://localhost:5173` pour le développement).
+3. Renseigner `VITE_GOOGLE_CLIENT_ID`.
+
+### Configurer Apple
+
+Sign in with Apple demande davantage : un **compte développeur Apple payant**.
+
+1. Créer un **App ID**, puis un **Services ID** — c'est ce dernier qui sert de
+   `clientId`, pas le Bundle ID.
+2. Déclarer le domaine et l'URL de retour, puis vérifier le domaine en
+   déposant le fichier fourni par Apple dans
+   `public/.well-known/apple-developer-domain-association.txt`.
+3. Renseigner `VITE_APPLE_CLIENT_ID` et `VITE_APPLE_REDIRECT_URI`.
+
+### Où mettre les variables
+
+Ces identifiants sont **publics** : ils apparaissent dans le code livré au
+navigateur. Ce ne sont pas des secrets.
+
+- En local : un fichier `.env.local` à la racine (déjà ignoré par git).
+- Sur GitHub Pages : Settings → Secrets and variables → Actions → **Variables**
+  (pas Secrets). Le workflow les passe au build.
+
+### Limites connues
+
+- **Dans l'artefact claude.ai, la connexion ne peut pas fonctionner** : la page
+  y est servie dans une iframe d'origine non déclarée chez Apple et Google.
+  Utiliser le déploiement GitHub Pages.
+- Apple ne transmet le nom de la personne qu'à la **toute première**
+  autorisation. Ensuite, seul l'e-mail revient.
+
+---
+
 ## Le bouton « Préparer mon Drive »
 
 **Aucune enseigne française ne publie d'API permettant à une application tierce
@@ -356,11 +422,12 @@ officiel d'enseigne : aucun des trois ne peut être simulé honnêtement.
 npm test
 ```
 
-92 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+103 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
 substitutions (dont la protection de la densité protéique), couverture de tous
 les croisements régime × restrictions × enseigne, absence de créneau non pourvu,
 mode « il me reste X € », double progression conditionnée à l'exécution, moyenne
-glissante du poids, règles de check-in, et la cascade de recalcul du
-planificateur.
+glissante du poids, règles de check-in, exécution renseignée pour chaque
+mouvement, cloisonnement des comptes et refus d'un jeton d'identité périmé ou
+destiné à une autre application, et la cascade de recalcul du planificateur.

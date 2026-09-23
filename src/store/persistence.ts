@@ -1,17 +1,29 @@
 import type { AppState } from '../types';
 import { STATE_VERSION, createInitialState } from './state';
 
-const KEY = 'one-better:state:v1';
+/**
+ * Persistance locale, cloisonnée par compte. Aucune donnée ne quitte l'appareil.
+ *
+ * Le compte local garde la clé historique : les personnes qui utilisaient
+ * l'application avant l'écran de connexion retrouvent leur semaine intacte en
+ * choisissant « continuer sans compte ».
+ */
+const BASE_KEY = 'one-better:state:v1';
+
+export const LOCAL_ACCOUNT_ID = 'local';
+
+function keyFor(accountId: string): string {
+  return accountId === LOCAL_ACCOUNT_ID ? BASE_KEY : `${BASE_KEY}:${accountId}`;
+}
 
 /**
- * Persistance locale. Aucune donnée ne quitte l'appareil.
- * La lecture est tolérante : un état corrompu ou d'une version antérieure
- * repart d'un état vierge plutôt que de casser l'application.
+ * Lecture tolérante : un état corrompu ou d'une version antérieure repart d'un
+ * état vierge plutôt que de casser l'application.
  */
-export function loadState(): AppState | null {
+export function loadState(accountId: string = LOCAL_ACCOUNT_ID): AppState | null {
   if (typeof localStorage === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(keyFor(accountId));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<AppState>;
     if (parsed.version !== STATE_VERSION || !parsed.profile) return null;
@@ -21,20 +33,25 @@ export function loadState(): AppState | null {
   }
 }
 
-export function saveState(state: AppState): void {
+export function saveState(state: AppState, accountId: string = LOCAL_ACCOUNT_ID): void {
   if (typeof localStorage === 'undefined') return;
   try {
-    localStorage.setItem(KEY, JSON.stringify(state));
+    localStorage.setItem(keyFor(accountId), JSON.stringify(state));
   } catch {
     // Quota dépassé ou stockage indisponible : l'application continue en mémoire.
   }
 }
 
-export function clearState(): void {
+export function clearState(accountId: string = LOCAL_ACCOUNT_ID): void {
   if (typeof localStorage === 'undefined') return;
   try {
-    localStorage.removeItem(KEY);
+    localStorage.removeItem(keyFor(accountId));
   } catch {
     /* ignoré */
   }
+}
+
+/** Vrai si une semaine est déjà enregistrée pour ce compte sur cet appareil. */
+export function hasSavedState(accountId: string = LOCAL_ACCOUNT_ID): boolean {
+  return loadState(accountId) !== null;
 }

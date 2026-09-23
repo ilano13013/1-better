@@ -1,5 +1,5 @@
 import {
-  createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState,
+  createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState,
   type ReactNode,
 } from 'react';
 import type {
@@ -7,7 +7,9 @@ import type {
 } from '../types';
 import { buildPlan, type PlanResult } from '../engine/planner';
 import { clearPlanOverrides, createInitialState, demoState } from './state';
-import { clearState, loadState, saveState } from './persistence';
+import { LOCAL_ACCOUNT_ID, clearState, loadState, saveState } from './persistence';
+import { loadSession, saveSession } from './session';
+import type { Session } from '../engine/auth';
 
 /**
  * État global et cascade de recalcul.
@@ -181,15 +183,45 @@ interface AppContextValue {
   dispatch: (action: Action) => void;
   toast: string | null;
   notify: (message: string) => void;
+  /** Compte actif, ou `null` tant que personne n'a choisi sur l'écran d'accueil. */
+  session: Session | null;
+  /** Bascule sur un compte : l'état courant est enregistré, celui du compte chargé. */
+  signIn: (session: Session) => void;
+  signOut: () => void;
+  /** Efface les données du compte actif, sans toucher aux autres comptes. */
+  eraseAccount: () => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, null, () => loadState() ?? createInitialState());
+  const [session, setSession] = useState<Session | null>(() => loadSession());
+  // La clé de stockage doit suivre le compte *avant* que le nouvel état ne soit
+  // enregistré : une ref, lue par l'effet de sauvegarde, garantit cet ordre.
+  const accountRef = useRef(session?.accountId ?? LOCAL_ACCOUNT_ID);
+  const [state, dispatch] = useReducer(
+    reducer, null, () => loadState(accountRef.current) ?? createInitialState(),
+  );
   const [toast, setToast] = useState<string | null>(null);
 
-  useEffect(() => { saveState(state); }, [state]);
+  useEffect(() => { saveState(state, accountRef.current); }, [state]);
+
+  const switchTo = useCallback((next: Session | null) => {
+    saveState(state, accountRef.current);          // on ne perd pas la semaine en cours
+    const id = next?.accountId ?? LOCAL_ACCOUNT_ID;
+    accountRef.current = id;
+    saveSession(next);
+    setSession(next);
+    dispatch({ type: 'setState', state: loadState(id) ?? createInitialState() });
+  }, [state]);
+
+  const signIn = useCallback((next: Session) => switchTo(next), [switchTo]);
+  const signOut = useCallback(() => switchTo(null), [switchTo]);
+
+  const eraseAccount = useCallback(() => {
+    clearState(accountRef.current);
+    dispatch({ type: 'reset' });
+  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = state.theme;
@@ -208,8 +240,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const notify = useCallback((message: string) => setToast(message), []);
 
   const value = useMemo(
-    () => ({ state, plan, dispatch, toast, notify }),
-    [state, plan, toast, notify],
+    () => ({ state, plan, dispatch, toast, notify, session, signIn, signOut, eraseAccount }),
+    [state, plan, toast, notify, session, signIn, signOut, eraseAccount],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -221,4 +253,3 @@ export function useApp(): AppContextValue {
   return ctx;
 }
 
-export { clearState };

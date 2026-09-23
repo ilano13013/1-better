@@ -43,6 +43,15 @@ jobs:
 
       - name: Construire
         run: npm run build
+        env:
+          # Identifiants clients Apple et Google. Ce ne sont pas des secrets :
+          # ils sont publics par construction et vivent donc dans les
+          # *variables* du dépôt (Settings → Secrets and variables → Actions →
+          # Variables), pas dans les secrets. Absents, l'écran de connexion
+          # désactive les deux boutons et le dit.
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
+          VITE_APPLE_CLIENT_ID: ${{ vars.VITE_APPLE_CLIENT_ID }}
+          VITE_APPLE_REDIRECT_URI: ${{ vars.VITE_APPLE_REDIRECT_URI }}
 
       - name: Préparer le site
         run: |

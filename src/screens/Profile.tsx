@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { DayIndex, EquipmentId, Macros, RestrictionId, WeeklyCheckIn } from '../types';
-import { useApp, clearState } from '../store/AppContext';
+import { useApp } from '../store/AppContext';
 import { GOAL_LIST, ACTIVITY_LABELS } from '../data/goals';
 import { ALL_EQUIPMENT, EQUIPMENT_LABELS, GYMS } from '../data/gyms';
 import { STORES } from '../data/stores';
@@ -20,7 +20,7 @@ import { IconCheck, IconMedal, IconSpark, IconTrend } from '../components/icons'
  * objectifs manuels, gamification discrète.
  */
 export default function ProfileScreen() {
-  const { state, plan, dispatch, notify } = useApp();
+  const { state, plan, dispatch, notify, session, signOut, eraseAccount } = useApp();
   const [sheet, setSheet] = useState<
     null | 'weight' | 'checkin' | 'macros' | 'goal' | 'gym' | 'store' | 'budget'
     | 'diet' | 'schedule'
@@ -174,6 +174,34 @@ export default function ProfileScreen() {
           </div>
         </div>
 
+        {/* Compte */}
+        <div>
+          <div className="card-title">Compte</div>
+          <Card className="card-flat">
+            <div className="row-between">
+              <div style={{ minWidth: 0 }}>
+                <div className="strong truncate">
+                  {session?.provider === 'local' || !session
+                    ? 'Sans compte'
+                    : session.name || session.email || 'Compte'}
+                </div>
+                <div className="xs dim truncate">
+                  {session && session.provider !== 'local'
+                    ? `${session.provider === 'google' ? 'Google' : 'Apple'}${session.email ? ` · ${session.email}` : ''}`
+                    : 'Données enregistrées sur cet appareil'}
+                </div>
+              </div>
+              <button type="button" className="btn btn-sm" onClick={signOut}>
+                {session && session.provider !== 'local' ? 'Se déconnecter' : 'Changer'}
+              </button>
+            </div>
+          </Card>
+          <p className="xs dim" style={{ marginTop: 10 }}>
+            Se déconnecter ne supprime rien : les données de ce compte restent
+            sur cet appareil et reviennent à la prochaine connexion.
+          </p>
+        </div>
+
         {/* Données */}
         <div>
           <div className="card-title">Données</div>
@@ -189,8 +217,7 @@ export default function ProfileScreen() {
             <button type="button" className="btn btn-alert btn-block"
               onClick={() => {
                 if (!window.confirm('Effacer toutes tes données locales, images comprises ? Cette action est définitive.')) return;
-                clearState();
-                dispatch({ type: 'reset' });
+                eraseAccount();
               }}>
               Tout effacer
             </button>
