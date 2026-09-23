@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import type { DayIndex, EquipmentId, PantryItem, Profile, RestrictionId } from '../types';
+import type {
+  DayIndex, EquipmentId, Gym, PantryItem, Profile, RestrictionId, Store,
+} from '../types';
 import { useApp } from '../store/AppContext';
 import { EMPTY_PROFILE } from '../store/state';
 import { GOAL_LIST, ACTIVITY_LABELS } from '../data/goals';
@@ -10,8 +12,9 @@ import { computeTargets } from '../engine/nutrition';
 import { CATEGORY_LABELS, CATEGORY_ORDER, formatQty } from '../engine/shopping';
 import { DIET_LABELS, RESTRICTION_LABELS } from '../engine/filters';
 import { DAY_NAMES } from '../engine/training';
-import { Card, Checkbox, Chip, Field, Option, Segmented, eur, num } from '../components/ui';
+import { Card, Checkbox, Chip, Field, Option, Segmented, Sheet, eur, num } from '../components/ui';
 import { GymMark, StoreMark } from '../components/BrandMark';
+import { LogoUploader, useBrandLogoDrop } from '../components/LogoUploader';
 import { IconBack, IconSpark } from '../components/icons';
 
 /**
@@ -277,17 +280,28 @@ function GymStep({ p, patch }: StepProps) {
       <Head title="Où t'entraînes-tu ?" hint="Le programme n'utilisera que le matériel réellement disponible." />
       <div className="stack-sm">
         {GYMS.map((g) => (
-          <Option
-            key={g.id}
-            selected={p.gymId === g.id}
-            onClick={() => patch({ gymId: g.id, customEquipment: g.custom ? p.customEquipment : [] })}
-            title={g.name}
-            subtitle={g.custom ? 'Tu choisis ton matériel à l\'étape suivante' : `${g.equipment.length} équipements référencés`}
-            leading={<GymMark gym={g} />}
-          />
+          <GymOption key={g.id} gym={g} p={p} patch={patch} />
         ))}
       </div>
+      <LogoHint only="gyms" />
     </>
+  );
+}
+
+function GymOption({ gym, p, patch }: { gym: Gym } & StepProps) {
+  const { accept, error } = useBrandLogoDrop(gym.id, gym.name);
+  return (
+    <div>
+      <Option
+        selected={p.gymId === gym.id}
+        onClick={() => patch({ gymId: gym.id, customEquipment: gym.custom ? p.customEquipment : [] })}
+        title={gym.name}
+        subtitle={gym.custom ? 'Tu choisis ton matériel à l\'étape suivante' : `${gym.equipment.length} équipements référencés`}
+        leading={<GymMark gym={gym} />}
+        onFileDrop={(file) => void accept(file)}
+      />
+      {error && <div className="xs alert" style={{ marginTop: 6, marginLeft: 16 }}>{error}</div>}
+    </div>
   );
 }
 
@@ -371,16 +385,54 @@ function StoreStep({ p, patch }: StepProps) {
       <Head title="Où fais-tu tes courses ?" hint="Les prix et les formats d'achat suivent l'enseigne choisie." />
       <div className="stack-sm">
         {STORES.map((s) => (
-          <Option key={s.id} selected={p.storeId === s.id} onClick={() => patch({ storeId: s.id })}
-            title={s.name}
-            subtitle={s.id === 'autre' ? 'Prix de référence, sans indice d\'enseigne' : undefined}
-            leading={<StoreMark store={s} />}
-          />
+          <StoreOption key={s.id} store={s} p={p} patch={patch} />
         ))}
       </div>
-      <p className="xs dim" style={{ marginTop: 16 }}>
+      <LogoHint only="stores" />
+      <p className="xs dim" style={{ marginTop: 14 }}>
         La gestion de plusieurs enseignes simultanées arrivera dans une version ultérieure.
       </p>
+    </>
+  );
+}
+
+function StoreOption({ store, p, patch }: { store: Store } & StepProps) {
+  const { accept, error } = useBrandLogoDrop(store.id, store.name);
+  return (
+    <div>
+      <Option
+        selected={p.storeId === store.id}
+        onClick={() => patch({ storeId: store.id })}
+        title={store.name}
+        subtitle={store.id === 'autre' ? 'Prix de référence, sans indice d\'enseigne' : undefined}
+        leading={<StoreMark store={store} />}
+        onFileDrop={(file) => void accept(file)}
+      />
+      {error && <div className="xs alert" style={{ marginTop: 6, marginLeft: 16 }}>{error}</div>}
+    </div>
+  );
+}
+
+/**
+ * Deux façons d'obtenir les vrais logos, exposées là où les marques
+ * apparaissent : déposer un fichier sur une ligne, ou ouvrir l'écran dédié.
+ */
+function LogoHint({ only }: { only: 'stores' | 'gyms' }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div className="row-between" style={{ marginTop: 14, gap: 10 }}>
+        <span className="xs dim">
+          Dépose un logo sur une ligne pour remplacer le monogramme.
+        </span>
+        <button type="button" className="btn btn-sm btn-ghost" onClick={() => setOpen(true)}>
+          Ajouter les logos
+        </button>
+      </div>
+      <Sheet open={open} onClose={() => setOpen(false)}
+        title={<div className="strong">Logos des enseignes</div>}>
+        <LogoUploader only={only} />
+      </Sheet>
     </>
   );
 }

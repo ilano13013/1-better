@@ -13,7 +13,13 @@ marque. Deux façons d'y mettre les vrais fichiers.
 
 ## A. Sur ton appareil, sans toucher au code
 
-**Profil → Logos des enseignes.** Glisse-dépose un fichier par marque. Les
+Deux entrées, l'une comme l'autre disponible dès l'onboarding :
+
+- **Glisse un fichier directement sur une ligne** dans « Où t'entraînes-tu ? »
+  ou « Où fais-tu tes courses ? ». La ligne se met en pointillés au survol.
+- **Ajouter les logos** (au bas de ces écrans, ou Profil → Logos des enseignes)
+  ouvre la liste complète, avec sélecteur de fichier pour les appareils sans
+  glisser-déposer. Les
 images sont réduites à 128 px et plafonnées à 60 Ko, pour ne pas saturer le
 stockage local — ce qui ferait échouer l'enregistrement du profil entier.
 

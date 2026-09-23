@@ -116,7 +116,8 @@ mémoire produirait des visuels faux présentés comme authentiques.
 `<BrandMark>` affiche donc un **monogramme** sur la couleur de la marque, et
 bascule sur le fichier officiel dès qu'il est fourni. Deux voies :
 
-- **Profil → Logos des enseignes** : glisser-déposer, par appareil. Les images
+- **Glisser-déposer sur une ligne d'enseigne**, dès l'onboarding, ou l'écran
+  complet « Ajouter les logos » pour les appareils sans glisser-déposer. Les images
   sont réduites à 128 px et plafonnées à 60 Ko, faute de quoi le stockage local
   saturerait et le profil cesserait d'être enregistré. Les fichiers ne quittent
   pas le navigateur et ne sont pas publiés avec l'application.

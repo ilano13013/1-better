@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type DragEvent, type ReactNode } from 'react';
 import { IconCheck, IconClose } from './icons';
 
 /* ---------------------------------------------------------------- format */
@@ -34,13 +34,36 @@ export function Card({
 }
 
 export function Option({
-  selected, onClick, title, subtitle, right, leading, multi = false,
+  selected, onClick, title, subtitle, right, leading, multi = false, onFileDrop,
 }: {
   selected: boolean; onClick: () => void; title: ReactNode;
   subtitle?: ReactNode; right?: ReactNode; leading?: ReactNode; multi?: boolean;
+  /** Reçoit un fichier déposé sur la ligne — sert à assigner un logo. */
+  onFileDrop?: (file: File) => void;
 }) {
+  const [over, setOver] = useState(false);
+  const dropProps = onFileDrop
+    ? {
+        onDragOver: (e: DragEvent) => { e.preventDefault(); setOver(true); },
+        onDragLeave: () => setOver(false),
+        onDrop: (e: DragEvent) => {
+          e.preventDefault();
+          setOver(false);
+          const file = e.dataTransfer?.files?.[0];
+          if (file) onFileDrop(file);
+        },
+      }
+    : {};
+
   return (
-    <button type="button" className="option" aria-pressed={selected} onClick={onClick}>
+    <button
+      type="button"
+      className="option"
+      aria-pressed={selected}
+      onClick={onClick}
+      {...dropProps}
+      style={over ? { borderStyle: 'dashed', borderColor: 'var(--ink)' } : undefined}
+    >
       {leading}
       {!leading && (
         <span className="option-mark" style={multi ? { borderRadius: 6 } : undefined}>

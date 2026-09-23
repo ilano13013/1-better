@@ -134,7 +134,13 @@ if (opts > 0) {
   await page.locator('.sheet .option').first().click();
   await page.waitForTimeout(600);
   console.log('   exercice:', ex1.trim(), '→', (await exerciseCard.locator('.strong').first().innerText()).trim());
-} else { console.log('   aucune alternative disponible'); }
+} else {
+  // Selon le jour, la séance affichée peut n'offrir aucune alternative avec le
+  // matériel choisi : on referme pour ne pas bloquer la suite du parcours.
+  console.log('   aucune alternative disponible pour', ex1.trim());
+  await page.locator('.sheet-head button').last().click();
+  await page.waitForTimeout(400);
+}
 
 await page.getByRole('button', { name: /Saisir/ }).first().click();
 await page.waitForTimeout(500);

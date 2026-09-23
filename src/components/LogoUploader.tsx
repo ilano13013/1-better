@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useApp } from '../store/AppContext';
 import { GymMark, StoreMark } from './BrandMark';
 import { GYMS } from '../data/gyms';
@@ -11,6 +11,32 @@ import { Card } from './ui';
 import { IconInfo, IconTrash } from './icons';
 
 /**
+ * Import d'un logo pour une marque donnée.
+ *
+ * Partagé entre l'écran dédié et les listes de choix : déposer un fichier sur
+ * une ligne d'enseigne doit faire exactement la même chose, contrôles de
+ * taille compris.
+ */
+export function useBrandLogoDrop(brandId: string, name: string) {
+  const { dispatch, notify } = useApp();
+  const [error, setError] = useState<string | null>(null);
+
+  const accept = useCallback(async (file: File | undefined) => {
+    setError(null);
+    if (!file) return;
+    try {
+      const { dataUrl, bytes } = await prepareLogo(file);
+      dispatch({ type: 'setBrandLogo', brandId, dataUrl });
+      notify(`Logo ${name} ajouté — ${formatBytes(bytes)}`);
+    } catch (e) {
+      setError(e instanceof LogoError ? e.message : 'Import impossible.');
+    }
+  }, [brandId, name, dispatch, notify]);
+
+  return { accept, error };
+}
+
+/**
  * Dépôt des logos officiels par l'utilisateur.
  *
  * L'application n'embarque aucun logo : ce sont des marques déposées, et leur
@@ -18,7 +44,7 @@ import { IconInfo, IconTrash } from './icons';
  * d'utiliser les fichiers auxquels il a droit sur SON appareil. Les images
  * restent en stockage local et ne quittent jamais le navigateur.
  */
-export function LogoUploader() {
+export function LogoUploader({ only }: { only?: 'stores' | 'gyms' } = {}) {
   const { state } = useApp();
 
   const used = Object.values(state.brandLogos).reduce((s, v) => s + dataUrlBytes(v), 0);
@@ -47,6 +73,7 @@ export function LogoUploader() {
         </div>
       )}
 
+      {only !== 'gyms' && (
       <div>
         <div className="card-title">Supermarchés</div>
         <div className="stack-sm">
@@ -60,7 +87,9 @@ export function LogoUploader() {
           ))}
         </div>
       </div>
+      )}
 
+      {only !== 'stores' && (
       <div>
         <div className="card-title">Salles de sport</div>
         <div className="stack-sm">
@@ -74,6 +103,7 @@ export function LogoUploader() {
           ))}
         </div>
       </div>
+      )}
 
       <p className="xs dim" style={{ lineHeight: 1.5 }}>
         Vérifie tes droits d'usage : chaque enseigne encadre l'emploi de son logo
@@ -90,21 +120,9 @@ function LogoRow({
   const { state, dispatch, notify } = useApp();
   const inputRef = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { accept, error } = useBrandLogoDrop(brandId, name);
 
   const current = state.brandLogos[brandId];
-
-  const accept = async (file: File | undefined) => {
-    setError(null);
-    if (!file) return;
-    try {
-      const { dataUrl, bytes } = await prepareLogo(file);
-      dispatch({ type: 'setBrandLogo', brandId, dataUrl });
-      notify(`Logo ${name} ajouté — ${formatBytes(bytes)}`);
-    } catch (e) {
-      setError(e instanceof LogoError ? e.message : 'Import impossible.');
-    }
-  };
 
   return (
     <div>
