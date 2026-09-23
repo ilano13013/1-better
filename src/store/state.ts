@@ -74,6 +74,7 @@ export function createInitialState(): AppState {
     driveAdded: [],
     driveTemplates: {},
     brandLogos: {},
+    recipePhotos: {},
     performances: [],
     weightEntries: [],
     checkIns: [],

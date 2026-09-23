@@ -438,6 +438,12 @@ export interface AppState {
    * redistribués avec l'application.
    */
   brandLogos: Record<string, string>;
+  /**
+   * Photos de recettes déposées par l'utilisateur, en data URI. Aucune photo
+   * n'est livrée avec l'application : les images externes sont bloquées dans
+   * certains conteneurs et le fichier autonome doit rester hors ligne.
+   */
+  recipePhotos: Record<string, string>;
   performances: Performance[];
   weightEntries: WeightEntry[];
   checkIns: WeeklyCheckIn[];

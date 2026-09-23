@@ -9,6 +9,7 @@ import { DAY_NAMES } from '../engine/training';
 import { workoutForDay } from '../engine/planner';
 import { Bar, Card, Sheet, eur, num } from '../components/ui';
 import { IconClock, IconFlame, IconRest } from '../components/icons';
+import { RecipeThumb } from '../components/RecipePhoto';
 import type { Screen } from '../App';
 
 /**
@@ -116,8 +117,13 @@ function DayDetail({
         <Card className="card-flat">
           {dayPlan.meals.map((meal, i) => (
             <div key={i} className="list-row">
-              <span className="xs dim" style={{ width: 88, flex: 'none' }}>{SLOT_LABELS[meal.slot]}</span>
-              <span className="grow sm truncate">{getRecipe(meal.recipeId).name}</span>
+              <RecipeThumb recipe={getRecipe(meal.recipeId)} size={38} />
+              <span className="grow" style={{ minWidth: 0 }}>
+                <span className="sm truncate" style={{ display: 'block' }}>
+                  {getRecipe(meal.recipeId).name}
+                </span>
+                <span className="xs dim">{SLOT_LABELS[meal.slot]}</span>
+              </span>
               <span className="xs dim num">{num(meal.macros.kcal)}</span>
             </div>
           ))}

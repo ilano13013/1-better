@@ -14,6 +14,7 @@ import { filterFromProfile, needsCertification } from '../engine/filters';
 import { CATEGORY_LABELS, CATEGORY_ORDER, formatQty } from '../engine/shopping';
 import { Bar, Card, Checkbox, Empty, Sheet, eur, num, type BarTone } from '../components/ui';
 import { IconCart, IconChevron, IconClock, IconFlame, IconInfo, IconSwap } from '../components/icons';
+import { RecipePhotoBanner, RecipeThumb } from '../components/RecipePhoto';
 import type { Screen } from '../App';
 
 /**
@@ -232,7 +233,8 @@ function MealCard({
 
   return (
     <Card>
-      <div className="row-between" style={{ alignItems: 'flex-start' }}>
+      <div className="row-between" style={{ alignItems: 'flex-start', gap: 12 }}>
+        <RecipeThumb recipe={recipe} size={58} />
         <button type="button" onClick={onOpen} className="grow"
           style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', minWidth: 0 }}>
           <div className="row" style={{ gap: 8, marginBottom: 6 }}>
@@ -273,6 +275,8 @@ function RecipeSheet({ meal, onReplace }: { meal: Meal; onReplace: () => void })
 
   return (
     <div className="stack">
+      <RecipePhotoBanner recipe={recipe} />
+
       <div className="row wrap" style={{ gap: 8 }}>
         <span className="badge"><IconClock size={12} /> {recipe.prepTimeMin} min</span>
         <span className="badge"><IconFlame size={12} /> {num(macros.kcal)} kcal</span>
@@ -366,6 +370,7 @@ function MealAlternatives({
         return (
           <button key={o.recipe.id} type="button" className="option" aria-pressed={false}
             onClick={() => onPick(o.recipe.id)}>
+            <RecipeThumb recipe={o.recipe} size={44} />
             <span className="grow">
               <span className="strong" style={{ display: 'block' }}>{o.recipe.name}</span>
               <span className="row xs dim wrap" style={{ marginTop: 4, gap: 10 }}>

@@ -14,6 +14,7 @@ import { personalRecords } from '../engine/progression';
 import { Bar, Card, Chip, Empty, Field, Option, Segmented, Sheet, eur, kg, num } from '../components/ui';
 import { GymMark, StoreMark } from '../components/BrandMark';
 import { LogoUploader } from '../components/LogoUploader';
+import { RecipePhotoLibrary } from '../components/RecipePhoto';
 import { LogoError, formatBytes, prepareLogo } from '../utils/image';
 import { IconCheck, IconMedal, IconSpark, IconTrend } from '../components/icons';
 
@@ -26,9 +27,10 @@ export default function ProfileScreen() {
   const uploadLogo = useLogoUpload();
   const [sheet, setSheet] = useState<
     null | 'weight' | 'checkin' | 'macros' | 'goal' | 'gym' | 'store' | 'budget'
-    | 'diet' | 'schedule' | 'logos'
+    | 'diet' | 'schedule' | 'logos' | 'photos'
   >(null);
   const logoCount = Object.keys(state.brandLogos).length;
+  const photoCount = Object.keys(state.recipePhotos).length;
 
   const entries = sortedEntries(state.weightEntries);
   const current = entries.length ? entries[entries.length - 1].weightKg : state.profile.weightKg;
@@ -135,6 +137,10 @@ export default function ProfileScreen() {
               label="Logos des enseignes"
               value={logoCount > 0 ? `${logoCount} déposé${logoCount > 1 ? 's' : ''}` : 'Monogrammes'}
               onClick={() => setSheet('logos')} />
+            <SettingRow
+              label="Photos des recettes"
+              value={photoCount > 0 ? `${photoCount} photo${photoCount > 1 ? 's' : ''}` : 'Aucune'}
+              onClick={() => setSheet('photos')} />
           </Card>
         </div>
 
@@ -291,6 +297,11 @@ export default function ProfileScreen() {
       <Sheet open={sheet === 'logos'} onClose={() => setSheet(null)}
         title={<div className="strong">Logos des enseignes</div>}>
         <LogoUploader />
+      </Sheet>
+
+      <Sheet open={sheet === 'photos'} onClose={() => setSheet(null)}
+        title={<div className="strong">Photos des recettes</div>}>
+        <RecipePhotoLibrary />
       </Sheet>
     </div>
   );

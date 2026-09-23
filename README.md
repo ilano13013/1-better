@@ -109,6 +109,25 @@ de salles, ce qui rend les listes de choix immédiatement lisibles.
 Les neutres portent un léger biais froid plutôt qu'un gris pur : un gris neutre
 absolu se lit comme un défaut, pas comme un choix.
 
+### Photos des recettes
+
+Aucune photo n'est livrée avec l'application, pour trois raisons cumulées : les
+images externes sont bloquées dans certains conteneurs d'exécution, le fichier
+autonome doit rester utilisable hors ligne, et la redistribution de photos
+tierces est encadrée.
+
+Les photos sont donc fournies par l'utilisateur, et restent sur son appareil :
+
+- **fiche recette** : un bandeau en tête sert de zone de dépôt ;
+- **Profil → Photos des recettes** : les 49 recettes au même endroit, avec
+  recherche et suivi de l'espace occupé.
+
+Elles sont réduites à 560 px et réencodées en JPEG — une prise de vue de
+téléphone passe ainsi de plusieurs mégaoctets à quelques dizaines de kilooctets.
+L'enveloppe totale des images est plafonnée à 2,6 Mo : au-delà, le quota du
+stockage local serait dépassé et l'enregistrement du profil échouerait sans
+prévenir. Une recette sans photo affiche une vignette neutre.
+
 ### Logos
 
 Aucun logo n'est embarqué : ce sont des marques déposées, et les redessiner de

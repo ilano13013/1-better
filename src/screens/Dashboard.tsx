@@ -15,6 +15,7 @@ import { sessionCount, weekStreak } from '../engine/gamification';
 import { Bar, Card, Ring, eur, kg, num, type BarTone } from '../components/ui';
 import { IconCart, IconChevron, IconClock, IconFlame, IconMedal, IconRest, IconWallet } from '../components/icons';
 import { StoreMark } from '../components/BrandMark';
+import { RecipeThumb } from '../components/RecipePhoto';
 import type { Screen } from '../App';
 
 /**
@@ -164,7 +165,12 @@ export default function Dashboard({ go }: { go: (s: Screen) => void }) {
               <span className="card-title" style={{ margin: 0 }}>Prochain repas</span>
               <span className="badge">{SLOT_LABELS[nextMeal.slot]}</span>
             </div>
-            <div className="strong" style={{ fontSize: 17 }}>{getRecipe(nextMeal.recipeId).name}</div>
+            <div className="row" style={{ gap: 12 }}>
+              <RecipeThumb recipe={getRecipe(nextMeal.recipeId)} size={52} />
+              <div className="strong grow" style={{ fontSize: 17, minWidth: 0 }}>
+                {getRecipe(nextMeal.recipeId).name}
+              </div>
+            </div>
             <div className="row xs dim" style={{ marginTop: 8, gap: 12 }}>
               <span className="row" style={{ gap: 5 }}><IconFlame size={13} />{num(nextMeal.macros.kcal)} kcal</span>
               <span>{nextMeal.macros.protein} g protéines</span>

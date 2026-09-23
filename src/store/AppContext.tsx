@@ -37,6 +37,7 @@ type Action =
   | { type: 'resetDrive' }
   | { type: 'setDriveTemplate'; storeId: string; template: string }
   | { type: 'setBrandLogo'; brandId: string; dataUrl: string | null }
+  | { type: 'setRecipePhoto'; recipeId: string; dataUrl: string | null }
   | { type: 'logPerformance'; performance: Performance }
   | { type: 'deletePerformance'; id: string }
   | { type: 'logWeight'; entry: WeightEntry }
@@ -142,6 +143,13 @@ function reducer(state: AppState, action: Action): AppState {
       if (action.dataUrl) brandLogos[action.brandId] = action.dataUrl;
       else delete brandLogos[action.brandId];
       return { ...state, brandLogos };
+    }
+
+    case 'setRecipePhoto': {
+      const recipePhotos = { ...state.recipePhotos };
+      if (action.dataUrl) recipePhotos[action.recipeId] = action.dataUrl;
+      else delete recipePhotos[action.recipeId];
+      return { ...state, recipePhotos };
     }
 
     case 'logPerformance': {
