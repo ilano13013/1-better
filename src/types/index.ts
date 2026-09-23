@@ -430,8 +430,6 @@ export interface AppState {
   packOverrides: Record<string, number>;
   /** Lignes déjà déposées dans le panier de l'enseigne. */
   driveAdded: string[];
-  /** Gabarits de recherche corrigés par l'utilisateur, par enseigne. */
-  driveTemplates: Record<string, string>;
   /**
    * Logos déposés par l'utilisateur, en data URI, indexés par identifiant
    * d'enseigne ou de salle. Ils restent sur l'appareil et ne sont jamais

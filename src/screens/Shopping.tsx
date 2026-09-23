@@ -14,7 +14,7 @@ import {
   buildSearchUrl, driveStatus, getHandoff, handoffPlan, handoffProgress,
 } from '../engine/drive';
 import { DAY_NAMES } from '../engine/training';
-import { Bar, Card, Empty, Field, Sheet, eur, num } from '../components/ui';
+import { Bar, Card, Empty, Sheet, eur, num } from '../components/ui';
 import {
   IconBack, IconCheck, IconCopy, IconDownload, IconInfo, IconMinus, IconPlus,
   IconShare, IconSpark, IconSwap, IconWallet,
@@ -623,9 +623,6 @@ function DrivePanel() {
   const status = driveStatus(store.id);
   const handoff = getHandoff(store.id);
   const items = purchasableItems(plan.shoppingList);
-  const template = state.driveTemplates[store.id] ?? '';
-
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [blockedUrl, setBlockedUrl] = useState<string | null>(null);
 
   const steps = useMemo(
@@ -635,8 +632,7 @@ function DrivePanel() {
   const progress = handoffProgress(steps);
   const current = progress.nextIndex >= 0 ? steps[progress.nextIndex] : null;
 
-  const urlFor = (term: string) =>
-    handoff ? buildSearchUrl(handoff, term, template || undefined) : null;
+  const urlFor = (term: string) => (handoff ? buildSearchUrl(handoff, term) : null);
 
   /**
    * Ouvre l'enseigne dans un onglet et dépose le terme dans le presse-papiers.
@@ -808,81 +804,13 @@ function DrivePanel() {
         </Card>
       </div>
 
-      <button type="button" className="btn btn-ghost btn-block" onClick={() => setSettingsOpen(true)}>
-        Lien de recherche {store.name}
-      </button>
-
       <p className="xs dim">
         {status.state === 'connecteur_absent'
           ? `Aucun accès officiel n'est connecté pour ${store.name}. Le jour où l'enseigne en ouvre un, il se branche sur le contrat défini dans engine/drive.ts et cette étape devient automatique.`
           : `Connecteur ${status.connector.label} disponible.`}
       </p>
 
-      <Sheet open={settingsOpen} onClose={() => setSettingsOpen(false)}
-        title={<div className="strong">Lien de recherche</div>}>
-        <TemplateEditor
-          storeName={store.name}
-          homeUrl={handoff.homeUrl}
-          value={template}
-          onTest={(v) => {
-            const url = buildSearchUrl(handoff, 'poulet', v || undefined);
-            try {
-              if (!window.open(url, '_blank', 'noopener,noreferrer')) setBlockedUrl(url);
-            } catch {
-              setBlockedUrl(url);
-            }
-          }}
-          onSave={(v) => {
-            dispatch({ type: 'setDriveTemplate', storeId: store.id, template: v });
-            notify(v ? 'Lien de recherche enregistré' : 'Retour à la page d\'accueil');
-            setSettingsOpen(false);
-          }}
-        />
-      </Sheet>
     </div>
   );
 }
 
-function TemplateEditor({
-  storeName, homeUrl, value, onSave, onTest,
-}: {
-  storeName: string; homeUrl: string; value: string;
-  onSave: (v: string) => void; onTest: (v: string) => void;
-}) {
-  const [draft, setDraft] = useState(value);
-  return (
-    <div className="stack">
-      <p className="sm muted">
-        Par défaut, l'application ouvre simplement la page d'accueil de {storeName}
-        avec le nom du produit dans le presse-papiers. C'est le seul comportement
-        qu'elle peut garantir : les enseignes changent leurs adresses de recherche
-        sans préavis, et rien ici ne permet de le vérifier.
-      </p>
-      <p className="sm muted">
-        Si tu relèves le format sur leur site, colle-le ici et chaque produit
-        s'ouvrira directement sur sa recherche.
-      </p>
-
-      <Field label="Gabarit de recherche" hint="Remplace le terme recherché par {q}.">
-        <input type="text" value={draft} placeholder={`${homeUrl}/recherche?q={q}`}
-          onChange={(e) => setDraft(e.target.value)} />
-      </Field>
-
-      <div className="grid-2">
-        <button type="button" className="btn" onClick={() => onTest(draft)}
-          disabled={!draft.includes('{q}')}>
-          Tester
-        </button>
-        <button type="button" className="btn btn-primary" onClick={() => onSave(draft)}>
-          Enregistrer
-        </button>
-      </div>
-
-      {value && (
-        <button type="button" className="btn btn-ghost btn-block" onClick={() => onSave('')}>
-          Revenir à la page d'accueil
-        </button>
-      )}
-    </div>
-  );
-}

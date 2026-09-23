@@ -12,9 +12,8 @@ import { computeTargets } from '../engine/nutrition';
 import { CATEGORY_LABELS, CATEGORY_ORDER, formatQty } from '../engine/shopping';
 import { DIET_LABELS, RESTRICTION_LABELS } from '../engine/filters';
 import { DAY_NAMES } from '../engine/training';
-import { Card, Checkbox, Chip, Field, Option, Segmented, Sheet, eur, num } from '../components/ui';
+import { Card, Checkbox, Chip, Field, Option, Segmented, eur, num } from '../components/ui';
 import { GymMark, StoreMark } from '../components/BrandMark';
-import { LogoUploader, useBrandLogoDrop } from '../components/LogoUploader';
 import { IconBack, IconSpark } from '../components/icons';
 
 /**
@@ -283,25 +282,19 @@ function GymStep({ p, patch }: StepProps) {
           <GymOption key={g.id} gym={g} p={p} patch={patch} />
         ))}
       </div>
-      <LogoHint only="gyms" />
     </>
   );
 }
 
 function GymOption({ gym, p, patch }: { gym: Gym } & StepProps) {
-  const { accept, error } = useBrandLogoDrop(gym.id, gym.name);
   return (
-    <div>
-      <Option
-        selected={p.gymId === gym.id}
-        onClick={() => patch({ gymId: gym.id, customEquipment: gym.custom ? p.customEquipment : [] })}
-        title={gym.name}
-        subtitle={gym.custom ? 'Tu choisis ton matériel à l\'étape suivante' : `${gym.equipment.length} équipements référencés`}
-        leading={<GymMark gym={gym} />}
-        onFileDrop={(file) => void accept(file)}
-      />
-      {error && <div className="xs alert" style={{ marginTop: 6, marginLeft: 16 }}>{error}</div>}
-    </div>
+    <Option
+      selected={p.gymId === gym.id}
+      onClick={() => patch({ gymId: gym.id, customEquipment: gym.custom ? p.customEquipment : [] })}
+      title={gym.name}
+      subtitle={gym.custom ? 'Tu choisis ton matériel à l\'étape suivante' : `${gym.equipment.length} équipements référencés`}
+      leading={<GymMark gym={gym} />}
+    />
   );
 }
 
@@ -388,7 +381,6 @@ function StoreStep({ p, patch }: StepProps) {
           <StoreOption key={s.id} store={s} p={p} patch={patch} />
         ))}
       </div>
-      <LogoHint only="stores" />
       <p className="xs dim" style={{ marginTop: 14 }}>
         La gestion de plusieurs enseignes simultanées arrivera dans une version ultérieure.
       </p>
@@ -397,45 +389,17 @@ function StoreStep({ p, patch }: StepProps) {
 }
 
 function StoreOption({ store, p, patch }: { store: Store } & StepProps) {
-  const { accept, error } = useBrandLogoDrop(store.id, store.name);
   return (
-    <div>
-      <Option
-        selected={p.storeId === store.id}
-        onClick={() => patch({ storeId: store.id })}
-        title={store.name}
-        subtitle={store.id === 'autre' ? 'Prix de référence, sans indice d\'enseigne' : undefined}
-        leading={<StoreMark store={store} />}
-        onFileDrop={(file) => void accept(file)}
-      />
-      {error && <div className="xs alert" style={{ marginTop: 6, marginLeft: 16 }}>{error}</div>}
-    </div>
+    <Option
+      selected={p.storeId === store.id}
+      onClick={() => patch({ storeId: store.id })}
+      title={store.name}
+      subtitle={store.id === 'autre' ? 'Prix de référence, sans indice d\'enseigne' : undefined}
+      leading={<StoreMark store={store} />}
+    />
   );
 }
 
-/**
- * Deux façons d'obtenir les vrais logos, exposées là où les marques
- * apparaissent : déposer un fichier sur une ligne, ou ouvrir l'écran dédié.
- */
-function LogoHint({ only }: { only: 'stores' | 'gyms' }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <div className="row-between" style={{ marginTop: 14, gap: 10 }}>
-        <span className="xs dim">
-          Dépose un logo sur une ligne pour remplacer le monogramme.
-        </span>
-        <button type="button" className="btn btn-sm btn-ghost" onClick={() => setOpen(true)}>
-          Ajouter les logos
-        </button>
-      </div>
-      <Sheet open={open} onClose={() => setOpen(false)}
-        title={<div className="strong">Logos des enseignes</div>}>
-        <LogoUploader only={only} />
-      </Sheet>
-    </>
-  );
-}
 
 function BudgetStep({ p, patch }: StepProps) {
   return (

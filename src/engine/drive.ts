@@ -137,10 +137,10 @@ export interface StoreHandoff {
   /**
    * Gabarit de recherche produit, `{q}` recevant le terme encodé.
    *
-   * ⚠️ Ces gabarits ne sont PAS vérifiés par l'application : les enseignes
-   * modifient leurs URL sans préavis et rien ici ne peut le détecter. En cas
-   * d'échec, l'application retombe sur `homeUrl` et l'utilisateur peut
-   * corriger le gabarit depuis l'écran de préparation.
+   * ⚠️ Ces gabarits ne sont PAS vérifiés : les enseignes modifient leurs URL
+   * sans préavis et rien ici ne peut le détecter. Tant qu'un format n'a pas
+   * été relevé et validé, le champ reste vide et l'application ouvre
+   * simplement `homeUrl`.
    */
   searchTemplate?: string;
 }
@@ -187,8 +187,8 @@ export function searchTerm(item: ShoppingListItem): string {
 }
 
 /** URL à ouvrir pour un produit : recherche si un gabarit existe, sinon accueil. */
-export function buildSearchUrl(handoff: StoreHandoff, term: string, template?: string): string {
-  const pattern = template ?? handoff.searchTemplate;
+export function buildSearchUrl(handoff: StoreHandoff, term: string): string {
+  const pattern = handoff.searchTemplate;
   if (!pattern || !pattern.includes('{q}')) return handoff.homeUrl;
   try {
     const url = pattern.replace('{q}', encodeURIComponent(term));

@@ -35,7 +35,6 @@ type Action =
   | { type: 'setPacks'; foodId: string; packs: number | null }
   | { type: 'toggleDriveAdded'; id: string }
   | { type: 'resetDrive' }
-  | { type: 'setDriveTemplate'; storeId: string; template: string }
   | { type: 'setBrandLogo'; brandId: string; dataUrl: string | null }
   | { type: 'setRecipePhoto'; recipeId: string; dataUrl: string | null }
   | { type: 'logPerformance'; performance: Performance }
@@ -129,14 +128,6 @@ function reducer(state: AppState, action: Action): AppState {
 
     case 'resetDrive':
       return { ...state, driveAdded: [] };
-
-    case 'setDriveTemplate': {
-      const driveTemplates = { ...state.driveTemplates };
-      const value = action.template.trim();
-      if (value) driveTemplates[action.storeId] = value;
-      else delete driveTemplates[action.storeId];
-      return { ...state, driveTemplates };
-    }
 
     case 'setBrandLogo': {
       const brandLogos = { ...state.brandLogos };

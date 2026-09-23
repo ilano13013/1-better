@@ -130,17 +130,14 @@ images externes sont bloquées dans certains conteneurs d'exécution, le fichier
 autonome doit rester utilisable hors ligne, et la redistribution de photos
 tierces est encadrée.
 
-Les photos sont donc fournies par l'utilisateur, et restent sur son appareil :
+L'application **affiche** les photos présentes dans `state.recipePhotos` : sur
+la fiche recette, les cartes de repas, la vue Semaine et le prochain repas de
+l'accueil. Une recette sans photo affiche une vignette neutre — une initiale,
+jamais une illustration.
 
-- **fiche recette** : un bandeau en tête sert de zone de dépôt ;
-- **Profil → Photos des recettes** : les 49 recettes au même endroit, avec
-  recherche et suivi de l'espace occupé.
-
-Elles sont réduites à 560 px et réencodées en JPEG — une prise de vue de
-téléphone passe ainsi de plusieurs mégaoctets à quelques dizaines de kilooctets.
-L'enveloppe totale des images est plafonnée à 2,6 Mo : au-delà, le quota du
-stockage local serait dépassé et l'enregistrement du profil échouerait sans
-prévenir. Une recette sans photo affiche une vignette neutre.
+L'import depuis l'interface a été retiré. Pour livrer des photos avec
+l'application, versionne les fichiers et référence-les depuis les données,
+comme décrit dans `src/assets/logos/README.md`.
 
 ### Logos
 
@@ -289,16 +286,15 @@ Ce qu'elle fait, et qui fonctionne aujourd'hui : une **préparation assistée**.
 
 ### Liens de recherche
 
-Par défaut, l'application ouvre la **page d'accueil** des courses en ligne. Les
-gabarits de recherche profonde ne sont pas codés en dur : les enseignes
-modifient leurs URL sans préavis, et une adresse inventée enverrait
-l'utilisateur sur une page d'erreur — pire que l'accueil avec le nom déjà
-copié.
+L'application ouvre la **page d'accueil** des courses en ligne. Les gabarits de
+recherche profonde ne sont pas codés en dur : les enseignes modifient leurs URL
+sans préavis, et une adresse inventée enverrait l'utilisateur sur une page
+d'erreur — pire que l'accueil avec le nom déjà copié.
 
-L'écran de préparation permet de **saisir et tester** le gabarit relevé sur le
-site de l'enseigne (`https://…/recherche?q={q}`). Il est alors mémorisé, et
-chaque produit s'ouvre directement sur sa recherche. Les gabarits validés
-peuvent être remontés en dur dans `STORE_HANDOFFS`, dans `engine/drive.ts`.
+`STORE_HANDOFFS`, dans `engine/drive.ts`, porte un champ `searchTemplate` par
+enseigne. Une fois un format relevé et vérifié, le renseigner suffit : chaque
+produit s'ouvre alors directement sur sa recherche. Les gabarits non https ou
+sans jeton `{q}` sont ignorés au profit de la page d'accueil.
 
 ### Le jour où une enseigne ouvre un accès officiel
 

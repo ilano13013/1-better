@@ -9,25 +9,15 @@ produirait des visuels approximatifs présentés comme authentiques, et les
 redistribuer sans autorisation poserait un problème de droits.
 
 En attendant, `<BrandMark>` affiche un **monogramme** sur la couleur de la
-marque. Deux façons d'y mettre les vrais fichiers.
+marque.
 
-## A. Sur ton appareil, sans toucher au code
+> L'import depuis l'interface a été retiré. Les images déjà déposées restent
+> affichées, mais elles vivent dans le stockage local du navigateur : elles ne
+> suivent ni sur un autre appareil, ni pour un autre visiteur, et disparaissent
+> si les données du site sont effacées. Pour qu'elles fassent partie de
+> l'application, elles doivent être ajoutées au dépôt comme ci-dessous.
 
-Deux entrées, l'une comme l'autre disponible dès l'onboarding :
-
-- **Glisse un fichier directement sur une ligne** dans « Où t'entraînes-tu ? »
-  ou « Où fais-tu tes courses ? ». La ligne se met en pointillés au survol.
-- **Ajouter les logos** (au bas de ces écrans, ou Profil → Logos des enseignes)
-  ouvre la liste complète, avec sélecteur de fichier pour les appareils sans
-  glisser-déposer. Les
-images sont réduites à 128 px et plafonnées à 60 Ko, pour ne pas saturer le
-stockage local — ce qui ferait échouer l'enregistrement du profil entier.
-
-Les fichiers restent dans le navigateur de l'appareil : ils ne sont ni envoyés
-ailleurs, ni publiés avec l'application. C'est la voie à privilégier si tu n'es
-pas certain de tes droits de redistribution.
-
-## B. Dans le projet, livré avec l'application
+## Ajouter les fichiers au projet
 
 1. Dépose les fichiers ici, de préférence en SVG, sinon en PNG transparent :
 
@@ -58,6 +48,10 @@ pas certain de tes droits de redistribution.
 
 3. Rien d'autre à faire : `<BrandMark>` bascule automatiquement sur le fichier
    dès que `logo` est renseigné, et retombe sur le monogramme s'il manque.
+
+La même démarche vaut pour les photos de recettes : `state.recipePhotos` est
+lu à l'affichage, et un champ `photo` sur `Recipe` ferait le même office une
+fois les fichiers versionnés.
 
 ## Où les obtenir légalement
 

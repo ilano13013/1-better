@@ -13,9 +13,6 @@ import { buildBadges, sessionCount, weekStreak, progressToGoal } from '../engine
 import { personalRecords } from '../engine/progression';
 import { Bar, Card, Chip, Empty, Field, Option, Segmented, Sheet, eur, kg, num } from '../components/ui';
 import { GymMark, StoreMark } from '../components/BrandMark';
-import { LogoUploader } from '../components/LogoUploader';
-import { RecipePhotoLibrary } from '../components/RecipePhoto';
-import { LogoError, formatBytes, prepareLogo } from '../utils/image';
 import { IconCheck, IconMedal, IconSpark, IconTrend } from '../components/icons';
 
 /**
@@ -24,13 +21,10 @@ import { IconCheck, IconMedal, IconSpark, IconTrend } from '../components/icons'
  */
 export default function ProfileScreen() {
   const { state, plan, dispatch, notify } = useApp();
-  const uploadLogo = useLogoUpload();
   const [sheet, setSheet] = useState<
     null | 'weight' | 'checkin' | 'macros' | 'goal' | 'gym' | 'store' | 'budget'
-    | 'diet' | 'schedule' | 'logos' | 'photos'
+    | 'diet' | 'schedule'
   >(null);
-  const logoCount = Object.keys(state.brandLogos).length;
-  const photoCount = Object.keys(state.recipePhotos).length;
 
   const entries = sortedEntries(state.weightEntries);
   const current = entries.length ? entries[entries.length - 1].weightKg : state.profile.weightKg;
@@ -133,14 +127,6 @@ export default function ProfileScreen() {
               mark={store && <StoreMark store={store} size={20} />} />
             <SettingRow label="Budget" value={`${eur(state.profile.weeklyBudget)} / sem.`} onClick={() => setSheet('budget')} />
             <SettingRow label="Alimentation" value={DIET_LABELS[state.profile.diet]} onClick={() => setSheet('diet')} />
-            <SettingRow
-              label="Logos des enseignes"
-              value={logoCount > 0 ? `${logoCount} déposé${logoCount > 1 ? 's' : ''}` : 'Monogrammes'}
-              onClick={() => setSheet('logos')} />
-            <SettingRow
-              label="Photos des recettes"
-              value={photoCount > 0 ? `${photoCount} photo${photoCount > 1 ? 's' : ''}` : 'Aucune'}
-              onClick={() => setSheet('photos')} />
           </Card>
         </div>
 
@@ -202,7 +188,7 @@ export default function ProfileScreen() {
             </button>
             <button type="button" className="btn btn-alert btn-block"
               onClick={() => {
-                if (!window.confirm('Effacer toutes tes données locales ? Cette action est définitive.')) return;
+                if (!window.confirm('Effacer toutes tes données locales, images comprises ? Cette action est définitive.')) return;
                 clearState();
                 dispatch({ type: 'reset' });
               }}>
@@ -277,13 +263,9 @@ export default function ProfileScreen() {
               onClick={() => { dispatch({ type: 'patchProfile', patch: { storeId: s.id } }); notify('Prix et liste recalculés'); setSheet(null); }}
               title={s.name}
               leading={<StoreMark store={s} />}
-              onFileDrop={(file) => void uploadLogo(s.id, s.name, file)}
             />
           ))}
         </div>
-        <p className="xs dim" style={{ marginTop: 12 }}>
-          Dépose un logo sur une ligne, ou ouvre « Logos des enseignes » depuis les réglages.
-        </p>
       </Sheet>
 
       <Sheet open={sheet === 'budget'} onClose={() => setSheet(null)} title={<div className="strong">Budget hebdomadaire</div>}>
@@ -293,35 +275,8 @@ export default function ProfileScreen() {
       <Sheet open={sheet === 'diet'} onClose={() => setSheet(null)} title={<div className="strong">Alimentation</div>}>
         <DietEditor />
       </Sheet>
-
-      <Sheet open={sheet === 'logos'} onClose={() => setSheet(null)}
-        title={<div className="strong">Logos des enseignes</div>}>
-        <LogoUploader />
-      </Sheet>
-
-      <Sheet open={sheet === 'photos'} onClose={() => setSheet(null)}
-        title={<div className="strong">Photos des recettes</div>}>
-        <RecipePhotoLibrary />
-      </Sheet>
     </div>
   );
-}
-
-/**
- * Import d'un logo depuis une ligne d'enseigne. Le hook ne pouvant pas être
- * appelé dans une boucle conditionnelle, on passe par l'utilitaire direct.
- */
-function useLogoUpload() {
-  const { dispatch, notify } = useApp();
-  return async (brandId: string, name: string, file: File) => {
-    try {
-      const { dataUrl, bytes } = await prepareLogo(file);
-      dispatch({ type: 'setBrandLogo', brandId, dataUrl });
-      notify(`Logo ${name} ajouté — ${formatBytes(bytes)}`);
-    } catch (e) {
-      notify(e instanceof LogoError ? e.message : 'Import impossible.');
-    }
-  };
 }
 
 function SettingRow({
@@ -618,7 +573,6 @@ function MacroEditor({ onDone }: { onDone: () => void }) {
 
 function GymEditor({ onDone }: { onDone: () => void }) {
   const { state, dispatch, notify } = useApp();
-  const uploadLogo = useLogoUpload();
   const gym = GYMS.find((g) => g.id === state.profile.gymId);
 
   const toggleEquipment = (id: EquipmentId) => {
@@ -642,7 +596,6 @@ function GymEditor({ onDone }: { onDone: () => void }) {
             }}
             title={g.name}
             leading={<GymMark gym={g} />}
-            onFileDrop={(file) => void uploadLogo(g.id, g.name, file)}
           />
         ))}
       </div>

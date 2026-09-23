@@ -247,17 +247,16 @@ describe('intégration Drive', () => {
     expect(buildSearchUrl(handoff, 'poulet')).toBe(handoff.homeUrl);
   });
 
-  it('construit une recherche dès qu\'un gabarit valide est fourni', () => {
-    const handoff = getHandoff('carrefour')!;
-    const url = buildSearchUrl(handoff, 'filets de poulet', 'https://www.carrefour.fr/s?q={q}');
-    expect(url).toBe('https://www.carrefour.fr/s?q=filets%20de%20poulet');
+  it('construit une recherche dès qu\'un gabarit valide est renseigné', () => {
+    const handoff = { storeId: 'test', homeUrl: 'https://exemple.fr', searchTemplate: 'https://exemple.fr/s?q={q}' };
+    expect(buildSearchUrl(handoff, 'filets de poulet')).toBe('https://exemple.fr/s?q=filets%20de%20poulet');
   });
 
   it('refuse un gabarit non https ou malformé', () => {
-    const handoff = getHandoff('carrefour')!;
-    expect(buildSearchUrl(handoff, 'riz', 'http://exemple.fr/?q={q}')).toBe(handoff.homeUrl);
-    expect(buildSearchUrl(handoff, 'riz', 'pas une url {q}')).toBe(handoff.homeUrl);
-    expect(buildSearchUrl(handoff, 'riz', 'https://exemple.fr/sans-jeton')).toBe(handoff.homeUrl);
+    const home = 'https://exemple.fr';
+    expect(buildSearchUrl({ storeId: 't', homeUrl: home, searchTemplate: 'http://x.fr/?q={q}' }, 'riz')).toBe(home);
+    expect(buildSearchUrl({ storeId: 't', homeUrl: home, searchTemplate: 'pas une url {q}' }, 'riz')).toBe(home);
+    expect(buildSearchUrl({ storeId: 't', homeUrl: home, searchTemplate: 'https://x.fr/sans-jeton' }, 'riz')).toBe(home);
   });
 
   it('nettoie le conditionnement du terme recherché', () => {
