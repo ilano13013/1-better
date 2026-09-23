@@ -24,9 +24,11 @@ npm install && npm run build && npm run bundle
 # → dist/1-better.html : un fichier unique, à ouvrir par double-clic.
 ```
 
-Le fichier est entièrement autonome : CSS et JavaScript inclus, aucune requête
-réseau, aucune police externe. Il fonctionne hors ligne et se déploie tel quel
-sur n'importe quel hébergeur statique.
+Le fichier est entièrement autonome : CSS et JavaScript inclus, aucune police
+externe. Il se déploie tel quel sur n'importe quel hébergeur statique et
+fonctionne hors ligne — à une exception près, facultative : la recherche d'un
+code-barres interroge Open Food Facts. Tout le reste, plan compris, est calculé
+localement.
 
 ### Développement
 
@@ -86,6 +88,7 @@ Rien n'est une maquette statique. Toutes les interactions recalculent l'état :
 | Panier au-dessus du budget | Substitutions cohérentes proposées, jamais imposées |
 | Changer de compte | La semaine, les performances et les images du compte chargé remplacent les précédentes |
 | Créer un compte e-mail | Les données du compte sont chiffrées avec une clé dérivée du mot de passe |
+| Pointer un repas ou ajouter un aliment | La barre et les macros du jour suivent ; le plan, lui, ne bouge pas |
 
 ---
 
@@ -548,6 +551,63 @@ légale de l'application deviendrait contradictoire.
 
 ---
 
+## Journal de consommation
+
+Le plan dit ce qui est prévu ; le journal dit ce qui a été mangé. **Il est un
+plus, jamais une obligation** : une journée sans aucune saisie reste une
+journée complète et valide, avec son plan et ses macros. Rien ne le réclame,
+aucun écran ne se bloque sans lui, et un plan non pointé n'est pas un plan en
+échec.
+
+### Ce que cela a corrigé au passage
+
+La part « consommée » de la journée était devinée à partir de l'heure : à
+14 h, le petit-déjeuner et le déjeuner étaient réputés avalés. Commode, et
+faux — quelqu'un qui saute un repas voyait ses calories monter quand même.
+Une saisie explicite remplace la devinette, et l'absence de saisie ne prétend
+plus rien : une journée non pointée affiche zéro, ce qui est la vérité.
+
+### Deux gestes
+
+- **« J'ai mangé ce repas »** sur chaque repas proposé. Le bouton bascule, la
+  barre et les macros du jour suivent.
+- **« + Aliment »** pour ce qui a été mangé hors plan, avec sa quantité en
+  grammes et un aperçu des macros avant d'enregistrer.
+
+Les macros sont **figées à la saisie**. Les recalculer après coup ferait bouger
+l'historique quand la base d'aliments change ou qu'une recette est corrigée, et
+un journal dont le passé bouge n'est pas un journal.
+
+### Le scanner, et pourquoi il n'est pas seul
+
+Trois chemins aboutissent au même endroit :
+
+1. **Scanner** — caméra et `BarcodeDetector`. Ni Safari ni un cadre isolé ne le
+   permettent, et l'autorisation caméra peut être refusée.
+2. **Code-barres saisi** — même recherche, sans caméra.
+3. **Base d'aliments** — 82 aliments, hors ligne, sans limite.
+
+Le troisième existe pour que la fonction ne dépende **jamais** du réseau ni
+d'une autorisation matérielle. Le scan est un raccourci, pas un péage.
+
+La **clé de contrôle** du code est vérifiée localement : le dernier chiffre
+d'un EAN se calcule à partir des autres, donc une lecture ratée est reconnue
+sans interroger quoi que ce soit.
+
+### Ce que valent les valeurs d'Open Food Facts
+
+C'est une base **contributive** : des emballages recopiés par des bénévoles.
+Les valeurs peuvent être fausses ou absentes. L'application affiche donc la
+source, signale les champs manquants — kilojoules convertis en kcal quand les
+kcal manquent, champs absents listés plutôt que présentés comme des zéros
+vrais — et laisse tout corriger avant d'enregistrer.
+
+**Quota** : la recherche en ligne est limitée à 3 par jour en formule gratuite,
+illimitée en 1% Better+. La base d'aliments locale reste illimitée dans les
+deux cas, puisqu'elle ne coûte rien et fonctionne hors ligne.
+
+---
+
 ## Le bouton « Préparer mon Drive »
 
 **Aucune enseigne française ne publie d'API permettant à une application tierce
@@ -623,7 +683,7 @@ officiel d'enseigne : aucun des trois ne peut être simulé honnêtement.
 npm test
 ```
 
-134 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+148 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
 substitutions (dont la protection de la densité protéique), couverture de tous
@@ -640,7 +700,10 @@ l'arithmétique de l'abonnement : remise annuelle au centime, échéance d'un
 31 janvier, d'un 29 février, fermeture effective des moteurs à échéance, et la
 caution professionnelle — aucun diplôme inventé, périmètre non vide, exclusion
 explicite de la nutrition et de la santé, adresse Instagram construite sans
-arobase parasite.
+arobase parasite, journal de consommation (totaux par jour, quantité négative
+sans effet, aliment à la pièce converti ou refusé, quota ne comptant que les
+recherches en ligne) et lecture de code-barres (clé de contrôle, kilojoules
+convertis, champs manquants signalés).
 
 Le test de fumée `npm run smoke` va plus loin : il compte les jours réellement
 planifiés en gratuit (3) puis après activation (7), crée un compte e-mail, vérifie

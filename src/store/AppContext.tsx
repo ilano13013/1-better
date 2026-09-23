@@ -13,6 +13,7 @@ import {
 import { loadSession, saveSession } from './session';
 import type { Session } from '../engine/auth';
 import { startSubscription, type BillingPeriod } from '../engine/entitlements';
+import type { IntakeEntry } from '../engine/intake';
 
 /**
  * État global et cascade de recalcul.
@@ -49,6 +50,8 @@ type Action =
   | { type: 'setTheme'; theme: 'light' | 'dark' }
   | { type: 'subscribe'; period: BillingPeriod }
   | { type: 'unsubscribe' }
+  | { type: 'logIntake'; entry: IntakeEntry }
+  | { type: 'removeIntake'; id: string }
   | { type: 'regeneratePlan' };
 
 /** Champs du profil dont la modification invalide les choix manuels. */
@@ -73,6 +76,13 @@ function reducer(state: AppState, action: Action): AppState {
 
     case 'unsubscribe':
       return { ...clearPlanOverrides(state), plan: 'free', subscription: null };
+
+    // Le journal ne touche pas au plan : pointer un repas ne le régénère pas.
+    case 'logIntake':
+      return { ...state, intake: [...state.intake, action.entry] };
+
+    case 'removeIntake':
+      return { ...state, intake: state.intake.filter((e) => e.id !== action.id) };
 
     case 'loadDemo':
       return demoState();

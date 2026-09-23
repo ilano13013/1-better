@@ -258,8 +258,9 @@ export default function ProfileScreen() {
             </button>
           </div>
           <p className="xs dim" style={{ marginTop: 12 }}>
-            Toutes tes données restent sur cet appareil. Aucune information n'est
-            transmise à un service externe.
+            Toutes tes données restent sur cet appareil. Le seul échange avec
+            l'extérieur est facultatif : chercher un code-barres envoie ce code
+            à Open Food Facts, et rien d'autre.
           </p>
         </div>
       </div>

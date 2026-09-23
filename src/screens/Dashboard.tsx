@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useApp } from '../store/AppContext';
 import { dayPlanFor } from '../engine/mealPlan';
-import { todayIndex } from '../store/state';
+import { entriesForDay, intakeTotals, isMealLogged } from '../engine/intake';
+import { isoForDay, todayIndex } from '../store/state';
 import { GOALS } from '../data/goals';
 import { getStore } from '../data/stores';
 import { getRecipe } from '../data/recipes';
@@ -44,13 +45,20 @@ export default function Dashboard({ go }: { go: (s: Screen) => void }) {
   const cart = plan.shoppingList.total;
   const overBudget = cart - budget;
 
-  // « Consommé » = repas de la journée déjà passés, estimés par l'heure.
-  const hour = new Date().getHours();
+  /*
+   * « Consommé » vient du journal, plus d'une estimation par l'heure. L'ancien
+   * calcul faisait monter les calories de quelqu'un qui avait sauté un repas ;
+   * une journée non pointée affiche désormais zéro, ce qui est la vérité.
+   */
   const meals = day?.meals ?? [];
-  const passedMeals = meals.filter((_, i) => hour >= mealHour(i, meals.length));
-  const eaten = passedMeals.reduce((s, m) => s + m.macros.kcal, 0);
-  const eatenProtein = passedMeals.reduce((s, m) => s + m.macros.protein, 0);
-  const nextMeal = meals[passedMeals.length] ?? null;
+  const logged = entriesForDay(state.intake, isoForDay(today));
+  const consumed = intakeTotals(logged);
+  const eaten = consumed.kcal;
+  const eatenProtein = consumed.protein;
+  // Prochain repas : le premier du plan qui n'a pas encore été pointé.
+  const nextMeal = meals.find(
+    (m) => !isMealLogged(state.intake, isoForDay(today), m.slot, m.recipeId),
+  ) ?? null;
 
   const nextWorkout = useMemo(() => {
     const upcoming = plan.workoutPlan.workouts.find((w) => w.day >= today);
@@ -88,8 +96,8 @@ export default function Dashboard({ go }: { go: (s: Screen) => void }) {
                 <IconChevron />
               </div>
               <MacroLine label="Protéines" value={eatenProtein} max={plan.targets.protein} unit="g" />
-              <MacroLine label="Glucides" value={Math.round(passedMeals.reduce((s, m) => s + m.macros.carbs, 0))} max={plan.targets.carbs} unit="g" tone="muted" />
-              <MacroLine label="Lipides" value={Math.round(passedMeals.reduce((s, m) => s + m.macros.fat, 0))} max={plan.targets.fat} unit="g" tone="hatch" />
+              <MacroLine label="Glucides" value={consumed.carbs} max={plan.targets.carbs} unit="g" tone="muted" />
+              <MacroLine label="Lipides" value={consumed.fat} max={plan.targets.fat} unit="g" tone="hatch" />
             </div>
           </div>
         </Card>
@@ -237,10 +245,4 @@ function MiniStat({ label, value, icon }: { label: string; value: string; icon: 
   );
 }
 
-/** Heure indicative d'un repas, pour estimer ce qui a déjà été consommé. */
-function mealHour(index: number, total: number): number {
-  const start = 8;
-  const end = 20;
-  if (total <= 1) return start;
-  return start + Math.round((index * (end - start)) / (total - 1));
-}
+

@@ -38,6 +38,12 @@ export interface Limits {
   autoProgression: boolean;
   /** Profondeur d'historique consultable, en jours. `null` : sans limite. */
   historyDays: number | null;
+  /**
+   * Recherches de code-barres par jour. `null` : sans limite.
+   * Seule la recherche en ligne est comptée : la base d'aliments locale reste
+   * illimitée, puisqu'elle ne coûte rien et fonctionne hors ligne.
+   */
+  barcodeLookupsPerDay: number | null;
   /** Export de la liste de courses. */
   exportShoppingList: boolean;
   /** Préparation du panier Drive. */
@@ -63,6 +69,7 @@ export const LIMITS: Record<Plan, Limits> = {
     gymEquipment: false,
     autoProgression: false,
     historyDays: 30,
+    barcodeLookupsPerDay: 3,
     exportShoppingList: false,
     drivePrep: false,
   },
@@ -75,6 +82,7 @@ export const LIMITS: Record<Plan, Limits> = {
     gymEquipment: true,
     autoProgression: true,
     historyDays: null,
+    barcodeLookupsPerDay: null,
     exportShoppingList: true,
     drivePrep: true,
   },
@@ -136,7 +144,8 @@ export const PLAN_TABLE: PlanFeature[] = [
   { label: 'Historique poids et charges', free: '30 jours', plus: 'Illimité' },
   { label: 'Export de la liste de courses', free: 'non', plus: 'oui' },
   { label: "Préparation d'un panier Drive", free: 'non', plus: 'oui' },
-  { label: 'Scanner code-barres', free: 'Limité', plus: 'Illimité', planned: true },
+  { label: 'Journal des repas et aliments', free: 'oui', plus: 'oui' },
+  { label: 'Scanner code-barres', free: '3 par jour', plus: 'Illimité' },
   { label: 'Historique des mensurations', free: '30 jours', plus: 'Illimité', planned: true },
 ];
 

@@ -14,6 +14,14 @@ export function currentWeekStart(today = new Date()): string {
 }
 
 /** Index du jour courant, 0 = lundi. */
+/** Date ISO du jour `day` (0 = lundi) dans la semaine courante. */
+export function isoForDay(day: number, today = new Date()): string {
+  const d = new Date(today);
+  d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + day);
+  return d.toISOString().slice(0, 10);
+}
+
 export function todayIndex(today = new Date()): 0 | 1 | 2 | 3 | 4 | 5 | 6 {
   return ((today.getDay() + 6) % 7) as 0 | 1 | 2 | 3 | 4 | 5 | 6;
 }
@@ -65,6 +73,7 @@ export function createInitialState(): AppState {
     onboarded: false,
     plan: 'free',
     subscription: null,
+    intake: [],
     profile: { ...EMPTY_PROFILE },
     targetsOverride: null,
     pantry: [],

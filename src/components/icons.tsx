@@ -103,3 +103,15 @@ export const IconInstagram = ({ size = 16, strokeWidth = 1.7 }: P) => (
     <path d="M17.5 6.5h.01" />
   </svg>
 );
+
+/** Loupe — recherche dans la base d'aliments. */
+export const IconSearch = ({ size = 16, strokeWidth = 1.8 }: P) => (
+  <svg {...base(size, strokeWidth)}><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
+);
+
+/** Code-barres — saisie et scan. */
+export const IconBarcode = ({ size = 16, strokeWidth = 1.8 }: P) => (
+  <svg {...base(size, strokeWidth)}>
+    <path d="M4 6v12M7.5 6v12M11 6v8M14.5 6v12M18 6v12M20.5 6v8" />
+  </svg>
+);

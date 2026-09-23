@@ -414,6 +414,8 @@ export interface CheckInAdjustment {
 /* État applicatif                                                      */
 /* ------------------------------------------------------------------ */
 
+export type { IntakeEntry } from '../engine/intake';
+import type { IntakeEntry } from '../engine/intake';
 export type { Plan, Subscription } from '../engine/entitlements';
 import type { Plan, Subscription } from '../engine/entitlements';
 
@@ -424,6 +426,8 @@ export interface AppState {
   plan: Plan;
   /** Abonnement en cours, `null` en formule gratuite. */
   subscription: Subscription | null;
+  /** Journal de ce qui a réellement été mangé. Facultatif par construction. */
+  intake: IntakeEntry[];
   profile: Profile;
   targetsOverride: Macros | null;
   pantry: PantryItem[];

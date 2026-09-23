@@ -2,19 +2,21 @@ import { useMemo, useState } from 'react';
 import type { DayIndex, Meal, PantryItem } from '../types';
 import { useApp } from '../store/AppContext';
 import { PlanSheet, PlusLock } from '../components/Plus';
-import { todayIndex } from '../store/state';
+import { isoForDay, todayIndex } from '../store/state';
 import { FOODS, getFood } from '../data/foods';
 import { getRecipe } from '../data/recipes';
 import { getStore } from '../data/stores';
 import { SLOT_LABELS } from '../engine/nutrition';
 import { DAY_NAMES, DAY_SHORT } from '../engine/training';
 import { dayPlanFor, rankRecipes } from '../engine/mealPlan';
+import { entriesForDay, intakeTotals, isMealLogged } from '../engine/intake';
+import { IntakeSheet } from '../components/IntakeSheet';
 import { basketFromPlan } from '../engine/basket';
 import { ingredientQty, recipeCost, recipeMacros, resolveRecipe } from '../engine/recipes';
 import { filterFromProfile, needsCertification } from '../engine/filters';
 import { CATEGORY_LABELS, CATEGORY_ORDER, formatQty } from '../engine/shopping';
 import { Bar, Card, Checkbox, Empty, Sheet, eur, num, type BarTone } from '../components/ui';
-import { IconCart, IconChevron, IconClock, IconFlame, IconInfo, IconSwap } from '../components/icons';
+import { IconCart, IconCheck, IconChevron, IconClock, IconFlame, IconInfo, IconPlus, IconSwap, IconTrash } from '../components/icons';
 import { RecipePhotoBanner, RecipeThumb } from '../components/RecipePhoto';
 import type { Screen } from '../App';
 
@@ -29,6 +31,35 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
   const [replacing, setReplacing] = useState<number | null>(null);
   const [pantryOpen, setPantryOpen] = useState(false);
   const [plans, setPlans] = useState(false);
+  const [adding, setAdding] = useState(false);
+
+  // Le journal porte sur une date réelle, pas sur un rang dans la semaine.
+  const isoDay = isoForDay(day);
+  const logged = entriesForDay(state.intake, isoDay);
+  const consumed = intakeTotals(logged);
+
+  const toggleMeal = (meal: Meal) => {
+    const existing = logged.find(
+      (e) => e.kind === 'meal' && e.slot === meal.slot && e.recipeId === meal.recipeId,
+    );
+    if (existing) {
+      dispatch({ type: 'removeIntake', id: existing.id });
+      return;
+    }
+    dispatch({
+      type: 'logIntake',
+      entry: {
+        id: `i${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+        date: isoDay,
+        kind: 'meal',
+        label: getRecipe(meal.recipeId).name,
+        recipeId: meal.recipeId,
+        slot: meal.slot,
+        macros: meal.macros,
+        at: new Date().toISOString(),
+      },
+    });
+  };
 
   const dayPlan = dayPlanFor(plan.mealPlan, day);
   const store = getStore(state.profile.storeId);
@@ -145,6 +176,58 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
           </Card>
         )}
 
+        {/* Journal du jour */}
+        <div>
+          <div className="row-between" style={{ marginBottom: 10 }}>
+            <div className="card-title" style={{ margin: 0 }}>Journal du jour</div>
+            <button type="button" className="btn btn-sm" onClick={() => setAdding(true)}>
+              <IconPlus size={14} /> Aliment
+            </button>
+          </div>
+          <Card className="card-flat">
+            <div className="row-between" style={{ alignItems: 'baseline' }}>
+              <div>
+                <div className="metric num">{num(consumed.kcal)}</div>
+                <div className="xs dim">kcal consommées sur {num(targets.kcal)}</div>
+              </div>
+              {logged.length === 0 && (
+                <span className="xs dim" style={{ textAlign: 'right', maxWidth: 150 }}>
+                  Facultatif : le plan reste valable sans rien pointer.
+                </span>
+              )}
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <Bar value={consumed.kcal} max={targets.kcal} />
+            </div>
+            <div className="macro-grid" style={{ marginTop: 16 }}>
+              <MacroCell label="Protéines" value={consumed.protein} target={targets.protein} />
+              <MacroCell label="Glucides" value={consumed.carbs} target={targets.carbs} tone="muted" />
+              <MacroCell label="Lipides" value={consumed.fat} target={targets.fat} tone="hatch" />
+            </div>
+
+            {logged.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <div className="divider" style={{ marginBottom: 6 }} />
+                {logged.map((e) => (
+                  <div key={e.id} className="list-row">
+                    <span className="grow" style={{ minWidth: 0 }}>
+                      <span className="sm truncate" style={{ display: 'block' }}>{e.label}</span>
+                      <span className="xs dim">
+                        {e.grams ? `${e.grams} g · ` : ''}{num(e.macros.kcal)} kcal
+                      </span>
+                    </span>
+                    <button type="button" className="icon-btn"
+                      onClick={() => dispatch({ type: 'removeIntake', id: e.id })}
+                      aria-label={`Retirer ${e.label}`}>
+                      <IconTrash />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+
         {/* Repas */}
         {dayPlan.meals.map((meal, index) => (
           <MealCard
@@ -152,6 +235,8 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
             meal={meal}
             swaps={state.foodSwaps}
             storeId={store.id}
+            eaten={isMealLogged(state.intake, isoDay, meal.slot, meal.recipeId)}
+            onEat={() => toggleMeal(meal)}
             onOpen={() => setOpenMeal(index)}
             onReplace={() => setReplacing(index)}
           />
@@ -205,6 +290,7 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
       </Sheet>
 
       <PlanSheet open={plans} onClose={() => setPlans(false)} />
+      <IntakeSheet open={adding} onClose={() => setAdding(false)} date={isoDay} />
 
       {/* Garde-manger */}
       <Sheet
@@ -237,9 +323,10 @@ function MacroCell({
 }
 
 function MealCard({
-  meal, swaps, storeId, onOpen, onReplace,
+  meal, swaps, storeId, eaten, onEat, onOpen, onReplace,
 }: {
   meal: Meal; swaps: Record<string, string>; storeId: string;
+  eaten: boolean; onEat: () => void;
   onOpen: () => void; onReplace: () => void;
 }) {
   const recipe = resolveRecipe(getRecipe(meal.recipeId), swaps);
@@ -276,6 +363,11 @@ function MealCard({
           </button>
         </div>
       </div>
+
+      <button type="button" className={`btn btn-sm btn-block eat-btn${eaten ? ' is-eaten' : ''}`}
+        style={{ marginTop: 12 }} onClick={onEat} aria-pressed={eaten}>
+        {eaten ? <><IconCheck size={13} /> Mangé</> : "J'ai mangé ce repas"}
+      </button>
     </Card>
   );
 }

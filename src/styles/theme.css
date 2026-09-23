@@ -825,6 +825,24 @@ input[type='range']::-moz-range-thumb {
 }
 .price-unit { font-size: var(--fs-xs); font-weight: 560; color: var(--ink-3); margin-left: 3px; }
 
+/* Journal : bouton « j'ai mangé », lecteur de code-barres */
+.eat-btn { justify-content: center; }
+.eat-btn.is-eaten {
+  background: var(--invert-bg); border-color: var(--invert-bg); color: var(--invert-fg);
+}
+.scanner {
+  position: relative; width: 100%; aspect-ratio: 4 / 3;
+  border-radius: var(--radius); overflow: hidden;
+  background: var(--invert-bg);
+}
+.scanner video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scanner-frame {
+  position: absolute; inset: 22% 12%;
+  border: 2px solid rgba(255, 255, 255, .9);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .35);
+}
+
 /* Caution professionnelle */
 .coach-card {
   display: flex; align-items: center; gap: 14px;

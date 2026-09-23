@@ -140,6 +140,38 @@ await page.waitForTimeout(700);
 const after = await page.locator('.card.card-ink .display').first().innerText();
 console.log('   kcal du jour:', before.trim(), '→', after.trim());
 
+console.log('→ journal du jour');
+// Le journal doit rester facultatif : une journée non pointée affiche zéro,
+// et pointer un repas doit faire bouger le consommé pour de bon.
+const journal = page.locator('.card-flat').filter({ hasText: 'kcal consommées' }).first();
+const avant = (await journal.locator('.metric').innerText()).trim();
+await page.getByRole('button', { name: /J'ai mangé ce repas/ }).first().click();
+await page.waitForTimeout(500);
+const apresRepas = (await journal.locator('.metric').innerText()).trim();
+console.log('   consommé :', avant, '→', apresRepas, '(repas pointé)');
+if (avant !== '0') errors.push('journal : une journée vierge devrait afficher 0 kcal');
+if (apresRepas === '0') errors.push("journal : pointer un repas n'a rien changé");
+
+// Ajout d'un aliment hors plan par la base locale : aucun réseau requis.
+await page.getByRole('button', { name: /Aliment/ }).first().click();
+await page.waitForTimeout(400);
+await shot('e2e-journal-ajout');
+await page.getByRole('button', { name: "Choisir dans la base d'aliments" }).click();
+await page.waitForTimeout(400);
+await page.locator('.sheet input[type=text]').fill('banane');
+await page.waitForTimeout(400);
+await page.locator('.sheet .option').first().click();
+await page.waitForTimeout(400);
+await page.locator('.sheet .suffix input').fill('150');
+await page.waitForTimeout(300);
+await shot('e2e-journal-quantite');
+await page.getByRole('button', { name: /Ajouter au journal/ }).click();
+await page.waitForTimeout(700);
+const apresAliment = (await journal.locator('.metric').innerText()).trim();
+console.log('   consommé :', apresRepas, '→', apresAliment, '(aliment ajouté)');
+if (apresAliment === apresRepas) errors.push("journal : l'aliment ajouté n'a pas compté");
+await shot('e2e-journal');
+
 console.log('→ liste de courses');
 await page.getByRole('button', { name: /Courses/ }).first().click();
 await page.waitForTimeout(600);
