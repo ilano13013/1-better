@@ -71,7 +71,15 @@ await page.getByRole('button', { name: 'Continuer' }).click();
 await page.waitForTimeout(300);
 await shot('e2e-recap');
 await page.getByRole('button', { name: 'Générer ma semaine' }).click();
-await page.waitForTimeout(800);
+
+// Écran de construction : on vérifie qu'il s'affiche, puis on le passe.
+await page.locator('.building').waitFor({ state: 'visible', timeout: 5000 });
+await page.waitForTimeout(1400);
+const built = await page.locator('.building-step.is-done').count();
+console.log('   étapes cochées :', built, '/', await page.locator('.building-step').count());
+await shot('e2e-construction');
+await page.locator('.building').click();
+await page.waitForTimeout(600);
 await shot('e2e-dashboard');
 
 console.log('→ remplacement de repas');

@@ -87,6 +87,20 @@ Rien n'est une maquette statique. Toutes les interactions recalculent l'état :
 
 ---
 
+## L'écran de construction
+
+À la sortie du questionnaire, un écran montre la semaine se construire :
+profil, besoins énergétiques, programme, repas, liste de courses. Chaque étape
+cochée vaut 0,2 %, pour un total de 1 % — la promesse du nom, la progression
+par petits incréments répétés.
+
+Le moteur est déterministe et s'exécute en quelques dizaines de millisecondes :
+ce rythme est **délibéré, pas une attente technique**. Il sert à rendre visible
+l'enchaînement qui fait la valeur de l'application, et chaque étape affiche les
+**chiffres réellement calculés** — « 2 680 kcal · 139 g de protéines »,
+« 18 produits · 59,96 € chez Lidl » — plutôt qu'un sablier. Un toucher passe
+l'écran, et une préférence système de mouvement réduit le saute.
+
 ## Identité visuelle
 
 L'interface est **achromatique**. L'emphase ne vient pas d'une couleur d'accent
