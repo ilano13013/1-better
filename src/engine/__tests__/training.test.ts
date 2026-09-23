@@ -3,7 +3,7 @@ import {
   assignDays, availableExercises, equipmentOk, findReplacements,
   generateWorkoutPlan, pickSplit, repairPlanForEquipment,
 } from '../training';
-import { getExercise } from '../../data/exercises';
+import { EXERCISES, getExercise } from '../../data/exercises';
 import { resolveEquipment } from '../../data/gyms';
 import { DEMO_PROFILE } from '../../data/demo';
 import type { DayIndex, Profile } from '../../types';
@@ -133,5 +133,16 @@ describe('moteur sportif', () => {
   it('accepte une semaine sans jour déclaré', () => {
     const plan = generateWorkoutPlan({ ...DEMO_PROFILE, availableDays: [] as DayIndex[] });
     expect(plan.workouts).toHaveLength(4);
+  });
+  it('décrit l\'exécution de chaque mouvement', () => {
+    for (const ex of EXERCISES) {
+      expect(ex.execution.length, ex.id).toBeGreaterThanOrEqual(3);
+      expect(ex.mistakes.length, ex.id).toBeGreaterThanOrEqual(1);
+      for (const line of [...ex.execution, ...ex.mistakes]) {
+        // Une consigne se lit d'un coup d'œil entre deux séries.
+        expect(line.length, `${ex.id} — ${line}`).toBeLessThanOrEqual(130);
+        expect(line.trim().endsWith('.'), `${ex.id} — ${line}`).toBe(true);
+      }
+    }
   });
 });

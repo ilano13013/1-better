@@ -6,7 +6,7 @@ import { MUSCLE_LABELS, getExercise } from '../data/exercises';
 import { EQUIPMENT_LABELS, GYM_BY_ID } from '../data/gyms';
 import { DAY_NAMES, DAY_SHORT, findReplacements } from '../engine/training';
 import { historyFor, lastPerformance, personalRecords, suggestNext, unitLabel } from '../engine/progression';
-import { Card, Checkbox, Empty, Sheet, num } from '../components/ui';
+import { Card, Checkbox, Disclaimer, Empty, Sheet, num } from '../components/ui';
 import { GymMark } from '../components/BrandMark';
 
 const LEVEL_LABELS = { debutant: 'Débutant', intermediaire: 'Intermédiaire', avance: 'Avancé' } as const;
@@ -234,9 +234,15 @@ function ExerciseCard({
             <span>{ex.equipment.map((e) => EQUIPMENT_LABELS[e]).join(', ')}</span>
           </div>
         </div>
-        <button type="button" className="icon-btn" onClick={onReplace} aria-label="Remplacer">
-          <IconSwap />
-        </button>
+        <div className="row" style={{ gap: 6, flex: 'none' }}>
+          <button type="button" className="icon-btn" onClick={onDetail}
+            aria-label={`Exécution du mouvement : ${ex.name}`}>
+            <IconInfo />
+          </button>
+          <button type="button" className="icon-btn" onClick={onReplace} aria-label="Remplacer">
+            <IconSwap />
+          </button>
+        </div>
       </div>
 
       <div className="row" style={{ marginTop: 14, gap: 18 }}>
@@ -415,12 +421,39 @@ function ExerciseDetail({
           <span className="strong num">{ex.restSec}s</span></div>
       </Card>
 
-      {ex.cues && (
+      <div>
+        <div className="card-title">Exécution du mouvement</div>
         <Card className="card-flat">
-          <div className="card-title">Exécution</div>
-          <p className="sm muted">{ex.cues}</p>
+          <ol className="move-list">
+            {ex.execution.map((step, i) => (
+              <li key={i}>
+                <span className="move-mark num">{i + 1}</span>
+                <span className="sm">{step}</span>
+              </li>
+            ))}
+          </ol>
         </Card>
-      )}
+      </div>
+
+      <div>
+        <div className="card-title">À éviter</div>
+        <Card className="card-flat">
+          <ul className="move-list">
+            {ex.mistakes.map((m, i) => (
+              <li key={i}>
+                <span className="move-mark move-mark-alert" aria-hidden="true">✕</span>
+                <span className="sm muted">{m}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </div>
+
+      <Disclaimer>
+        Ces repères d'exécution sont généraux : ils ne remplacent pas la correction
+        d'un coach sur place. En cas de douleur, arrête la série et fais vérifier
+        ton placement.
+      </Disclaimer>
 
       <div>
         <div className="card-title">Historique</div>

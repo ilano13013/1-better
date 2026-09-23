@@ -679,6 +679,29 @@ input[type='range']::-moz-range-thumb {
 }
 .list-row:last-child { border-bottom: none; }
 
+/* Déroulé d'un mouvement : étapes numérotées, erreurs à éviter. */
+.move-list { list-style: none; margin: 0; padding: 0; }
+.move-list > li {
+  display: flex; align-items: flex-start; gap: 11px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.move-list > li:first-child { padding-top: 0; }
+.move-list > li:last-child { padding-bottom: 0; border-bottom: none; }
+.move-mark {
+  flex: none;
+  width: 20px; height: 20px;
+  margin-top: 1px;
+  border-radius: var(--radius-full);
+  display: grid; place-items: center;
+  font-size: 11px; font-weight: 640;
+  background: var(--ink); color: var(--ground);
+}
+.move-mark-alert {
+  background: transparent; color: var(--signal-ink);
+  border: 1px solid var(--signal-line-strong);
+}
+
 .scroller {
   display: flex; gap: 8px;
   overflow-x: auto;

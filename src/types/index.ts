@@ -238,7 +238,10 @@ export interface Exercise {
   /** Plus la valeur est élevée, plus l'exercice est prioritaire dans la séance. */
   priority: number;
   alternatives: string[];
-  cues?: string;
+  /** Déroulé du mouvement, du placement à la dernière répétition. */
+  execution: string[];
+  /** Erreurs fréquentes sur ce mouvement. */
+  mistakes: string[];
 }
 
 export interface Gym {

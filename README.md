@@ -325,7 +325,7 @@ délibérément à un panier **préparé** : la validation reste à l'utilisateu
 | Base | Volume |
 | --- | --- |
 | Aliments | 82, avec macros, étiquettes de régime et substituts |
-| Exercices | 64, avec muscles, matériel, niveau, séries/répétitions, alternatives |
+| Exercices | 64, avec muscles, matériel, niveau, séries/répétitions, alternatives, exécution du mouvement et erreurs fréquentes |
 | Recettes | 44 ; chaque croisement régime × restrictions dispose d'au moins deux recettes par créneau |
 | Salles | 7 (Basic-Fit, Fitness Park, Keepcool, Neoness, On Air, indépendante, domicile) |
 | Enseignes | 9 (Lidl, Aldi, Leclerc, Intermarché, Carrefour, Auchan, Super U, Monoprix, autre) |
