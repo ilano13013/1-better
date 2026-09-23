@@ -108,28 +108,6 @@ export const RECIPES: Recipe[] = [
 
   /* ---------------- Déjeuners / dîners ---------------- */
   {
-    id: 'poulet_curry_riz',
-    name: 'Poulet curry & riz',
-    slots: ['dejeuner', 'diner'],
-    ingredients: [
-      { foodId: 'poulet_filet', qty: 160 },
-      { foodId: 'riz_blanc', qty: 90 },
-      { foodId: 'lait_coco', qty: 60 },
-      { foodId: 'oignon', qty: 60 },
-      { foodId: 'poivron', qty: 80 },
-      { foodId: 'curry', qty: 5, scalable: false },
-      { foodId: 'huile_olive', qty: 8, scalable: false },
-    ],
-    steps: [
-      'Faire cuire le riz selon les indications du paquet.',
-      'Couper le poulet en cubes et le saisir à l\'huile 5 minutes.',
-      'Ajouter oignon et poivron émincés, cuire 5 minutes.',
-      'Saupoudrer de curry, verser le lait de coco, mijoter 8 minutes.',
-      'Servir sur le riz.',
-    ],
-    prepTimeMin: 25, minScale: 0.6, maxScale: 1.9,
-  },
-  {
     id: 'pates_thon',
     name: 'Pâtes au thon & tomate',
     slots: ['dejeuner', 'diner'],
@@ -166,43 +144,6 @@ export const RECIPES: Recipe[] = [
       'Poêler le bœuf 6 minutes avec les épices.',
       'Faire sauter les haricots verts 6 minutes.',
       'Assembler dans l\'assiette.',
-    ],
-    prepTimeMin: 30, minScale: 0.6, maxScale: 1.9,
-  },
-  {
-    id: 'saumon_quinoa',
-    name: 'Saumon rôti, quinoa & brocoli',
-    slots: ['dejeuner', 'diner'],
-    ingredients: [
-      { foodId: 'saumon_frais', qty: 140 },
-      { foodId: 'quinoa', qty: 80 },
-      { foodId: 'brocoli', qty: 180 },
-      { foodId: 'citron', qty: 0.5, scalable: false },
-      { foodId: 'huile_olive', qty: 8, scalable: false },
-    ],
-    steps: [
-      'Rincer le quinoa et le cuire 12 minutes.',
-      'Cuire le saumon au four 12 minutes à 200 °C.',
-      'Cuire le brocoli à la vapeur 8 minutes.',
-      'Arroser de citron et d\'huile d\'olive.',
-    ],
-    prepTimeMin: 25, minScale: 0.6, maxScale: 1.5,
-  },
-  {
-    id: 'poulet_patate_douce',
-    name: 'Poulet rôti & patate douce',
-    slots: ['dejeuner', 'diner'],
-    ingredients: [
-      { foodId: 'poulet_filet', qty: 170 },
-      { foodId: 'patate_douce', qty: 300 },
-      { foodId: 'courgette', qty: 150 },
-      { foodId: 'huile_olive', qty: 10, scalable: false },
-      { foodId: 'epices', qty: 4, scalable: false },
-    ],
-    steps: [
-      'Préchauffer le four à 200 °C.',
-      'Couper la patate douce en frites, la courgette en rondelles.',
-      'Enfourner légumes et poulet 25 minutes avec l\'huile et les épices.',
     ],
     prepTimeMin: 30, minScale: 0.6, maxScale: 1.9,
   },
@@ -267,25 +208,6 @@ export const RECIPES: Recipe[] = [
       'Servir avec le riz.',
     ],
     prepTimeMin: 30, minScale: 0.6, maxScale: 2,
-  },
-  {
-    id: 'cabillaud_ecrase',
-    name: 'Cabillaud & écrasé de pommes de terre',
-    slots: ['diner'],
-    ingredients: [
-      { foodId: 'cabillaud', qty: 180 },
-      { foodId: 'pomme_terre', qty: 280 },
-      { foodId: 'epinards', qty: 120 },
-      { foodId: 'huile_olive', qty: 10, scalable: false },
-      { foodId: 'citron', qty: 0.5, scalable: false },
-    ],
-    steps: [
-      'Cuire les pommes de terre 20 minutes puis les écraser avec l\'huile.',
-      'Cuire le cabillaud 8 minutes à la poêle.',
-      'Faire tomber les épinards 3 minutes.',
-      'Servir avec un filet de citron.',
-    ],
-    prepTimeMin: 30, minScale: 0.6, maxScale: 1.9,
   },
   {
     id: 'wrap_poulet',
@@ -619,28 +541,6 @@ export const RECIPES: Recipe[] = [
   },
 
   /* ---------------- Plats riches en protéines ---------------- */
-  {
-    id: 'salade_poulet_oeufs',
-    name: 'Salade César revisitée poulet & œufs',
-    slots: ['dejeuner'],
-    ingredients: [
-      { foodId: 'poulet_filet', qty: 180 },
-      { foodId: 'oeuf', qty: 2 },
-      { foodId: 'salade', qty: 70 },
-      { foodId: 'tomate', qty: 120 },
-      { foodId: 'pomme_terre', qty: 180 },
-      { foodId: 'fromage_blanc', qty: 60 },
-      { foodId: 'moutarde', qty: 8, scalable: false },
-      { foodId: 'huile_olive', qty: 8, scalable: false },
-    ],
-    steps: [
-      'Cuire les pommes de terre 18 minutes, les œufs 9 minutes.',
-      'Griller le poulet en lanières.',
-      'Mélanger fromage blanc, moutarde et huile pour la sauce.',
-      'Assembler salade, tomates, pommes de terre, poulet et œufs.',
-    ],
-    prepTimeMin: 25, minScale: 0.6, maxScale: 1.9,
-  },
   {
     id: 'cabillaud_riz_legumes',
     name: 'Cabillaud vapeur, riz & poêlée',

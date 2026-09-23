@@ -5,16 +5,16 @@ Dépose ici une image par recette, **nommée avec l'identifiant de la recette** 
 ```
 src/assets/recipes/
   porridge_banane.jpg
-  poulet_curry_riz.jpg
+  chili_dinde.jpg
   pates_thon.webp
 ```
 
 Aucun code à modifier : les fichiers sont détectés automatiquement au build.
 Les tirets valent les tirets bas et la casse est ignorée, donc
-`poulet-curry-riz.jpg` fonctionne aussi.
+`chili-dinde.jpg` fonctionne aussi.
 
 
-## Les 49 identifiants
+## Les 44 identifiants
 
 | Fichier | Recette |
 | --- | --- |
@@ -23,15 +23,11 @@ Les tirets valent les tirets bas et la casse est ignorée, donc
 | `bowl_skyr.jpg` | Bowl skyr, fruits rouges & amandes |
 | `pancakes_avoine.jpg` | Pancakes protéinés avoine & whey |
 | `tartines_avocat_vegan.jpg` | Tartines complètes & tofu brouillé |
-| `poulet_curry_riz.jpg` | Poulet curry & riz |
 | `pates_thon.jpg` | Pâtes au thon & tomate |
 | `boeuf_patates.jpg` | Bœuf haché, pommes de terre & haricots verts |
-| `saumon_quinoa.jpg` | Saumon rôti, quinoa & brocoli |
-| `poulet_patate_douce.jpg` | Poulet rôti & patate douce |
 | `chili_dinde.jpg` | Chili de dinde aux haricots rouges |
 | `wok_tofu.jpg` | Wok de tofu, légumes & riz complet |
 | `dahl_lentilles.jpg` | Dahl de lentilles corail |
-| `cabillaud_ecrase.jpg` | Cabillaud & écrasé de pommes de terre |
 | `wrap_poulet.jpg` | Wraps poulet crudités |
 | `riz_saute_oeufs.jpg` | Riz sauté aux œufs & légumes |
 | `salade_pois_chiches.jpg` | Salade complète pois chiches & feta |
@@ -50,7 +46,6 @@ Les tirets valent les tirets bas et la casse est ignorée, donc
 | `riz_au_lait_proteine.jpg` | Riz au lait protéiné & banane |
 | `bowl_skyr_amandes.jpg` | Skyr, banane & amandes |
 | `porridge_vegan.jpg` | Porridge vegan soja & cacahuète |
-| `salade_poulet_oeufs.jpg` | Salade César revisitée poulet & œufs |
 | `cabillaud_riz_legumes.jpg` | Cabillaud vapeur, riz & poêlée |
 | `pates_lentilles.jpg` | Pâtes aux lentilles & tomate |
 | `shaker_skyr_whey.jpg` | Bol protéiné skyr & whey |

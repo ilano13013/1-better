@@ -154,7 +154,7 @@ jamais une illustration.
 Pour livrer des photos avec l'application, dépose les fichiers dans
 `src/assets/recipes/`, **nommés avec l'identifiant de la recette**
 (`poulet_curry_riz.jpg`). Ils sont détectés automatiquement au build : aucun
-code à modifier. Le README de ce dossier liste les 49 identifiants.
+code à modifier. Le README de ce dossier liste les 44 identifiants.
 
 ### Logos
 
@@ -326,7 +326,7 @@ délibérément à un panier **préparé** : la validation reste à l'utilisateu
 | --- | --- |
 | Aliments | 82, avec macros, étiquettes de régime et substituts |
 | Exercices | 64, avec muscles, matériel, niveau, séries/répétitions, alternatives |
-| Recettes | 49 ; chaque croisement régime × restrictions dispose d'au moins deux recettes par créneau |
+| Recettes | 44 ; chaque croisement régime × restrictions dispose d'au moins deux recettes par créneau |
 | Salles | 7 (Basic-Fit, Fitness Park, Keepcool, Neoness, On Air, indépendante, domicile) |
 | Enseignes | 9 (Lidl, Aldi, Leclerc, Intermarché, Carrefour, Auchan, Super U, Monoprix, autre) |
 | Produits | ~700 lignes enseigne × aliment, avec conditionnements réels |
