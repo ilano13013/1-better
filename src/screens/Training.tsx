@@ -8,6 +8,7 @@ import { DAY_NAMES, DAY_SHORT, findReplacements } from '../engine/training';
 import { historyFor, lastPerformance, personalRecords, suggestNext, unitLabel } from '../engine/progression';
 import { Card, Checkbox, Disclaimer, Empty, Sheet, num } from '../components/ui';
 import { PlanSheet, PlusLock } from '../components/Plus';
+import { CoachCard } from '../components/CoachCard';
 import type { Limits } from '../engine/entitlements';
 import { GymMark } from '../components/BrandMark';
 
@@ -128,6 +129,10 @@ export default function Training() {
           ))}
         </div>
       )}
+
+      <div style={{ marginTop: 20 }}>
+        <CoachCard />
+      </div>
 
       {(!plan.limits.gymEquipment || plan.limits.maxSessionsPerWeek !== null) && (
         <div style={{ marginTop: 20 }}>

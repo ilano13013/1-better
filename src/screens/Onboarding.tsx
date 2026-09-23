@@ -3,6 +3,7 @@ import type {
   DayIndex, EquipmentId, Gym, PantryItem, Profile, RestrictionId, Store,
 } from '../types';
 import { useApp } from '../store/AppContext';
+import { CoachCard } from '../components/CoachCard';
 import { EMPTY_PROFILE } from '../store/state';
 import { GOAL_LIST, ACTIVITY_LABELS } from '../data/goals';
 import { GYMS, EQUIPMENT_LABELS, ALL_EQUIPMENT } from '../data/gyms';
@@ -150,6 +151,7 @@ function Welcome({ onStart, onDemo }: { onStart: () => void; onDemo: () => void 
           recettes, quantités, liste de courses et prix.
         </p>
       </div>
+      <CoachCard />
       <div className="stack">
         <button type="button" className="btn btn-primary btn-block" onClick={onStart}>
           Commencer

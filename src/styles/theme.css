@@ -820,6 +820,26 @@ input[type='range']::-moz-range-thumb {
 }
 .price-unit { font-size: var(--fs-xs); font-weight: 560; color: var(--ink-3); margin-left: 3px; }
 
+/* Caution professionnelle */
+.coach-card {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; text-align: left; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.coach-card:active { transform: scale(.994); }
+.coach-photo {
+  width: 60px; height: 60px; flex: none;
+  border-radius: var(--radius-full); object-fit: cover;
+  background: var(--inset);
+}
+.coach-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.coach-cta { text-decoration: underline; text-underline-offset: 3px; margin-top: 3px; }
+.coach-portrait {
+  width: 100%; max-width: 260px; margin: 0 auto;
+  aspect-ratio: 1; object-fit: cover;
+  border-radius: var(--radius-lg); display: block;
+}
+
 /* Déroulé d'un mouvement : étapes numérotées, erreurs à éviter. */
 .move-list { list-style: none; margin: 0; padding: 0; }
 .move-list > li {

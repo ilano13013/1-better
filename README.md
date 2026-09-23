@@ -508,6 +508,38 @@ aurait été vendre du vide.
 
 ---
 
+## Caution professionnelle
+
+La méthode d'entraînement est validée par **Damien Phelipon**, 27 ans, coach
+sportif diplômé. Sa carte apparaît sur l'écran d'accueil et sur l'écran
+Training ; la fiche détaille le périmètre.
+
+Les données vivent dans `src/data/coach.ts`, source unique. Deux règles y sont
+tenues, parce qu'une caution mal formulée est pire que pas de caution :
+
+**Rien n'est inventé.** `credential` est **vide** : l'intitulé exact du diplôme
+n'a pas été fourni, et écrire « BPJEPS » ou « CQP » au jugé serait une fausse
+déclaration de qualification, pas un détail de rédaction. Un test refuse ces
+intitulés tant qu'ils ne sont pas confirmés. Renseigner le champ suffit à
+l'afficher partout.
+
+**Le périmètre est dit.** `scope` énumère ce que la validation couvre — base
+d'exercices et consignes d'exécution, construction des séances, règles de
+progression — et `outOfScope` ce qu'elle ne couvre pas : ni la nutrition, ni la
+santé, qui restent des estimations calculées. Un « validé par un
+professionnel » sans périmètre laisserait croire l'inverse, et la mention
+légale de l'application deviendrait contradictoire.
+
+### Deux points à régler hors du code
+
+- **Confirmer le périmètre avec l'intéressé.** Les trois lignes de `scope` sont
+  une proposition raisonnable ; c'est à lui de dire ce qu'il endosse.
+- **Accord écrit sur le nom et l'image.** Publier le nom et la photographie
+  d'une personne identifiable suppose son accord, et relève du droit à l'image
+  comme du RGPD. Le code ne peut pas le fournir.
+
+---
+
 ## Le bouton « Préparer mon Drive »
 
 **Aucune enseigne française ne publie d'API permettant à une application tierce
@@ -583,7 +615,7 @@ officiel d'enseigne : aucun des trois ne peut être simulé honnêtement.
 npm test
 ```
 
-129 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+132 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
 substitutions (dont la protection de la densité protéique), couverture de tous
@@ -597,7 +629,9 @@ cascade de recalcul du planificateur, et les limites de formule vérifiées sur
 la sortie des moteurs — trois jours planifiés, séances plafonnées sans devenir
 un plancher, matériel de base, créneaux tous pourvus, calories intactes — et
 l'arithmétique de l'abonnement : remise annuelle au centime, échéance d'un
-31 janvier, d'un 29 février, et fermeture effective des moteurs à échéance.
+31 janvier, d'un 29 février, fermeture effective des moteurs à échéance, et la
+caution professionnelle — aucun diplôme inventé, périmètre non vide, exclusion
+explicite de la nutrition et de la santé.
 
 Le test de fumée `npm run smoke` va plus loin : il compte les jours réellement
 planifiés en gratuit (3) puis après activation (7), crée un compte e-mail, vérifie
