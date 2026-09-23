@@ -56,22 +56,36 @@ export function IntakeSheet({
   const [mode, setMode] = useState<Mode>('choose');
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Code dont la recherche a échoué : il reste saisissable à la main.
+  const [failed, setFailed] = useState<string | null>(null);
 
   const left = lookupsLeft(state.intake, date, plan.limits.barcodeLookupsPerDay);
   const quotaReached = left !== null && left <= 0;
 
-  const reset = useCallback(() => { setMode('choose'); setDraft(null); setError(null); }, []);
+  const reset = useCallback(() => {
+    setMode('choose'); setDraft(null); setError(null); setFailed(null);
+  }, []);
 
   const close = () => { reset(); onClose(); };
 
   const search = useCallback(async (raw: string) => {
     setError(null);
+    setFailed(null);
     if (quotaReached) {
       setError('Quota de recherches atteint pour aujourd\'hui. La base d\'aliments reste ouverte.');
+      setMode('choose');
       return;
     }
     const result = await lookupBarcode(raw);
-    if (!result.ok) { setError(LOOKUP_MESSAGES[result.error]); return; }
+    if (!result.ok) {
+      setError(LOOKUP_MESSAGES[result.error]);
+      // Une recherche qui échoue ne doit pas être un cul-de-sac : le produit
+      // existe, seule sa fiche manque. On garde le code pour une saisie
+      // manuelle, sauf si c'est le code lui-même qui est mauvais.
+      if (result.error !== 'code_invalide') setFailed(normalizeBarcode(raw));
+      setMode('choose');
+      return;
+    }
     const p = result.product;
     setDraft({
       label: p.name, per100g: p.per100g, grams: 100,
@@ -115,7 +129,27 @@ export function IntakeSheet({
         <FoodPicker onPick={(d) => { setDraft(d); setMode('choose'); }} onCancel={reset} />
       ) : (
         <div className="stack">
-          {error && <div className="card card-alert"><p className="sm notice">{error}</p></div>}
+          {error && (
+            <div className="card card-alert">
+              <p className="sm notice">{error}</p>
+              {failed && (
+                <button type="button" className="btn btn-sm btn-block" style={{ marginTop: 12 }}
+                  onClick={() => {
+                    setDraft({
+                      label: `Produit ${failed}`,
+                      per100g: { kcal: 0, protein: 0, carbs: 0, fat: 0 },
+                      grams: 100,
+                      barcode: failed,
+                      missing: ['kcal', 'protein', 'carbs', 'fat'],
+                    });
+                    setError(null);
+                    setFailed(null);
+                  }}>
+                  Saisir les valeurs à la main
+                </button>
+              )}
+            </div>
+          )}
 
           <button type="button" className="btn btn-primary btn-block"
             disabled={!window.BarcodeDetector || quotaReached}
@@ -375,7 +409,8 @@ function DraftForm({
       </div>
 
       <button type="button" className="btn btn-primary btn-block"
-        onClick={onSave} disabled={draft.grams <= 0}>
+        onClick={onSave}
+        disabled={draft.grams <= 0 || Object.values(draft.per100g).every((v) => v <= 0)}>
         <IconCheck size={15} /> Ajouter au journal
       </button>
       <button type="button" className="btn btn-ghost btn-block" onClick={onCancel}>

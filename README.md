@@ -606,6 +606,36 @@ vrais — et laisse tout corriger avant d'enregistrer.
 illimitée en 1% Better+. La base d'aliments locale reste illimitée dans les
 deux cas, puisqu'elle ne coûte rien et fonctionne hors ligne.
 
+### Quand la recherche échoue
+
+`fetch` lève la **même** `TypeError` pour une coupure réseau et pour un appel
+refusé par la politique de sécurité de la page. Répondre « Open Food Facts est
+injoignable » dans les deux cas envoie chercher une panne au mauvais endroit.
+Le contexte tranche donc, dans cet ordre :
+
+| Cause | Message |
+| --- | --- |
+| Navigateur hors ligne | Pas de connexion ; la base d'aliments fonctionne hors ligne |
+| Page dans un cadre imbriqué | Cet affichage bloque les appels vers d'autres sites |
+| Délai de 6 s dépassé | Open Food Facts n'a pas répondu à temps |
+| Réponse HTTP en erreur | Open Food Facts a répondu par une erreur |
+| Le reste | Open Food Facts est injoignable |
+
+**Le cas du cadre imbriqué compte en pratique** : dans l'artefact claude.ai,
+la page est servie dans une iframe qui n'autorise pas les appels vers un autre
+domaine. Le scan y échouera toujours, quel que soit l'état d'Open Food Facts.
+C'est l'adresse GitHub Pages qu'il faut utiliser pour cette fonction.
+
+**Deux adresses sont essayées** : l'API v2 avec sa liste de champs — quelques
+kilo-octets au lieu de la fiche entière — puis l'API v0, plus ancienne et plus
+bavarde, si la première répond par une erreur de serveur. Le second essai n'a
+lieu que dans ce cas : réessayer quand c'est la page qui bloque l'appel ne
+ferait que doubler l'attente, et un produit absent reste absent.
+
+**Un échec n'est jamais un cul-de-sac.** Le code reste affiché, et une saisie
+manuelle des valeurs permet d'enregistrer quand même — avec le garde-fou qui
+refuse un enregistrement dont toutes les valeurs sont à zéro.
+
 ---
 
 ## Le bouton « Préparer mon Drive »
@@ -683,7 +713,7 @@ officiel d'enseigne : aucun des trois ne peut être simulé honnêtement.
 npm test
 ```
 
-148 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+156 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
 substitutions (dont la protection de la densité protéique), couverture de tous
@@ -703,7 +733,8 @@ explicite de la nutrition et de la santé, adresse Instagram construite sans
 arobase parasite, journal de consommation (totaux par jour, quantité négative
 sans effet, aliment à la pièce converti ou refusé, quota ne comptant que les
 recherches en ligne) et lecture de code-barres (clé de contrôle, kilojoules
-convertis, champs manquants signalés).
+convertis, champs manquants signalés, cause d'échec nommée selon le contexte, second essai
+sur l'autre adresse et seulement après une erreur de serveur).
 
 Le test de fumée `npm run smoke` va plus loin : il compte les jours réellement
 planifiés en gratuit (3) puis après activation (7), crée un compte e-mail, vérifie

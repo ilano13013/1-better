@@ -14,8 +14,25 @@ import type { Per100g } from './intake';
  * d'enregistrer, plutôt que de présenter ces chiffres comme vérifiés.
  */
 
-const ENDPOINT = 'https://world.openfoodfacts.org/api/v2/product';
+const HOST = 'https://world.openfoodfacts.org';
 const FIELDS = 'product_name,product_name_fr,brands,quantity,nutriments';
+
+/**
+ * Deux adresses, essayées dans l'ordre.
+ *
+ * L'API v2 avec sa liste de champs est la bonne : elle renvoie quelques
+ * kilo-octets au lieu de la fiche entière. Mais une erreur de serveur sur
+ * celle-ci ne doit pas condamner la recherche, alors que l'API v0 — plus
+ * ancienne, plus bavarde, toujours servie — répondrait. Un second essai ne
+ * coûte qu'une requête, et seulement quand la première a répondu par une
+ * erreur : inutile de réessayer quand c'est la page qui bloque l'appel.
+ */
+function endpoints(barcode: string): string[] {
+  return [
+    `${HOST}/api/v2/product/${barcode}.json?fields=${encodeURIComponent(FIELDS)}`,
+    `${HOST}/api/v0/product/${barcode}.json`,
+  ];
+}
 
 export interface ScannedProduct {
   barcode: string;
@@ -30,6 +47,10 @@ export type LookupError =
   | 'code_invalide'
   | 'introuvable'
   | 'sans_valeurs'
+  | 'bloque'
+  | 'hors_ligne'
+  | 'lent'
+  | 'serveur'
   | 'reseau';
 
 export type LookupResult =
@@ -131,29 +152,83 @@ export function parseProduct(barcode: string, body: OffResponse): LookupResult {
   };
 }
 
+/** Contexte d'exécution, pour distinguer les causes d'un appel qui échoue. */
+export interface LookupContext {
+  /** La page tourne-t-elle dans un cadre imbriqué ? */
+  framed: boolean;
+  /** Le navigateur se déclare-t-il en ligne ? */
+  online: boolean;
+}
+
+export function readContext(): LookupContext {
+  let framed = false;
+  try { framed = typeof window !== 'undefined' && window.self !== window.top; } catch { framed = true; }
+  return {
+    framed,
+    online: typeof navigator === 'undefined' || navigator.onLine !== false,
+  };
+}
+
 /**
- * Interroge Open Food Facts. `fetchImpl` est injectable pour les tests : on ne
- * fait pas dépendre une suite de tests d'un service extérieur.
+ * Distingue les causes d'un `fetch` qui a levé.
+ *
+ * `fetch` lève la même `TypeError` qu'il s'agisse d'une coupure réseau ou d'un
+ * blocage par la politique de sécurité de la page. Renvoyer « injoignable »
+ * dans les deux cas envoyait chercher une panne côté Open Food Facts alors que
+ * c'est l'hébergement de la page qui refuse l'appel. Le contexte tranche :
+ * hors ligne d'abord, puis cadre imbriqué — un artefact claude.ai n'autorise
+ * pas les appels vers un autre domaine.
+ */
+export function classifyFailure(ctx: LookupContext, aborted: boolean): LookupError {
+  if (aborted) return 'lent';
+  if (!ctx.online) return 'hors_ligne';
+  if (ctx.framed) return 'bloque';
+  return 'reseau';
+}
+
+/** Au-delà, l'attente ne sert plus à rien. */
+const TIMEOUT_MS = 6000;
+
+/**
+ * Interroge Open Food Facts. `fetchImpl` et `ctx` sont injectables : une suite
+ * de tests ne doit dépendre ni d'un service extérieur, ni d'un navigateur.
  */
 export async function lookupBarcode(
   raw: string,
   fetchImpl: typeof fetch = fetch,
-  signal?: AbortSignal,
+  ctx: LookupContext = readContext(),
 ): Promise<LookupResult> {
   const barcode = normalizeBarcode(raw);
   if (!isValidBarcode(barcode)) return { ok: false, error: 'code_invalide' };
-  try {
-    const res = await fetchImpl(`${ENDPOINT}/${barcode}.json?fields=${FIELDS}`, { signal });
-    if (!res.ok) return { ok: false, error: res.status === 404 ? 'introuvable' : 'reseau' };
-    return parseProduct(barcode, (await res.json()) as OffResponse);
-  } catch {
-    return { ok: false, error: 'reseau' };
+
+  let last: LookupResult = { ok: false, error: 'reseau' };
+  for (const url of endpoints(barcode)) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetchImpl(url, { signal: controller.signal });
+      if (res.status === 404) return { ok: false, error: 'introuvable' };
+      if (res.ok) return parseProduct(barcode, (await res.json()) as OffResponse);
+      last = { ok: false, error: 'serveur' };
+      // Erreur de serveur : l'autre adresse vaut la peine d'être tentée.
+    } catch {
+      // Blocage, coupure ou délai : réessayer la même chose n'y changera rien.
+      return { ok: false, error: classifyFailure(ctx, controller.signal.aborted) };
+    } finally {
+      clearTimeout(timer);
+    }
   }
+  return last;
 }
 
 export const LOOKUP_MESSAGES: Record<LookupError, string> = {
   code_invalide: "Ce code-barres n'est pas valide — la lecture a dû échouer.",
   introuvable: "Ce produit n'est pas dans Open Food Facts.",
   sans_valeurs: 'Cette fiche ne porte aucune valeur nutritionnelle.',
+  bloque: "Cet affichage bloque les appels vers d'autres sites. "
+    + "Ouvre l'application à son adresse publique pour chercher un produit.",
+  hors_ligne: 'Pas de connexion. La base d\'aliments fonctionne hors ligne.',
+  lent: "Open Food Facts n'a pas répondu à temps.",
+  serveur: 'Open Food Facts a répondu par une erreur.',
   reseau: 'Open Food Facts est injoignable.',
 };
