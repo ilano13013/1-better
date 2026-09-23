@@ -14,6 +14,7 @@
  */
 import type { Gym, Store } from '../types';
 import { useApp } from '../store/AppContext';
+import { BUNDLED_LOGOS } from '../data/assets';
 
 export interface BrandMarkProps {
   name: string;
@@ -72,8 +73,9 @@ export function BrandMark({ name, color, logo, size = 36, quiet = false }: Brand
 /* ------------------------------------------------------------------ */
 
 /**
- * Un logo déposé par l'utilisateur prime sur celui livré avec l'application.
- * Passer par ces variantes évite d'oublier cette règle sur un écran.
+ * Ordre de priorité : le fichier livré avec l'application, puis un éventuel
+ * reste de stockage local, puis le monogramme. Passer par ces variantes évite
+ * d'oublier cette règle sur un écran.
  */
 export function StoreMark({
   store, size, quiet,
@@ -83,9 +85,9 @@ export function StoreMark({
     <BrandMark
       name={store.name}
       color={store.color}
-      logo={state.brandLogos[store.id] ?? store.logo}
+      logo={BUNDLED_LOGOS[store.id] ?? store.logo ?? state.brandLogos[store.id]}
       size={size}
-      quiet={quiet ?? (store.id === 'autre' && !state.brandLogos[store.id])}
+      quiet={quiet ?? (store.id === 'autre' && !BUNDLED_LOGOS[store.id] && !state.brandLogos[store.id])}
     />
   );
 }
@@ -98,9 +100,9 @@ export function GymMark({
     <BrandMark
       name={gym.name}
       color={gym.color}
-      logo={state.brandLogos[gym.id] ?? gym.logo}
+      logo={BUNDLED_LOGOS[gym.id] ?? gym.logo ?? state.brandLogos[gym.id]}
       size={size}
-      quiet={quiet ?? (gym.custom && !state.brandLogos[gym.id])}
+      quiet={quiet ?? (gym.custom && !BUNDLED_LOGOS[gym.id] && !state.brandLogos[gym.id])}
     />
   );
 }

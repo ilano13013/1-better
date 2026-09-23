@@ -53,6 +53,34 @@ La même démarche vaut pour les photos de recettes : `state.recipePhotos` est
 lu à l'affichage, et un champ `photo` sur `Recipe` ferait le même office une
 fois les fichiers versionnés.
 
+
+## Noms de fichiers attendus
+
+Le nom du fichier doit reprendre l'identifiant, extension libre.
+
+### Supermarchés
+
+| Fichier | Enseigne |
+| --- | --- |
+| `lidl.svg` | Lidl |
+| `aldi.svg` | Aldi |
+| `leclerc.svg` | Leclerc |
+| `intermarche.svg` | Intermarché |
+| `carrefour.svg` | Carrefour |
+| `auchan.svg` | Auchan |
+| `superu.svg` | Super U |
+| `monoprix.svg` | Monoprix |
+
+### Salles de sport
+
+| Fichier | Salle |
+| --- | --- |
+| `basic_fit.svg` | Basic-Fit |
+| `fitness_park.svg` | Fitness Park |
+| `keepcool.svg` | Keepcool |
+| `neoness.svg` | Neoness |
+| `on_air.svg` | On Air |
+
 ## Où les obtenir légalement
 
 Chaque enseigne publie une charte de marque ou un kit presse précisant les

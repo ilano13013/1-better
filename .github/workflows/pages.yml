@@ -1,9 +1,10 @@
 # Publie l'application sur GitHub Pages à chaque poussée.
 #
-# Le site déployé est le fichier unique autonome (`npm run bundle`) : CSS et
-# JavaScript inclus, aucune requête réseau. Servi tel quel en index.html, il
-# n'a aucun chemin d'asset à résoudre, ce qui le rend insensible au
-# sous-chemin sur lequel Pages l'héberge.
+# Le site déployé est le build complet : les images de `src/assets/` restent
+# des fichiers servis séparément, mis en cache par le navigateur, plutôt que
+# d'être encodées en base64 dans la page. Vite génère des chemins relatifs
+# (`base: './'`), ce qui rend le site insensible au sous-chemin sur lequel
+# Pages l'héberge.
 name: Publier sur GitHub Pages
 
 on:
@@ -40,21 +41,17 @@ jobs:
       - name: Tests des moteurs métier
         run: npm test
 
-      - name: Construire le fichier unique
-        run: |
-          npm run build
-          npm run bundle
+      - name: Construire
+        run: npm run build
 
       - name: Préparer le site
         run: |
-          mkdir -p site
-          cp dist/1-better.html site/index.html
-          # Empêche Jekyll d'ignorer d'éventuels fichiers commençant par un underscore.
-          touch site/.nojekyll
+          # Empêche Jekyll d'ignorer les fichiers commençant par un underscore.
+          touch dist/.nojekyll
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: dist
 
   deployer:
     needs: construire

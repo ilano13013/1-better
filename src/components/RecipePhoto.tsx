@@ -1,19 +1,23 @@
 import type { Recipe } from '../types';
 import { useApp } from '../store/AppContext';
+import { BUNDLED_PHOTOS } from '../data/assets';
 
 /**
  * Affichage des photos de recettes.
  *
- * Les photos proviennent du stockage local de l'appareil : elles y ont été
- * déposées avant que l'import ne soit retiré de l'interface. Ce module se
- * contente donc de les afficher ; pour livrer des photos avec l'application,
- * voir `src/assets/logos/README.md`, qui décrit la même démarche.
+ * Priorité au fichier livré avec l'application (`src/assets/recipes/`), qui
+ * suit sur tous les appareils et pour tous les visiteurs. Le stockage local
+ * n'est plus qu'un repli, hérité de l'import retiré de l'interface.
  */
+
+function photoFor(recipeId: string, stored: Record<string, string>): string | undefined {
+  return BUNDLED_PHOTOS[recipeId] ?? stored[recipeId];
+}
 
 /** Vignette carrée, utilisée dans les listes de repas. */
 export function RecipeThumb({ recipe, size = 56 }: { recipe: Recipe; size?: number }) {
   const { state } = useApp();
-  const photo = state.recipePhotos[recipe.id];
+  const photo = photoFor(recipe.id, state.recipePhotos);
 
   const style: React.CSSProperties = {
     width: size, height: size, borderRadius: 10, flex: 'none',
@@ -43,7 +47,7 @@ export function RecipeThumb({ recipe, size = 56 }: { recipe: Recipe; size?: numb
 /** Bandeau en tête de la fiche recette. Rien ne s'affiche sans photo. */
 export function RecipePhotoBanner({ recipe }: { recipe: Recipe }) {
   const { state } = useApp();
-  const photo = state.recipePhotos[recipe.id];
+  const photo = photoFor(recipe.id, state.recipePhotos);
   if (!photo) return null;
 
   return (

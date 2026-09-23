@@ -87,6 +87,22 @@ Rien n'est une maquette statique. Toutes les interactions recalculent l'état :
 
 ---
 
+## Où vivent les images
+
+Une distinction qui compte :
+
+- **`src/assets/logos/` et `src/assets/recipes/`** font partie du build. Ces
+  images suivent sur tous les appareils, pour tous les visiteurs, et sont
+  servies par GitHub Pages. C'est là qu'il faut les mettre.
+- Le **stockage local du navigateur** ne vaut que pour un appareil et un
+  domaine donnés. Des images déposées sur `claude.ai` n'apparaissent pas sur
+  `github.io` : `localStorage` est cloisonné par origine. L'import depuis
+  l'interface a d'ailleurs été retiré ; ce chemin ne subsiste qu'en repli.
+
+Le fichier unique (`npm run bundle`) incorpore les images du dépôt en data URI
+et vérifie, avant d'écrire, qu'aucune référence n'est restée pendante — un
+build qui échoue vaut mieux qu'une image manquante en silence.
+
 ## L'écran de construction
 
 À la sortie du questionnaire, un écran montre la semaine se construire :
@@ -135,9 +151,10 @@ la fiche recette, les cartes de repas, la vue Semaine et le prochain repas de
 l'accueil. Une recette sans photo affiche une vignette neutre — une initiale,
 jamais une illustration.
 
-L'import depuis l'interface a été retiré. Pour livrer des photos avec
-l'application, versionne les fichiers et référence-les depuis les données,
-comme décrit dans `src/assets/logos/README.md`.
+Pour livrer des photos avec l'application, dépose les fichiers dans
+`src/assets/recipes/`, **nommés avec l'identifiant de la recette**
+(`poulet_curry_riz.jpg`). Ils sont détectés automatiquement au build : aucun
+code à modifier. Le README de ce dossier liste les 49 identifiants.
 
 ### Logos
 
