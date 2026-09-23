@@ -70,7 +70,12 @@ export default function BuildingWeek({ onDone }: { onDone: () => void }) {
     return () => timers.forEach(window.clearTimeout);
   }, [steps.length, onDone]);
 
-  const pct = (done * 0.2).toFixed(1).replace('.', ',');
+  // Calcul en dixièmes pour éviter la dérive du flottant (0,2 × 3 ≠ 0,6 exact),
+  // puis la décimale est retirée quand le chiffre est rond : « 1 % », pas « 1,0 % ».
+  const tenths = done * 2;
+  const pct = tenths % 10 === 0
+    ? String(tenths / 10)
+    : (tenths / 10).toFixed(1).replace('.', ',');
   const complete = done >= steps.length;
 
   return (
