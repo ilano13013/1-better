@@ -6,22 +6,20 @@ import {
   createLocalAccount, localAccountId, normalizeEmail, unlockLocalAccount,
   validateEmail, validatePassword,
 } from '../engine/localAccount';
-import { findLocalAccount, listLocalAccounts, saveLocalAccount } from '../store/accounts';
-import { hasSavedState } from '../store/persistence';
+import { findLocalAccount, listLocalAccounts, removeLocalAccount } from '../store/accounts';
+import { saveLocalAccount } from '../store/accounts';
+import { clearState } from '../store/persistence';
 
 /**
  * Écran de connexion.
  *
- * Trois voies, aucune obligatoire :
+ * Deux blocs — inscription, connexion — et trois voies, aucune obligatoire :
+ * compte e-mail créé ici même (données chiffrées avec le mot de passe), Apple,
+ * Google, ou rien du tout.
  *
- * - **Apple / Google** — intégration réelle (Google Identity Services, Sign in
- *   with Apple JS), mais impossible sans identifiant client déclaré chez le
- *   fournisseur. Un bouton non configuré est désactivé et le dit, plutôt que
- *   d'échouer au clic.
- * - **E-mail et mot de passe** — compte créé ici même, sans service tiers. Les
- *   données du compte sont chiffrées avec une clé dérivée du mot de passe.
- * - **Sans compte** — l'application est un site statique, rien n'oblige à
- *   s'identifier.
+ * Apple et Google sont intégrés pour de vrai (Google Identity Services, Sign in
+ * with Apple JS) mais ne peuvent pas fonctionner sans identifiant client
+ * déclaré chez le fournisseur : un bouton non configuré est désactivé.
  */
 
 const GOOGLE_SDK = 'https://accounts.google.com/gsi/client';
@@ -73,8 +71,7 @@ function loadScript(src: string): Promise<void> {
   return p;
 }
 
-type Busy = null | 'google' | 'apple' | 'email';
-type Mode = 'choose' | 'email';
+type Mode = 'choose' | 'signup' | 'login' | 'forgot';
 
 interface Props {
   onSignIn: (session: Session, key?: CryptoKey | null) => void | Promise<void>;
@@ -83,11 +80,10 @@ interface Props {
 }
 
 export default function SignIn({ onSignIn, locked = null }: Props) {
-  const [mode, setMode] = useState<Mode>(locked ? 'email' : 'choose');
-  const [busy, setBusy] = useState<Busy>(null);
+  const [mode, setMode] = useState<Mode>(locked ? 'login' : 'choose');
+  const [appleBusy, setAppleBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const googleSlot = useRef<HTMLDivElement>(null);
-  const localData = hasSavedState('local');
 
   const { google, apple } = AUTH_CONFIG;
 
@@ -120,15 +116,14 @@ export default function SignIn({ onSignIn, locked = null }: Props) {
           auto_select: false,
           cancel_on_tap_outside: true,
         });
-        // Le bouton officiel porte la marque Google, comme leurs règles
-        // l'exigent. On lui donne la largeur de la carte, bornée à 400 px.
+        // Le bouton officiel porte la marque Google, comme leurs règles l'exigent.
         api.renderButton(slot, {
           type: 'standard', theme: 'outline', size: 'large', shape: 'pill',
           text: 'continue_with', logo_alignment: 'center',
           width: Math.min(400, Math.max(200, slot.clientWidth || 320)),
         });
       })
-      .catch(() => { if (alive) setError("Le service d'identification Google est injoignable."); });
+      .catch(() => { if (alive) setError("Le service d'identification Google est injoignable."); })
     return () => { alive = false; };
   }, [google, mode, onGoogleCredential]);
 
@@ -137,20 +132,17 @@ export default function SignIn({ onSignIn, locked = null }: Props) {
   const signInWithApple = useCallback(async () => {
     if (!apple) return;
     setError(null);
-    setBusy('apple');
-    // `state` revient tel quel dans la réponse : une réponse qui ne le porte
-    // pas ne vient pas de cette tentative.
+    setAppleBusy(true);
+    // `state` revient tel quel : une réponse qui ne le porte pas ne vient pas
+    // de cette tentative.
     const state = randomState();
     try {
       await loadScript(APPLE_SDK);
       const api = window.AppleID;
       if (!api) throw new Error('SDK Apple indisponible');
       api.auth.init({
-        clientId: apple.clientId,
-        scope: 'name email',
-        redirectURI: apple.redirectUri,
-        state,
-        usePopup: true,
+        clientId: apple.clientId, scope: 'name email',
+        redirectURI: apple.redirectUri, state, usePopup: true,
       });
       const res = await api.auth.signIn();
       const token = res.authorization?.id_token;
@@ -170,73 +162,69 @@ export default function SignIn({ onSignIn, locked = null }: Props) {
       // Une fermeture de la fenêtre Apple passe aussi par là : on reste sobre.
       setError("La connexion avec Apple n'a pas abouti.");
     } finally {
-      setBusy(null);
+      setAppleBusy(false);
     }
   }, [apple, onSignIn]);
 
-  /* ----------------------------------- Vue ----------------------------------- */
+  /* ----------------------------------- Vues ---------------------------------- */
 
-  if (mode === 'email') {
+  if (mode === 'signup' || mode === 'login') {
     return (
       <EmailForm
+        tab={mode}
         locked={locked}
-        busy={busy === 'email'}
-        setBusy={(b) => setBusy(b ? 'email' : null)}
         onSignIn={onSignIn}
-        onBack={locked ? null : () => { setMode('choose'); setError(null); }}
+        onForgot={() => setMode('forgot')}
+        onBack={locked ? null : () => setMode('choose')}
       />
     );
   }
 
-  const nothingConfigured = !google && !apple;
+  if (mode === 'forgot') {
+    return <Forgot email={locked?.email ?? ''} onBack={() => setMode(locked ? 'login' : 'choose')} />;
+  }
 
   return (
     <div className="signin">
       <div className="signin-inner">
-        <header className="signin-head">
-          <Logo size="lg" />
-          <p className="signin-promise">
-            Ton objectif, ta salle, ton supermarché et ton budget :
-            toute ta semaine est planifiée.
-          </p>
-        </header>
+        <Logo size="lg" />
 
-        <div className="stack-sm">
-          <button
-            type="button"
-            className="btn btn-primary btn-block"
-            onClick={() => { setMode('email'); setError(null); }}
-          >
-            Créer un compte avec un e-mail
-          </button>
-
-          {/* Bouton officiel Google, injecté par leur SDK. */}
-          {google ? (
-            <div className="signin-google" ref={googleSlot} />
-          ) : (
-            <button type="button" className="btn btn-block" disabled>
-              Continuer avec Google
+        <section className="signin-block">
+          <h2 className="signin-title">Inscription</h2>
+          <div className="stack-sm">
+            <button type="button" className="btn btn-primary btn-block"
+              onClick={() => setMode('signup')}>
+              Créer un compte
             </button>
-          )}
 
-          <button
-            type="button"
-            className="btn btn-block btn-apple"
-            onClick={signInWithApple}
-            disabled={!apple || busy !== null}
-          >
-            <AppleGlyph />
-            {busy === 'apple' ? 'Connexion…' : 'Continuer avec Apple'}
+            <button type="button" className="btn btn-block btn-apple"
+              onClick={signInWithApple} disabled={!apple || appleBusy}>
+              <AppleGlyph />
+              {appleBusy ? 'Connexion…' : 'Se connecter avec Apple'}
+            </button>
+
+            {/* Bouton officiel Google, injecté par leur SDK. */}
+            {google ? (
+              <div className="signin-google" ref={googleSlot} />
+            ) : (
+              <button type="button" className="btn btn-block" disabled>
+                Se connecter avec Google
+              </button>
+            )}
+          </div>
+        </section>
+
+        <div className="signin-sep" />
+
+        <section className="signin-block">
+          <h2 className="signin-title">Connexion</h2>
+          <button type="button" className="btn btn-block" onClick={() => setMode('login')}>
+            Se connecter
           </button>
-        </div>
-
-        {nothingConfigured && (
-          <p className="xs dim center">
-            Apple et Google demandent un identifiant client déclaré chez eux, que
-            ce déploiement n'a pas encore. Le compte e-mail, lui, ne dépend
-            d'aucun service extérieur.
-          </p>
-        )}
+          <button type="button" className="linkish" onClick={() => setMode('forgot')}>
+            Mot de passe oublié ?
+          </button>
+        </section>
 
         {error && (
           <div className="card card-alert">
@@ -244,27 +232,10 @@ export default function SignIn({ onSignIn, locked = null }: Props) {
           </div>
         )}
 
-        <div className="signin-sep"><span>ou</span></div>
-
-        <button
-          type="button"
-          className="btn btn-ghost btn-block"
-          onClick={() => void onSignIn(LOCAL_SESSION)}
-        >
+        <button type="button" className="btn btn-ghost btn-block"
+          onClick={() => void onSignIn(LOCAL_SESSION)}>
           Continuer sans compte
         </button>
-        {localData && (
-          <p className="xs dim center">
-            Une semaine est déjà enregistrée sur cet appareil : tu la retrouveras
-            telle quelle.
-          </p>
-        )}
-
-        <p className="xs dim signin-note">
-          Il n'y a pas de serveur : tout reste dans ce navigateur. Un compte sert
-          à séparer tes données de celles d'une autre personne sur le même
-          appareil — rien ne se synchronise d'un appareil à l'autre.
-        </p>
       </div>
     </div>
   );
@@ -273,23 +244,19 @@ export default function SignIn({ onSignIn, locked = null }: Props) {
 /* ------------------------------ Compte e-mail ------------------------------ */
 
 function EmailForm({
-  locked, busy, setBusy, onSignIn, onBack,
+  tab, locked, onSignIn, onForgot, onBack,
 }: {
+  tab: 'signup' | 'login';
   locked: Session | null;
-  busy: boolean;
-  setBusy: (b: boolean) => void;
   onSignIn: Props['onSignIn'];
+  onForgot: () => void;
   onBack: (() => void) | null;
 }) {
-  const known = listLocalAccounts();
-  // On ouvre sur « se connecter » dès qu'un compte existe déjà ici.
-  const [tab, setTab] = useState<'login' | 'signup'>(
-    locked || known.length > 0 ? 'login' : 'signup',
-  );
   const [name, setName] = useState('');
   const [email, setEmail] = useState(locked?.email ?? '');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
@@ -318,7 +285,7 @@ function EmailForm({
       } else {
         const account = findLocalAccount(localAccountId(email));
         if (!account) {
-          setError("Aucun compte avec cette adresse sur cet appareil. Crée-le d'abord.");
+          setError("Aucun compte avec cette adresse sur cet appareil.");
           return;
         }
         const key = await unlockLocalAccount(account, password);
@@ -335,29 +302,10 @@ function EmailForm({
   return (
     <div className="signin">
       <form className="signin-inner" onSubmit={submit}>
-        <header className="signin-head">
-          <Logo size="md" />
-          <p className="signin-promise" style={{ marginTop: 14 }}>
-            {locked
-              ? `Bon retour${locked.name ? `, ${locked.name}` : ''}. Ton mot de passe déverrouille tes données.`
-              : tab === 'signup'
-                ? 'Un compte créé ici même, sans passer par Apple ni Google.'
-                : 'Retrouve le compte enregistré sur cet appareil.'}
-          </p>
-        </header>
-
-        {!locked && (
-          <div className="signin-tabs">
-            <button type="button" className="chip" aria-pressed={tab === 'signup'}
-              onClick={() => { setTab('signup'); setError(null); }}>
-              Créer un compte
-            </button>
-            <button type="button" className="chip" aria-pressed={tab === 'login'}
-              onClick={() => { setTab('login'); setError(null); }}>
-              J'ai déjà un compte
-            </button>
-          </div>
-        )}
+        <Logo size="md" />
+        <h2 className="signin-title signin-title-lead">
+          {tab === 'signup' ? 'Inscription' : 'Connexion'}
+        </h2>
 
         <div className="stack-sm">
           {tab === 'signup' && (
@@ -384,6 +332,13 @@ function EmailForm({
               autoComplete={tab === 'signup' ? 'new-password' : 'current-password'}
               value={password} onChange={(e) => setPassword(e.target.value)}
             />
+            {tab === 'signup' && (
+              // Information matérielle, pas un conseil d'usage : il n'existe
+              // aucun moyen de revenir en arrière.
+              <p className="xs notice">
+                Il chiffre tes données et ne peut pas être réinitialisé.
+              </p>
+            )}
           </div>
 
           {tab === 'signup' && (
@@ -404,21 +359,13 @@ function EmailForm({
         )}
 
         <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
-          {busy
-            ? 'Chiffrement…'
-            : tab === 'signup' ? 'Créer mon compte' : 'Se connecter'}
+          {busy ? 'Chiffrement…' : tab === 'signup' ? 'Créer mon compte' : 'Se connecter'}
         </button>
 
-        {tab === 'signup' && (
-          <div className="card card-notice">
-            <div className="card-title">À lire avant de choisir ton mot de passe</div>
-            <p className="sm muted">
-              Il chiffre les données de ce compte sur cet appareil. Comme il n'y a
-              pas de serveur, <span className="strong">il ne peut pas être
-              réinitialisé</span> : oublié, la semaine, les performances et les
-              images de ce compte sont définitivement illisibles.
-            </p>
-          </div>
+        {tab === 'login' && (
+          <button type="button" className="linkish" onClick={onForgot}>
+            Mot de passe oublié ?
+          </button>
         )}
 
         {onBack && (
@@ -427,14 +374,90 @@ function EmailForm({
           </button>
         )}
         {locked && (
-          <button
-            type="button" className="btn btn-ghost btn-block"
-            onClick={() => void onSignIn(LOCAL_SESSION)}
-          >
+          <button type="button" className="btn btn-ghost btn-block"
+            onClick={() => void onSignIn(LOCAL_SESSION)}>
             Continuer sans compte
           </button>
         )}
       </form>
+    </div>
+  );
+}
+
+/* --------------------------- Mot de passe oublié --------------------------- */
+
+/**
+ * Il n'y a rien à réinitialiser : aucun serveur ne détient de quoi le faire, et
+ * les données sont chiffrées avec le mot de passe. Plutôt qu'un formulaire qui
+ * n'enverrait aucun courriel, cet écran dit ce qui est vrai et propose la seule
+ * action réelle — repartir de zéro, en sachant ce que cela coûte.
+ */
+function Forgot({ email, onBack }: { email: string; onBack: () => void }) {
+  const [target, setTarget] = useState(email);
+  const [done, setDone] = useState(false);
+  const accounts = listLocalAccounts();
+
+  const erase = () => {
+    const account = findLocalAccount(localAccountId(target || 'x@x.xx'));
+    if (!account) return;
+    if (!window.confirm(
+      `Supprimer définitivement le compte ${account.email} et toutes ses données ? `
+      + 'Elles sont chiffrées : personne ne pourra les récupérer.',
+    )) return;
+    clearState(account.accountId);
+    removeLocalAccount(account.accountId);
+    setDone(true);
+  };
+
+  return (
+    <div className="signin">
+      <div className="signin-inner">
+        <Logo size="md" />
+        <h2 className="signin-title signin-title-lead">Mot de passe oublié</h2>
+
+        <div className="card card-alert">
+          <p className="sm">
+            <span className="strong">Il ne peut pas être réinitialisé.</span> Il
+            n'y a pas de serveur : personne, ici ou ailleurs, ne détient de quoi
+            le retrouver. Tes données sont chiffrées avec lui.
+          </p>
+        </div>
+
+        {done ? (
+          <>
+            <div className="card card-flat">
+              <p className="sm muted">Compte supprimé. Tu peux en créer un nouveau.</p>
+            </div>
+            <button type="button" className="btn btn-primary btn-block" onClick={onBack}>
+              Retour
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="field">
+              <label htmlFor="forgot-email">Compte à supprimer</label>
+              {accounts.length > 0 ? (
+                <select id="forgot-email" value={target} onChange={(e) => setTarget(e.target.value)}>
+                  <option value="">Choisir…</option>
+                  {accounts.map((a) => (
+                    <option key={a.accountId} value={a.email}>{a.email}</option>
+                  ))}
+                </select>
+              ) : (
+                <p className="sm dim">Aucun compte e-mail sur cet appareil.</p>
+              )}
+            </div>
+
+            <button type="button" className="btn btn-alert btn-block"
+              onClick={erase} disabled={!target}>
+              Supprimer ce compte et repartir de zéro
+            </button>
+            <button type="button" className="btn btn-ghost btn-block" onClick={onBack}>
+              Retour
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }

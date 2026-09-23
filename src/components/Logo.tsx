@@ -1,17 +1,23 @@
+import logoUrl from '../assets/brand/logo.webp';
+
 /**
  * Marque « 1% Better ».
  *
- * Le pourcentage est repris de l'écran de construction de la semaine : c'est
- * la même idée, un point de mieux à chaque fois. Achromatique par construction,
- * elle s'inverse avec le thème sans règle supplémentaire.
+ * Le fichier est la marque officielle : il n'est ni redessiné ni recoloré. Son
+ * fond est noir, donc en thème sombre un filet très discret redonne au carré
+ * son contour — sans rien changer à l'image.
  */
-export function Logo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+export function Logo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' | 'xl' }) {
   return (
-    <span className={`logo logo-${size}`} aria-label="1% Better" role="img">
-      <span className="logo-mark" aria-hidden="true">
-        1<span className="logo-pct">%</span>
-      </span>
-      <span className="logo-word" aria-hidden="true">Better</span>
-    </span>
+    <img
+      className={`logo logo-${size}`}
+      src={logoUrl}
+      width={512}
+      height={512}
+      alt="1% Better"
+      draggable={false}
+    />
   );
 }
+
+export { logoUrl };

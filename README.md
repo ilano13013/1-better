@@ -121,6 +121,26 @@ l'écran, et une préférence système de mouvement réduit le saute.
 
 ## Identité visuelle
 
+### La marque
+
+`src/assets/brand/logo.webp` est la marque officielle : elle n'est ni
+redessinée, ni recolorée, ni découpée. Elle sert de logo dans l'application,
+d'icône d'onglet et d'icône d'écran d'accueil — l'import Vite fournit son URL,
+donc le fichier unique la porte aussi, en URL de données.
+
+Son fond est noir. En thème sombre, un filet d'un pixel lui rend son contour,
+sans rien changer à l'image. Son vert est la seule couleur de la marque, et il
+ne se propage pas à l'interface : le reste reste achromatique.
+
+### L'écran de lancement
+
+L'application s'ouvre sur la marque : apparition en 500 ms, barre qui se
+remplit, effacement. Environ 1,4 seconde en tout — un écran de lancement qui se
+fait attendre est une taxe, pas une identité. Un appui le passe, et
+`prefers-reduced-motion` le réduit à une apparition sans mouvement.
+
+### Le reste
+
 L'interface est **achromatique**. L'emphase ne vient pas d'une couleur d'accent
 mais du contraste et de la typographie : un chiffre large et serré porte plus
 qu'une pastille colorée, et l'action principale est un bloc inversé — encre sur
@@ -285,8 +305,12 @@ fait passer les protéines de 96 g à 128 g pour une cible de 136 g.
 
 ## Comptes
 
-L'application s'ouvre sur un écran de connexion. **Aucune voie n'est
-obligatoire** :
+L'écran de connexion tient en deux blocs — **Inscription** (créer un compte,
+Apple, Google) et **Connexion** (se connecter, mot de passe oublié) — plus
+« continuer sans compte ». Aucune prose : un bouton grisé signale un
+fournisseur non configuré, et cette page-ci explique pourquoi.
+
+**Aucune voie n'est obligatoire** :
 
 | Voie | Dépend d'un service tiers | Données chiffrées |
 | --- | --- | --- |
@@ -327,9 +351,17 @@ Ce que cela ne protège pas : une session déjà ouverte (la clé est alors en
 mémoire), et les comptes Apple, Google et local, qui n'ont pas de mot de passe
 dont dériver une clé.
 
-**Conséquence assumée, écrite sur l'écran de création :** un mot de passe
+**Conséquence assumée, écrite sous le champ à la création :** un mot de passe
 oublié ne peut pas être réinitialisé, et les données de ce compte sont alors
 définitivement illisibles.
+
+### « Mot de passe oublié ? »
+
+Le lien existe, mais il ne mène pas à un formulaire qui n'enverrait aucun
+courriel. Il mène à un écran qui dit ce qui est vrai — personne ne détient de
+quoi retrouver ce mot de passe — et qui propose la seule action réelle :
+supprimer le compte et repartir de zéro, après confirmation, en sachant que les
+données sont perdues.
 
 ### Apple et Google
 

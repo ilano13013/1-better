@@ -25,9 +25,10 @@ const shot = (name) => (out ? page.screenshot({ path: `${out}/${name}.png`, full
 await page.goto(baseUrl, { waitUntil: 'networkidle' });
 
 console.log('→ connexion');
+// L'écran de lancement précède tout : on attend qu'il s'efface.
 // Apple et Google exigent une origine déclarée : le parcours automatisé passe
 // par le mode sans compte, le seul qui ne dépende d'aucun service externe.
-await page.getByRole('button', { name: 'Continuer sans compte' }).waitFor();
+await page.getByRole('button', { name: 'Continuer sans compte' }).waitFor({ timeout: 15000 });
 await shot('e2e-connexion');
 await page.getByRole('button', { name: 'Continuer sans compte' }).click();
 await page.waitForTimeout(350);
@@ -188,7 +189,7 @@ await page.waitForTimeout(400);
 await page.getByRole('button', { name: /^(Se déconnecter|Changer)$/ }).click();
 await page.waitForTimeout(500);
 
-await page.getByRole('button', { name: 'Créer un compte avec un e-mail' }).click();
+await page.getByRole('button', { name: 'Créer un compte', exact: true }).click();
 await page.waitForTimeout(300);
 await shot('e2e-compte-creation');
 await page.locator('#signup-name').fill('Dominique');
@@ -210,7 +211,7 @@ if (!sealed) errors.push("l'état du compte e-mail n'est pas chiffré");
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(600);
 // Rouvrir l'application redemande le mot de passe : la clé n'est pas conservée.
-await page.locator('#signin-password').waitFor({ timeout: 10000 });
+await page.locator('#signin-password').waitFor({ timeout: 15000 });
 await shot('e2e-compte-verrouille');
 await page.locator('#signin-password').fill('mauvais-mot-de-passe');
 await page.getByRole('button', { name: 'Se connecter' }).click();

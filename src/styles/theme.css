@@ -680,26 +680,53 @@ input[type='range']::-moz-range-thumb {
 .list-row:last-child { border-bottom: none; }
 
 /* --- Marque « 1% Better » --- */
-.logo { display: inline-flex; align-items: center; gap: 10px; }
-.logo-mark {
-  /* Flex et non grid : en grid, le « 1 » et le « % » deviennent deux lignes. */
-  display: inline-flex; align-items: center; justify-content: center;
-  background: var(--invert-bg); color: var(--invert-fg);
-  border-radius: var(--radius-sm);
-  font-weight: 700; letter-spacing: -.05em;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  /* Le « 1% » tient sur une ligne : la pastille s'élargit, elle ne casse pas. */
-  white-space: nowrap; padding: 0 .3em;
+.logo {
+  display: block; margin: 0 auto;
+  height: auto; border-radius: 22.3%;   /* rayon du carré de l'icône */
+  -webkit-user-select: none; user-select: none;
 }
-.logo-pct { font-size: .56em; letter-spacing: -.02em; margin-left: .03em; align-self: center; }
-.logo-word { font-weight: 660; letter-spacing: -.035em; line-height: 1; }
-.logo-sm .logo-mark { min-width: 26px; height: 26px; font-size: 14px; }
-.logo-sm .logo-word { font-size: 16px; }
-.logo-md .logo-mark { min-width: 36px; height: 36px; font-size: 19px; }
-.logo-md .logo-word { font-size: 22px; }
-.logo-lg .logo-mark { min-width: 54px; height: 54px; font-size: 28px; border-radius: var(--radius); }
-.logo-lg .logo-word { font-size: 33px; }
+/* Le fond de l'icône est noir : en thème sombre, un filet lui rend son contour. */
+:root[data-theme="dark"] .logo { box-shadow: 0 0 0 1px var(--line-strong); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .logo { box-shadow: 0 0 0 1px var(--line-strong); }
+}
+.logo-sm { width: 32px; }
+.logo-md { width: 64px; }
+.logo-lg { width: 112px; }
+.logo-xl { width: 128px; }
+
+/* --- Animation de lancement --- */
+.splash {
+  position: fixed; inset: 0; z-index: 80;
+  display: grid; place-items: center;
+  background: var(--ground);
+  padding: 0 var(--pad);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: opacity .26s var(--ease);
+}
+.splash.is-leaving { opacity: 0; pointer-events: none; }
+.splash-inner {
+  display: flex; flex-direction: column; align-items: center; gap: 26px;
+  animation: splash-in .5s var(--ease) both;
+}
+@keyframes splash-in {
+  0% { opacity: 0; transform: translateY(10px) scale(.93); }
+  to { opacity: 1; transform: none; }
+}
+.splash-rail {
+  width: 96px; height: 2px; overflow: hidden;
+  background: var(--track); border-radius: var(--radius-full);
+}
+.splash-rail > i {
+  display: block; height: 100%; width: 100%;
+  background: var(--ink); border-radius: var(--radius-full);
+  transform-origin: left center;
+  animation: splash-fill .95s var(--ease) both;
+}
+@keyframes splash-fill { 0% { transform: scaleX(0); } to { transform: scaleX(1); } }
+/* Mouvement réduit : la marque apparaît, sans déplacement ni remplissage. */
+.splash.is-still .splash-inner { animation: fade .2s var(--ease) both; }
+.splash.is-still .splash-rail { display: none; }
 
 /* --- Écran de connexion --- */
 .signin {
@@ -708,30 +735,28 @@ input[type='range']::-moz-range-thumb {
   padding: 40px var(--pad) calc(40px + env(safe-area-inset-bottom, 0px));
   animation: screen-in .3s var(--ease);
 }
-.signin-inner { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 14px; }
-.signin-head { text-align: center; margin-bottom: 10px; }
-.signin-head .logo { margin-bottom: 18px; }
-.signin-promise {
-  font-size: var(--fs-body); color: var(--ink-2);
-  text-wrap: balance; line-height: 1.45;
+.signin-inner { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 18px; }
+.signin-block { display: flex; flex-direction: column; gap: 10px; }
+.signin-title {
+  margin: 0; font-size: var(--fs-xs); font-weight: 620;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3);
 }
+.signin-title-lead { text-align: center; }
 /* Le SDK Google injecte son propre bouton : on ne lui impose que la largeur. */
 .signin-google { display: flex; justify-content: center; min-height: 44px; }
 .signin-google > div { width: 100% !important; }
 .btn-apple {
   background: var(--invert-bg); border-color: var(--invert-bg); color: var(--invert-fg);
 }
-.signin-sep {
-  display: flex; align-items: center; gap: 12px;
-  color: var(--ink-3); font-size: var(--fs-xs);
-  text-transform: uppercase; letter-spacing: .14em;
+.signin-sep { height: 1px; background: var(--line); }
+.linkish {
+  align-self: center;
+  background: none; border: none; padding: 4px;
+  font: inherit; font-size: var(--fs-sm); color: var(--ink-2);
+  text-decoration: underline; text-underline-offset: 3px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-.signin-sep::before, .signin-sep::after {
-  content: ""; flex: 1; height: 1px; background: var(--line);
-}
-.signin-note { line-height: 1.55; margin-top: 6px; }
-.signin-tabs { display: flex; gap: 8px; }
-.signin-tabs .chip { flex: 1; text-align: center; }
+.linkish:active { opacity: .6; }
 
 /* Déroulé d'un mouvement : étapes numérotées, erreurs à éviter. */
 .move-list { list-style: none; margin: 0; padding: 0; }

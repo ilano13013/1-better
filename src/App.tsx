@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from './store/AppContext';
+import Splash from './screens/Splash';
 import SignIn from './screens/SignIn';
 import Onboarding from './screens/Onboarding';
 import BuildingWeek from './screens/BuildingWeek';
@@ -24,6 +25,7 @@ const TABS: { id: Screen; label: string; icon: JSX.Element }[] = [
 export default function App() {
   const { state, toast, session, lockedSession, signIn } = useApp();
   const [screen, setScreen] = useState<Screen>('home');
+  const [splash, setSplash] = useState(true);
   const [building, setBuilding] = useState(false);
 
   // Le questionnaire vient d'être validé : on montre la construction du plan
@@ -34,6 +36,11 @@ export default function App() {
     if (!wasOnboarded.current && state.onboarded) setBuilding(true);
     wasOnboarded.current = state.onboarded;
   }, [state.onboarded]);
+
+  // Animation de lancement, avant toute décision.
+  if (splash) {
+    return <div className="app"><Splash onDone={() => setSplash(false)} /></div>;
+  }
 
   // Personne n'a encore choisi entre un compte et l'usage local.
   if (!session) {
