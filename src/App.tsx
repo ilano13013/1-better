@@ -22,7 +22,7 @@ const TABS: { id: Screen; label: string; icon: JSX.Element }[] = [
 ];
 
 export default function App() {
-  const { state, toast, session, signIn } = useApp();
+  const { state, toast, session, lockedSession, signIn } = useApp();
   const [screen, setScreen] = useState<Screen>('home');
   const [building, setBuilding] = useState(false);
 
@@ -37,7 +37,7 @@ export default function App() {
 
   // Personne n'a encore choisi entre un compte et l'usage local.
   if (!session) {
-    return <div className="app"><SignIn onSignIn={signIn} /></div>;
+    return <div className="app"><SignIn onSignIn={signIn} locked={lockedSession} /></div>;
   }
 
   if (!state.onboarded) {

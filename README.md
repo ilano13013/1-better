@@ -85,6 +85,7 @@ Rien n'est une maquette statique. Toutes les interactions recalculent l'état :
 | Cocher « j'ai déjà ça » | La quantité est déduite avant tout achat |
 | Panier au-dessus du budget | Substitutions cohérentes proposées, jamais imposées |
 | Changer de compte | La semaine, les performances et les images du compte chargé remplacent les précédentes |
+| Créer un compte e-mail | Les données du compte sont chiffrées avec une clé dérivée du mot de passe |
 
 ---
 
@@ -282,32 +283,64 @@ fait passer les protéines de 96 g à 128 g pour une cible de 136 g.
 
 ---
 
-## Comptes Apple et Google
+## Comptes
 
-L'application s'ouvre sur un écran de connexion proposant **Google**, **Apple**
-et **« continuer sans compte »**. Les deux premiers sont intégrés pour de vrai
-— Google Identity Services et Sign in with Apple JS — mais ne peuvent pas
-fonctionner sans identifiant client déclaré chez le fournisseur. Sans
-configuration, les boutons sont désactivés et l'écran l'explique, plutôt que
-d'échouer au clic.
+L'application s'ouvre sur un écran de connexion. **Aucune voie n'est
+obligatoire** :
 
-### Ce qu'un compte fait, et ce qu'il ne fait pas
+| Voie | Dépend d'un service tiers | Données chiffrées |
+| --- | --- | --- |
+| **E-mail et mot de passe** | non | ✅ oui |
+| **Google** | oui, identifiant client requis | non |
+| **Apple** | oui, compte développeur payant requis | non |
+| **Sans compte** | non | non |
 
 Le site est statique : **il n'y a pas de serveur**. Par conséquent :
 
 | | |
 | --- | --- |
-| Reconnaître la personne | ✅ le jeton d'identité porte un identifiant stable |
-| Séparer deux personnes sur le même appareil | ✅ chaque compte a sa propre clé de stockage |
+| Séparer plusieurs personnes sur le même appareil | ✅ une clé de stockage par compte |
 | Retrouver sa semaine après déconnexion | ✅ les données du compte restent en place |
+| Chiffrer les données au repos | ✅ **compte e-mail seulement** |
 | Synchroniser entre téléphone et ordinateur | ❌ rien ne quitte le navigateur |
-| Protéger les données | ❌ elles sont lisibles localement, compte ou pas |
+| Réinitialiser un mot de passe oublié | ❌ personne ne détient de quoi le faire |
 
-La signature du jeton **n'est pas vérifiée** : seul un serveur peut le faire.
-Elle sert à identifier, pas à autoriser — ce qui suffit ici, puisqu'il n'y a
-aucune ressource distante à protéger. Une vraie synchronisation demanderait un
-backend (Supabase, Firebase, un service maison) ; ce serait un autre chantier,
-et il n'est pas commencé.
+Une vraie synchronisation demanderait un backend (Supabase, Firebase, un
+service maison) ; ce serait un autre chantier, et il n'est pas commencé.
+
+### Compte e-mail : ce que le mot de passe protège vraiment
+
+Un mot de passe qui ne protège rien serait un mensonge d'interface. Ici, il
+sert de matière à une clé, et cette clé chiffre les données du compte :
+
+- **PBKDF2-HMAC-SHA-256**, 310 000 itérations, sel de 16 octets propre au
+  compte, puis **AES-GCM 256 bits** — via WebCrypto, sans dépendance.
+- Le mot de passe n'est **jamais stocké**, pas même sous forme de condensat.
+  La vérification consiste à déchiffrer un témoin : AES-GCM authentifie, donc
+  une mauvaise clé échoue au lieu de produire des octets faux.
+- La clé n'est pas conservée d'une visite à l'autre — ce serait contourner le
+  chiffrement. Rouvrir l'application **redemande donc le mot de passe**.
+- Deux comptes qui choisissent le même mot de passe n'obtiennent pas la même
+  clé : le sel diffère.
+
+Ce que cela ne protège pas : une session déjà ouverte (la clé est alors en
+mémoire), et les comptes Apple, Google et local, qui n'ont pas de mot de passe
+dont dériver une clé.
+
+**Conséquence assumée, écrite sur l'écran de création :** un mot de passe
+oublié ne peut pas être réinitialisé, et les données de ce compte sont alors
+définitivement illisibles.
+
+### Apple et Google
+
+Les deux sont intégrés pour de vrai — Google Identity Services et Sign in with
+Apple JS — mais ne peuvent pas fonctionner sans identifiant client déclaré chez
+le fournisseur. Sans configuration, les boutons sont désactivés et l'écran
+l'explique, plutôt que d'échouer au clic.
+
+La signature du jeton d'identité **n'est pas vérifiée** : seul un serveur peut
+le faire. Elle sert à identifier, pas à autoriser — ce qui suffit ici,
+puisqu'il n'y a aucune ressource distante à protéger.
 
 ### Configurer Google
 
@@ -422,12 +455,18 @@ officiel d'enseigne : aucun des trois ne peut être simulé honnêtement.
 npm test
 ```
 
-103 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+112 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
 substitutions (dont la protection de la densité protéique), couverture de tous
 les croisements régime × restrictions × enseigne, absence de créneau non pourvu,
 mode « il me reste X € », double progression conditionnée à l'exécution, moyenne
 glissante du poids, règles de check-in, exécution renseignée pour chaque
-mouvement, cloisonnement des comptes et refus d'un jeton d'identité périmé ou
-destiné à une autre application, et la cascade de recalcul du planificateur.
+mouvement, cloisonnement des comptes, refus d'un jeton d'identité périmé ou destiné à une
+autre application, chiffrement des comptes e-mail (aller-retour, refus d'une
+mauvaise clé, sel distinct par compte, absence de trace du mot de passe), et la
+cascade de recalcul du planificateur.
+
+Le test de fumée `npm run smoke` va plus loin : il crée un compte e-mail, vérifie
+que l'état stocké est bien chiffré, recharge la page, constate que le mot de
+passe est redemandé, en essaie un mauvais puis le bon.

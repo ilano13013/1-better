@@ -7,7 +7,9 @@ import type {
 } from '../types';
 import { buildPlan, type PlanResult } from '../engine/planner';
 import { clearPlanOverrides, createInitialState, demoState } from './state';
-import { LOCAL_ACCOUNT_ID, clearState, loadState, saveState } from './persistence';
+import {
+  LOCAL_ACCOUNT_ID, clearState, loadSealedState, loadState, saveSealedState, saveState,
+} from './persistence';
 import { loadSession, saveSession } from './session';
 import type { Session } from '../engine/auth';
 
@@ -185,8 +187,14 @@ interface AppContextValue {
   notify: (message: string) => void;
   /** Compte actif, ou `null` tant que personne n'a choisi sur l'écran d'accueil. */
   session: Session | null;
-  /** Bascule sur un compte : l'état courant est enregistré, celui du compte chargé. */
-  signIn: (session: Session) => void;
+  /**
+   * Compte e-mail de la dernière session, en attente de son mot de passe.
+   * Sa clé de déchiffrement ne peut pas être conservée : elle défierait le
+   * chiffrement. Il faut donc la redériver à chaque ouverture.
+   */
+  lockedSession: Session | null;
+  /** Bascule sur un compte. `key` n'est fourni que pour un compte chiffré. */
+  signIn: (session: Session, key?: CryptoKey | null) => Promise<void>;
   signOut: () => void;
   /** Efface les données du compte actif, sans toucher aux autres comptes. */
   eraseAccount: () => void;
@@ -195,28 +203,51 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(() => loadSession());
-  // La clé de stockage doit suivre le compte *avant* que le nouvel état ne soit
-  // enregistré : une ref, lue par l'effet de sauvegarde, garantit cet ordre.
+  // Un compte e-mail rouvert repart verrouillé : son mot de passe est la seule
+  // source de la clé, et rien ne permet de la conserver d'une visite à l'autre.
+  const [stored] = useState(() => loadSession());
+  const locked = stored?.provider === 'email' ? stored : null;
+
+  const [session, setSession] = useState<Session | null>(locked ? null : stored);
+  // La clé de stockage et la clé de chiffrement doivent suivre le compte *avant*
+  // que le nouvel état ne soit enregistré : des refs garantissent cet ordre.
   const accountRef = useRef(session?.accountId ?? LOCAL_ACCOUNT_ID);
+  const cryptoRef = useRef<CryptoKey | null>(null);
   const [state, dispatch] = useReducer(
-    reducer, null, () => loadState(accountRef.current) ?? createInitialState(),
+    reducer, null, () => (locked ? null : loadState(accountRef.current)) ?? createInitialState(),
   );
   const [toast, setToast] = useState<string | null>(null);
 
-  useEffect(() => { saveState(state, accountRef.current); }, [state]);
+  // Les écritures sont sérialisées : le chiffrement est asynchrone, deux
+  // sauvegardes concurrentes pourraient s'écrire dans le désordre.
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  const persist = useCallback((value: AppState) => {
+    queue.current = queue.current.then(async () => {
+      const key = cryptoRef.current;
+      if (key) await saveSealedState(value, accountRef.current, key);
+      else saveState(value, accountRef.current);
+    });
+    return queue.current;
+  }, []);
 
-  const switchTo = useCallback((next: Session | null) => {
-    saveState(state, accountRef.current);          // on ne perd pas la semaine en cours
+  useEffect(() => { void persist(state); }, [state, persist]);
+
+  const switchTo = useCallback(async (next: Session | null, key: CryptoKey | null) => {
+    await persist(state);                          // on ne perd pas la semaine en cours
     const id = next?.accountId ?? LOCAL_ACCOUNT_ID;
     accountRef.current = id;
+    cryptoRef.current = key;
     saveSession(next);
     setSession(next);
-    dispatch({ type: 'setState', state: loadState(id) ?? createInitialState() });
-  }, [state]);
+    const loaded = key ? await loadSealedState(id, key) : loadState(id);
+    dispatch({ type: 'setState', state: loaded ?? createInitialState() });
+  }, [persist, state]);
 
-  const signIn = useCallback((next: Session) => switchTo(next), [switchTo]);
-  const signOut = useCallback(() => switchTo(null), [switchTo]);
+  const signIn = useCallback(
+    (next: Session, key: CryptoKey | null = null) => switchTo(next, key),
+    [switchTo],
+  );
+  const signOut = useCallback(() => { void switchTo(null, null); }, [switchTo]);
 
   const eraseAccount = useCallback(() => {
     clearState(accountRef.current);
@@ -240,8 +271,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const notify = useCallback((message: string) => setToast(message), []);
 
   const value = useMemo(
-    () => ({ state, plan, dispatch, toast, notify, session, signIn, signOut, eraseAccount }),
-    [state, plan, toast, notify, session, signIn, signOut, eraseAccount],
+    () => ({
+      state, plan, dispatch, toast, notify,
+      session, lockedSession: locked, signIn, signOut, eraseAccount,
+    }),
+    [state, plan, toast, notify, session, locked, signIn, signOut, eraseAccount],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

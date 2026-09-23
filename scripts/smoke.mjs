@@ -180,6 +180,48 @@ await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(700);
 console.log('   après rechargement:', (await page.locator('.screen-head h1').innerText()).trim());
 
+console.log('→ compte e-mail chiffré');
+// Le chiffrement est la partie la plus risquée : on vérifie qu'un compte créé
+// ici survit à un rechargement, et qu'il est bien cloisonné du mode sans compte.
+await page.locator('.tabbar button', { hasText: 'Profil' }).click();
+await page.waitForTimeout(400);
+await page.getByRole('button', { name: /^(Se déconnecter|Changer)$/ }).click();
+await page.waitForTimeout(500);
+
+await page.getByRole('button', { name: 'Créer un compte avec un e-mail' }).click();
+await page.waitForTimeout(300);
+await shot('e2e-compte-creation');
+await page.locator('#signup-name').fill('Dominique');
+await page.locator('#signin-email').fill('dominique@exemple.fr');
+await page.locator('#signin-password').fill('motdepasse-solide');
+await page.locator('#signin-confirm').fill('motdepasse-solide');
+await page.getByRole('button', { name: 'Créer mon compte' }).click();
+// Le compte est neuf : il repart sur le questionnaire, preuve du cloisonnement.
+await page.getByRole('button', { name: 'Commencer' }).waitFor({ timeout: 15000 });
+console.log('   nouveau compte : questionnaire vierge, données de Camille intactes');
+
+const sealed = await page.evaluate(() => {
+  const id = Object.keys(localStorage).find((k) => k.includes(':email.'));
+  return id ? JSON.parse(localStorage.getItem(id)).sealed === true : false;
+});
+console.log('   état stocké chiffré :', sealed ? 'oui' : 'NON');
+if (!sealed) errors.push("l'état du compte e-mail n'est pas chiffré");
+
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+// Rouvrir l'application redemande le mot de passe : la clé n'est pas conservée.
+await page.locator('#signin-password').waitFor({ timeout: 10000 });
+await shot('e2e-compte-verrouille');
+await page.locator('#signin-password').fill('mauvais-mot-de-passe');
+await page.getByRole('button', { name: 'Se connecter' }).click();
+await page.locator('.card-alert').waitFor({ timeout: 15000 });
+console.log('   mauvais mot de passe :', (await page.locator('.card-alert').innerText()).trim());
+
+await page.locator('#signin-password').fill('motdepasse-solide');
+await page.getByRole('button', { name: 'Se connecter' }).click();
+await page.getByRole('button', { name: 'Commencer' }).waitFor({ timeout: 15000 });
+console.log('   bon mot de passe : compte déverrouillé');
+
 console.log('ERREURS JS:', errors.length ? errors.join(' | ') : 'aucune');
 await browser.close();
 if (errors.length) process.exit(1);

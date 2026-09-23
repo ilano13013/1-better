@@ -2,20 +2,26 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Logo } from '../components/Logo';
 import { AUTH_CONFIG } from '../config/auth';
 import { LOCAL_SESSION, sessionFromIdToken, type Session } from '../engine/auth';
+import {
+  createLocalAccount, localAccountId, normalizeEmail, unlockLocalAccount,
+  validateEmail, validatePassword,
+} from '../engine/localAccount';
+import { findLocalAccount, listLocalAccounts, saveLocalAccount } from '../store/accounts';
 import { hasSavedState } from '../store/persistence';
 
 /**
  * Écran de connexion.
  *
- * Les deux fournisseurs sont intégrés pour de vrai : Google Identity Services
- * et Sign in with Apple JS. Aucun des deux ne peut fonctionner sans un
- * identifiant client déclaré chez le fournisseur et une origine autorisée — un
- * bouton non configuré est donc désactivé et le dit, plutôt que d'échouer au
- * clic.
+ * Trois voies, aucune obligatoire :
  *
- * « Continuer sans compte » reste toujours disponible : l'application est un
- * site statique qui fonctionne entièrement hors ligne, rien n'oblige à
- * s'identifier.
+ * - **Apple / Google** — intégration réelle (Google Identity Services, Sign in
+ *   with Apple JS), mais impossible sans identifiant client déclaré chez le
+ *   fournisseur. Un bouton non configuré est désactivé et le dit, plutôt que
+ *   d'échouer au clic.
+ * - **E-mail et mot de passe** — compte créé ici même, sans service tiers. Les
+ *   données du compte sont chiffrées avec une clé dérivée du mot de passe.
+ * - **Sans compte** — l'application est un site statique, rien n'oblige à
+ *   s'identifier.
  */
 
 const GOOGLE_SDK = 'https://accounts.google.com/gsi/client';
@@ -67,9 +73,17 @@ function loadScript(src: string): Promise<void> {
   return p;
 }
 
-type Busy = null | 'google' | 'apple';
+type Busy = null | 'google' | 'apple' | 'email';
+type Mode = 'choose' | 'email';
 
-export default function SignIn({ onSignIn }: { onSignIn: (session: Session) => void }) {
+interface Props {
+  onSignIn: (session: Session, key?: CryptoKey | null) => void | Promise<void>;
+  /** Compte e-mail de la dernière session, qui attend son mot de passe. */
+  locked?: Session | null;
+}
+
+export default function SignIn({ onSignIn, locked = null }: Props) {
+  const [mode, setMode] = useState<Mode>(locked ? 'email' : 'choose');
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
   const googleSlot = useRef<HTMLDivElement>(null);
@@ -89,13 +103,12 @@ export default function SignIn({ onSignIn }: { onSignIn: (session: Session) => v
       setError("Le jeton renvoyé par Google n'est pas exploitable.");
       return;
     }
-    onSignIn(session);
+    void onSignIn(session);
   }, [google, onSignIn]);
 
   useEffect(() => {
-    if (!google || !googleSlot.current) return;
+    if (!google || mode !== 'choose' || !googleSlot.current) return;
     let alive = true;
-    setBusy('google');
     loadScript(GOOGLE_SDK)
       .then(() => {
         const api = window.google?.accounts?.id;
@@ -115,10 +128,9 @@ export default function SignIn({ onSignIn }: { onSignIn: (session: Session) => v
           width: Math.min(400, Math.max(200, slot.clientWidth || 320)),
         });
       })
-      .catch(() => { if (alive) setError("Le service d'identification Google est injoignable."); })
-      .finally(() => { if (alive) setBusy(null); });
+      .catch(() => { if (alive) setError("Le service d'identification Google est injoignable."); });
     return () => { alive = false; };
-  }, [google, onGoogleCredential]);
+  }, [google, mode, onGoogleCredential]);
 
   /* ---------------------------------- Apple ---------------------------------- */
 
@@ -153,7 +165,7 @@ export default function SignIn({ onSignIn }: { onSignIn: (session: Session) => v
         'apple', token, apple.clientId, new Date(), `${first} ${lastName}`.trim(),
       );
       if (!session) throw new Error('jeton inexploitable');
-      onSignIn(session);
+      await onSignIn(session);
     } catch {
       // Une fermeture de la fenêtre Apple passe aussi par là : on reste sobre.
       setError("La connexion avec Apple n'a pas abouti.");
@@ -163,6 +175,18 @@ export default function SignIn({ onSignIn }: { onSignIn: (session: Session) => v
   }, [apple, onSignIn]);
 
   /* ----------------------------------- Vue ----------------------------------- */
+
+  if (mode === 'email') {
+    return (
+      <EmailForm
+        locked={locked}
+        busy={busy === 'email'}
+        setBusy={(b) => setBusy(b ? 'email' : null)}
+        onSignIn={onSignIn}
+        onBack={locked ? null : () => { setMode('choose'); setError(null); }}
+      />
+    );
+  }
 
   const nothingConfigured = !google && !apple;
 
@@ -178,6 +202,14 @@ export default function SignIn({ onSignIn }: { onSignIn: (session: Session) => v
         </header>
 
         <div className="stack-sm">
+          <button
+            type="button"
+            className="btn btn-primary btn-block"
+            onClick={() => { setMode('email'); setError(null); }}
+          >
+            Créer un compte avec un e-mail
+          </button>
+
           {/* Bouton officiel Google, injecté par leur SDK. */}
           {google ? (
             <div className="signin-google" ref={googleSlot} />
@@ -199,15 +231,11 @@ export default function SignIn({ onSignIn }: { onSignIn: (session: Session) => v
         </div>
 
         {nothingConfigured && (
-          <div className="card card-notice">
-            <div className="card-title">Identification non configurée</div>
-            <p className="sm muted">
-              Ce déploiement n'a pas encore d'identifiant client Apple ni Google.
-              Les deux boutons restent inactifs tant qu'il n'en a pas — voir
-              <span className="strong"> README, « Comptes Apple et Google »</span>.
-              L'application fonctionne entièrement sans compte.
-            </p>
-          </div>
+          <p className="xs dim center">
+            Apple et Google demandent un identifiant client déclaré chez eux, que
+            ce déploiement n'a pas encore. Le compte e-mail, lui, ne dépend
+            d'aucun service extérieur.
+          </p>
         )}
 
         {error && (
@@ -221,7 +249,7 @@ export default function SignIn({ onSignIn }: { onSignIn: (session: Session) => v
         <button
           type="button"
           className="btn btn-ghost btn-block"
-          onClick={() => onSignIn(LOCAL_SESSION)}
+          onClick={() => void onSignIn(LOCAL_SESSION)}
         >
           Continuer sans compte
         </button>
@@ -233,14 +261,192 @@ export default function SignIn({ onSignIn }: { onSignIn: (session: Session) => v
         )}
 
         <p className="xs dim signin-note">
-          Un compte sert à séparer tes données de celles d'une autre personne sur
-          le même appareil, et rien d'autre. Il n'y a pas de serveur : tout reste
-          dans ce navigateur, donc rien ne se synchronise d'un appareil à
-          l'autre, avec ou sans compte.
+          Il n'y a pas de serveur : tout reste dans ce navigateur. Un compte sert
+          à séparer tes données de celles d'une autre personne sur le même
+          appareil — rien ne se synchronise d'un appareil à l'autre.
         </p>
       </div>
     </div>
   );
+}
+
+/* ------------------------------ Compte e-mail ------------------------------ */
+
+function EmailForm({
+  locked, busy, setBusy, onSignIn, onBack,
+}: {
+  locked: Session | null;
+  busy: boolean;
+  setBusy: (b: boolean) => void;
+  onSignIn: Props['onSignIn'];
+  onBack: (() => void) | null;
+}) {
+  const known = listLocalAccounts();
+  // On ouvre sur « se connecter » dès qu'un compte existe déjà ici.
+  const [tab, setTab] = useState<'login' | 'signup'>(
+    locked || known.length > 0 ? 'login' : 'signup',
+  );
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState(locked?.email ?? '');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    const emailError = validateEmail(email);
+    if (emailError) { setError(emailError); return; }
+    const passwordError = validatePassword(password);
+    if (passwordError) { setError(passwordError); return; }
+    if (tab === 'signup' && password !== confirm) {
+      setError('Les deux mots de passe ne correspondent pas.');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      if (tab === 'signup') {
+        if (findLocalAccount(localAccountId(email))) {
+          setError('Un compte existe déjà avec cette adresse sur cet appareil.');
+          return;
+        }
+        const { account, key } = await createLocalAccount(email, password, name);
+        saveLocalAccount(account);
+        await onSignIn(sessionOf(account.accountId, account.name, account.email), key);
+      } else {
+        const account = findLocalAccount(localAccountId(email));
+        if (!account) {
+          setError("Aucun compte avec cette adresse sur cet appareil. Crée-le d'abord.");
+          return;
+        }
+        const key = await unlockLocalAccount(account, password);
+        if (!key) { setError('Mot de passe incorrect.'); return; }
+        await onSignIn(sessionOf(account.accountId, account.name, account.email), key);
+      }
+    } catch {
+      setError("La création de la clé de chiffrement a échoué sur ce navigateur.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="signin">
+      <form className="signin-inner" onSubmit={submit}>
+        <header className="signin-head">
+          <Logo size="md" />
+          <p className="signin-promise" style={{ marginTop: 14 }}>
+            {locked
+              ? `Bon retour${locked.name ? `, ${locked.name}` : ''}. Ton mot de passe déverrouille tes données.`
+              : tab === 'signup'
+                ? 'Un compte créé ici même, sans passer par Apple ni Google.'
+                : 'Retrouve le compte enregistré sur cet appareil.'}
+          </p>
+        </header>
+
+        {!locked && (
+          <div className="signin-tabs">
+            <button type="button" className="chip" aria-pressed={tab === 'signup'}
+              onClick={() => { setTab('signup'); setError(null); }}>
+              Créer un compte
+            </button>
+            <button type="button" className="chip" aria-pressed={tab === 'login'}
+              onClick={() => { setTab('login'); setError(null); }}>
+              J'ai déjà un compte
+            </button>
+          </div>
+        )}
+
+        <div className="stack-sm">
+          {tab === 'signup' && (
+            <div className="field">
+              <label htmlFor="signup-name">Prénom</label>
+              <input id="signup-name" type="text" autoComplete="given-name" placeholder="Alex"
+                value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+          )}
+
+          <div className="field">
+            <label htmlFor="signin-email">E-mail</label>
+            <input
+              id="signin-email" type="email" inputMode="email" autoComplete="email"
+              placeholder="alex@exemple.fr" value={email} readOnly={Boolean(locked)}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+
+          <div className="field">
+            <label htmlFor="signin-password">Mot de passe</label>
+            <input
+              id="signin-password" type="password"
+              autoComplete={tab === 'signup' ? 'new-password' : 'current-password'}
+              value={password} onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+
+          {tab === 'signup' && (
+            <div className="field">
+              <label htmlFor="signin-confirm">Confirmer le mot de passe</label>
+              <input
+                id="signin-confirm" type="password" autoComplete="new-password"
+                value={confirm} onChange={(e) => setConfirm(e.target.value)}
+              />
+            </div>
+          )}
+        </div>
+
+        {error && (
+          <div className="card card-alert">
+            <p className="sm notice">{error}</p>
+          </div>
+        )}
+
+        <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
+          {busy
+            ? 'Chiffrement…'
+            : tab === 'signup' ? 'Créer mon compte' : 'Se connecter'}
+        </button>
+
+        {tab === 'signup' && (
+          <div className="card card-notice">
+            <div className="card-title">À lire avant de choisir ton mot de passe</div>
+            <p className="sm muted">
+              Il chiffre les données de ce compte sur cet appareil. Comme il n'y a
+              pas de serveur, <span className="strong">il ne peut pas être
+              réinitialisé</span> : oublié, la semaine, les performances et les
+              images de ce compte sont définitivement illisibles.
+            </p>
+          </div>
+        )}
+
+        {onBack && (
+          <button type="button" className="btn btn-ghost btn-block" onClick={onBack}>
+            Retour
+          </button>
+        )}
+        {locked && (
+          <button
+            type="button" className="btn btn-ghost btn-block"
+            onClick={() => void onSignIn(LOCAL_SESSION)}
+          >
+            Continuer sans compte
+          </button>
+        )}
+      </form>
+    </div>
+  );
+}
+
+function sessionOf(accountId: string, name: string, email: string): Session {
+  return {
+    accountId,
+    provider: 'email',
+    name,
+    email: normalizeEmail(email),
+    signedInAt: new Date().toISOString(),
+  };
 }
 
 function randomState(): string {

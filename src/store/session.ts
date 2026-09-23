@@ -14,10 +14,10 @@ export function loadSession(): Session | null {
     const parsed = JSON.parse(raw) as Partial<Session>;
     if (typeof parsed.accountId !== 'string' || typeof parsed.provider !== 'string') return null;
     if (parsed.provider === 'local') return LOCAL_SESSION;
-    if (parsed.provider !== 'google' && parsed.provider !== 'apple') return null;
+    if (!['google', 'apple', 'email'].includes(parsed.provider)) return null;
     return {
       accountId: parsed.accountId,
-      provider: parsed.provider,
+      provider: parsed.provider as Session['provider'],
       name: parsed.name ?? '',
       email: parsed.email ?? '',
       signedInAt: parsed.signedInAt ?? '',

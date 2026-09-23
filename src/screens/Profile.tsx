@@ -8,6 +8,7 @@ import { computeTargets, kcalFromMacros } from '../engine/nutrition';
 import { DIET_LABELS, RESTRICTION_LABELS } from '../engine/filters';
 import { DAY_NAMES } from '../engine/training';
 import { movingAverage, sortedEntries, weeklyTrendPct } from '../engine/weight';
+import { providerLabel } from '../engine/auth';
 import { evaluateCheckIn, isCheckInDue } from '../engine/checkin';
 import { buildBadges, sessionCount, weekStreak, progressToGoal } from '../engine/gamification';
 import { personalRecords } from '../engine/progression';
@@ -187,7 +188,7 @@ export default function ProfileScreen() {
                 </div>
                 <div className="xs dim truncate">
                   {session && session.provider !== 'local'
-                    ? `${session.provider === 'google' ? 'Google' : 'Apple'}${session.email ? ` · ${session.email}` : ''}`
+                    ? `${providerLabel(session.provider)}${session.email ? ` · ${session.email}` : ''}`
                     : 'Données enregistrées sur cet appareil'}
                 </div>
               </div>
@@ -197,8 +198,11 @@ export default function ProfileScreen() {
             </div>
           </Card>
           <p className="xs dim" style={{ marginTop: 10 }}>
-            Se déconnecter ne supprime rien : les données de ce compte restent
-            sur cet appareil et reviennent à la prochaine connexion.
+            {session?.provider === 'email'
+              ? `Se déconnecter ne supprime rien : les données de ce compte restent
+                 sur cet appareil, chiffrées, et ton mot de passe les rouvre.`
+              : `Se déconnecter ne supprime rien : les données de ce compte restent
+                 sur cet appareil et reviennent à la prochaine connexion.`}
           </p>
         </div>
 

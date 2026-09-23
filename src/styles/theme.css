@@ -730,6 +730,8 @@ input[type='range']::-moz-range-thumb {
   content: ""; flex: 1; height: 1px; background: var(--line);
 }
 .signin-note { line-height: 1.55; margin-top: 6px; }
+.signin-tabs { display: flex; gap: 8px; }
+.signin-tabs .chip { flex: 1; text-align: center; }
 
 /* Déroulé d'un mouvement : étapes numérotées, erreurs à éviter. */
 .move-list { list-style: none; margin: 0; padding: 0; }

@@ -15,7 +15,7 @@
  * un compte ne les synchronise pas d'un appareil à l'autre.
  */
 
-export type AuthProvider = 'google' | 'apple' | 'local';
+export type AuthProvider = 'google' | 'apple' | 'email' | 'local';
 
 /** Champs d'un jeton d'identité OpenID que l'application utilise. */
 export interface IdTokenClaims {
@@ -149,9 +149,17 @@ export function sessionFromIdToken(
   };
 }
 
+const PROVIDER_LABELS: Record<AuthProvider, string> = {
+  google: 'Google', apple: 'Apple', email: 'E-mail', local: 'Sans compte',
+};
+
+export function providerLabel(provider: AuthProvider): string {
+  return PROVIDER_LABELS[provider];
+}
+
 /** Libellé court d'une session, pour l'écran Profil. */
 export function sessionLabel(session: Session): string {
   if (session.provider === 'local') return 'Sans compte — données sur cet appareil';
   const who = session.name || session.email || 'Compte';
-  return `${who} · ${session.provider === 'google' ? 'Google' : 'Apple'}`;
+  return `${who} · ${providerLabel(session.provider)}`;
 }
