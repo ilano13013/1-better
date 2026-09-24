@@ -77,6 +77,7 @@ export function createInitialState(): AppState {
     startDate: null,
     tourSeen: false,
     activeSession: null,
+    restTimer: null,
     completedWorkouts: [],
     profile: { ...EMPTY_PROFILE },
     targetsOverride: null,

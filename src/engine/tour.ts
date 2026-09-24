@@ -59,10 +59,10 @@ export const TOUR_STEPS: TourStep[] = [
     id: 'session',
     screen: 'training',
     target: 'session',
-    title: 'Le chronomètre',
-    body: 'Démarre-le en arrivant à la salle, mets-le en pause si tu es '
-      + "interrompu. « Séance terminée » valide la journée pour ton cycle, même "
-      + 'sans charge enregistrée.',
+    title: 'La récupération',
+    body: 'Le minuteur part du temps de repos de chaque exercice, et se lance '
+      + "seul après une saisie. « Séance terminée » valide la journée pour ton "
+      + 'cycle, même sans charge enregistrée.',
   },
   {
     id: 'nutrition',

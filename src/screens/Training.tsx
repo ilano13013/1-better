@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { DayIndex, Performance, PerformanceSet, Workout, WorkoutExercise } from '../types';
 import { useApp } from '../store/AppContext';
-import type { Screen } from '../App';
 import { isoForDay, todayIndex } from '../store/state';
 import { SessionBar } from '../components/SessionBar';
 import { MUSCLE_LABELS, getExercise } from '../data/exercises';
@@ -10,7 +9,6 @@ import { DAY_NAMES, DAY_SHORT, findReplacements } from '../engine/training';
 import { historyFor, lastPerformance, personalRecords, suggestNext, unitLabel } from '../engine/progression';
 import { Card, Checkbox, Disclaimer, Empty, Sheet, num } from '../components/ui';
 import { PlanSheet, PlusLock } from '../components/Plus';
-import { CoachCard } from '../components/CoachCard';
 import type { Limits } from '../engine/entitlements';
 import { GymMark } from '../components/BrandMark';
 
@@ -23,7 +21,7 @@ import {
  * Écran Training : planning de la semaine, détail de séance, remplacement
  * d'exercice et enregistrement des performances (double progression).
  */
-export default function Training({ go }: { go: (s: Screen) => void }) {
+export default function Training() {
   const { state, plan, dispatch, notify } = useApp();
   const today = todayIndex();
 
@@ -37,6 +35,15 @@ export default function Training({ go }: { go: (s: Screen) => void }) {
   const [logging, setLogging] = useState<{ workout: Workout; we: WorkoutExercise } | null>(null);
   const [detail, setDetail] = useState<string | null>(null);
   const [plans, setPlans] = useState(false);
+
+  /** Lance la récupération de cet exercice, à son temps de repos prévu. */
+  const startRest = (w: Workout, we: WorkoutExercise) => dispatch({
+    type: 'startRest',
+    exerciseId: we.exerciseId,
+    totalSec: we.restSec,
+    workoutId: w.id,
+    date: isoForDay(w.day),
+  });
 
   const gym = GYM_BY_ID[state.profile.gymId];
   const records = useMemo(() => personalRecords(state.performances), [state.performances]);
@@ -128,15 +135,12 @@ export default function Training({ go }: { go: (s: Screen) => void }) {
               limits={plan.limits}
               onReplace={() => setReplacing({ workout, index })}
               onLog={() => setLogging({ workout, we })}
+              onRest={() => startRest(workout, we)}
               onDetail={() => setDetail(we.exerciseId)}
             />
           ))}
         </div>
       )}
-
-      <div style={{ marginTop: 20 }}>
-        <CoachCard onOpen={() => go('coach')} />
-      </div>
 
       {(!plan.limits.gymEquipment || plan.limits.maxSessionsPerWeek !== null) && (
         <div style={{ marginTop: 20 }}>
@@ -215,7 +219,9 @@ export default function Training({ go }: { go: (s: Screen) => void }) {
                 cleanExecution,
               };
               dispatch({ type: 'logPerformance', performance: perf });
-              notify('Séance enregistrée');
+              // Une saisie signe la fin d'une série : le repos démarre seul.
+              startRest(logging.workout, logging.we);
+              notify('Enregistré — récupération lancée');
               setLogging(null);
             }}
           />
@@ -235,10 +241,10 @@ export default function Training({ go }: { go: (s: Screen) => void }) {
 }
 
 function ExerciseCard({
-  we, index, performances, limits, onReplace, onLog, onDetail,
+  we, index, performances, limits, onReplace, onLog, onRest, onDetail,
 }: {
   we: WorkoutExercise; index: number; performances: Performance[]; limits: Limits;
-  onReplace: () => void; onLog: () => void; onDetail: () => void;
+  onReplace: () => void; onLog: () => void; onRest: () => void; onDetail: () => void;
 }) {
   const ex = getExercise(we.exerciseId);
   const last = lastPerformance(we.exerciseId, performances);
@@ -304,9 +310,14 @@ function ExerciseCard({
             <div className="xs dim">Aucune performance enregistrée</div>
           )}
         </div>
-        <button type="button" className="btn btn-sm" onClick={onLog}>
-          <IconPlus size={14} /> Saisir
-        </button>
+        <div className="row" style={{ gap: 8, flex: 'none' }}>
+          <button type="button" className="btn btn-sm" onClick={onRest}>
+            <IconClock size={14} /> Repos
+          </button>
+          <button type="button" className="btn btn-sm" onClick={onLog}>
+            <IconPlus size={14} /> Saisir
+          </button>
+        </div>
       </div>
 
       <div className="card card-flat" style={{ marginTop: 12, padding: 12 }}>

@@ -15,7 +15,7 @@ import type { Session } from '../engine/auth';
 import { startSubscription, type BillingPeriod } from '../engine/entitlements';
 import type { IntakeEntry } from '../engine/intake';
 import {
-  elapsedSec, findCompleted, pauseSession, resumeSession, startSession,
+  addRest, elapsedSec, findCompleted, pauseRest, resumeRest, startRest, startSession,
 } from '../engine/session';
 
 /**
@@ -57,10 +57,11 @@ type Action =
   | { type: 'removeIntake'; id: string }
   | { type: 'setStartDate'; date: string }
   | { type: 'setTourSeen'; seen: boolean }
-  | { type: 'startChrono'; workoutId: string; date: string }
-  | { type: 'pauseChrono' }
-  | { type: 'resumeChrono' }
-  | { type: 'stopChrono' }
+  | { type: 'startRest'; exerciseId: string; totalSec: number; workoutId: string; date: string }
+  | { type: 'pauseRest' }
+  | { type: 'resumeRest' }
+  | { type: 'addRest'; seconds: number }
+  | { type: 'stopRest' }
   | { type: 'completeWorkout'; workoutId: string; date: string; estimatedMin: number }
   | { type: 'uncompleteWorkout'; id: string }
   | { type: 'regeneratePlan' };
@@ -103,23 +104,35 @@ function reducer(state: AppState, action: Action): AppState {
     case 'setTourSeen':
       return { ...state, tourSeen: action.seen };
 
-    /* --- Chronomètre et séance terminée : aucun effet sur le plan. --- */
+    /* --- Repos et séance terminée : aucun effet sur le plan. --- */
 
-    case 'startChrono':
-      return { ...state, activeSession: startSession(action.workoutId, action.date) };
+    case 'startRest': {
+      // Le premier repos marque le début de la séance : c'est la première
+      // trace horodatée qu'on ait, et elle est vraie.
+      const already = state.activeSession?.workoutId === action.workoutId
+        && state.activeSession.date === action.date;
+      return {
+        ...state,
+        activeSession: already
+          ? state.activeSession
+          : startSession(action.workoutId, action.date),
+        restTimer: startRest(action.exerciseId, action.totalSec),
+      };
+    }
 
-    case 'pauseChrono':
-      return state.activeSession
-        ? { ...state, activeSession: pauseSession(state.activeSession) }
+    case 'pauseRest':
+      return state.restTimer ? { ...state, restTimer: pauseRest(state.restTimer) } : state;
+
+    case 'resumeRest':
+      return state.restTimer ? { ...state, restTimer: resumeRest(state.restTimer) } : state;
+
+    case 'addRest':
+      return state.restTimer
+        ? { ...state, restTimer: addRest(state.restTimer, action.seconds) }
         : state;
 
-    case 'resumeChrono':
-      return state.activeSession
-        ? { ...state, activeSession: resumeSession(state.activeSession) }
-        : state;
-
-    case 'stopChrono':
-      return { ...state, activeSession: null };
+    case 'stopRest':
+      return { ...state, restTimer: null };
 
     case 'completeWorkout': {
       // Une séance déjà déclarée terminée ne compte pas deux fois.
@@ -131,6 +144,7 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         activeSession: null,
+        restTimer: null,
         completedWorkouts: [...state.completedWorkouts, {
           id: `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
           date: action.date,

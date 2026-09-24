@@ -237,23 +237,29 @@ await page.locator('.list-row button.option-mark').first().click();
 await page.waitForTimeout(500);
 console.log('   chariot:', (await page.locator('.card.card-flat', { hasText: 'Déjà dans le chariot' }).innerText()).replace(/\n/g, ' '));
 
-console.log('→ chronomètre et séance terminée');
+console.log('→ récupération et séance terminée');
 await page.locator('.tabbar button', { hasText: 'Training' }).click();
 await page.waitForTimeout(500);
-// On choisit un jour avec séance : le sélecteur ouvre sur la prochaine.
 const barre = page.locator('.session-bar');
 if (await barre.count()) {
-  await page.getByRole('button', { name: /Démarrer/ }).click();
+  // Le minuteur part du temps de repos de l'exercice, pas d'un réglage global.
+  await page.getByRole('button', { name: /^Repos$/ }).first().click();
+  await page.waitForTimeout(300);
+  const depart = (await page.locator('.rest-value').innerText()).trim();
+  console.log('   repos lancé à', depart);
   await page.waitForTimeout(2100);
-  const chrono = (await page.locator('.chrono').innerText()).trim();
-  console.log('   chronomètre après 2 s :', chrono);
-  if (chrono === '0:00') errors.push('chronomètre : resté à zéro');
+  const apres = (await page.locator('.rest-value').innerText()).trim();
+  console.log('   après 2 s :', apres);
+  if (apres === depart) errors.push('repos : le décompte n\'a pas avancé');
   await page.getByRole('button', { name: 'Pause' }).click();
   await page.waitForTimeout(1500);
-  const fige = (await page.locator('.chrono').innerText()).trim();
-  if (fige !== chrono) errors.push(`chronomètre : a couru en pause (${chrono} → ${fige})`);
+  const fige = (await page.locator('.rest-value').innerText()).trim();
+  if (fige !== apres) errors.push(`repos : a couru en pause (${apres} → ${fige})`);
   console.log('   en pause :', fige, '— figé');
-  await shot('e2e-chrono');
+  await page.getByRole('button', { name: '+30 s' }).click();
+  await page.waitForTimeout(300);
+  console.log('   après +30 s :', (await page.locator('.rest-value').innerText()).trim());
+  await shot('e2e-repos');
   await page.getByRole('button', { name: 'Séance terminée' }).click();
   await page.waitForTimeout(800);
   console.log('   ', (await page.locator('.session-bar .sm').first().innerText()).trim());

@@ -1,5 +1,5 @@
 /**
- * CHRONOMÈTRE DE SÉANCE ET SÉANCE TERMINÉE.
+ * MINUTEUR DE RÉCUPÉRATION, DURÉE DE SÉANCE ET SÉANCE TERMINÉE.
  *
  * Le chronomètre ne compte pas : il retient **quand il a démarré**. Un
  * compteur incrémenté par un `setInterval` dérive dès que l'onglet passe en
@@ -102,4 +102,77 @@ export function durationNote(realSec: number, estimatedMin: number): string {
   return gap > 0
     ? `${real} min, soit ${gap} de plus que l'estimation.`
     : `${real} min, soit ${-gap} de moins que l'estimation.`;
+}
+
+/* --------------------- Récupération entre les séries --------------------- */
+
+/**
+ * Minuteur de repos.
+ *
+ * Même principe que le chronomètre, à l'envers : on retient **l'instant de
+ * fin**, pas un décompte. Un décompte incrémenté se serait figé dès l'écran
+ * éteint — précisément le moment où l'on pose son téléphone entre deux séries.
+ * Ici, revenir sur l'application affiche le temps réellement restant, ou zéro.
+ */
+export interface RestTimer {
+  exerciseId: string;
+  /** Durée prévue au départ, secondes. */
+  totalSec: number;
+  /** Instant de fin prévu. `null` en pause. */
+  endsAt: string | null;
+  /** Secondes restantes au moment de la mise en pause. */
+  remainingSec: number;
+}
+
+export function startRest(exerciseId: string, totalSec: number, now: Date = new Date()): RestTimer {
+  const total = Math.max(1, Math.round(totalSec));
+  return {
+    exerciseId,
+    totalSec: total,
+    endsAt: new Date(now.getTime() + total * 1000).toISOString(),
+    remainingSec: total,
+  };
+}
+
+/** Secondes restantes, jamais négatives. */
+export function restLeft(timer: RestTimer | null, now: Date = new Date()): number {
+  if (!timer) return 0;
+  if (!timer.endsAt) return Math.max(0, Math.round(timer.remainingSec));
+  const left = (new Date(timer.endsAt).getTime() - now.getTime()) / 1000;
+  return Math.max(0, Math.round(left));
+}
+
+export function pauseRest(timer: RestTimer, now: Date = new Date()): RestTimer {
+  if (!timer.endsAt) return timer;
+  return { ...timer, endsAt: null, remainingSec: restLeft(timer, now) };
+}
+
+export function resumeRest(timer: RestTimer, now: Date = new Date()): RestTimer {
+  if (timer.endsAt) return timer;
+  return { ...timer, endsAt: new Date(now.getTime() + timer.remainingSec * 1000).toISOString() };
+}
+
+/**
+ * Allonge le repos.
+ *
+ * `totalSec` suit, sinon la jauge afficherait un anneau plus que plein après
+ * un ajout — un repos rallongé reste un repos, pas un dépassement.
+ */
+export function addRest(timer: RestTimer, extraSec: number, now: Date = new Date()): RestTimer {
+  const left = restLeft(timer, now) + extraSec;
+  const total = timer.totalSec + extraSec;
+  if (left <= 0) return { ...timer, totalSec: Math.max(1, total), endsAt: null, remainingSec: 0 };
+  return timer.endsAt
+    ? { ...timer, totalSec: total, endsAt: new Date(now.getTime() + left * 1000).toISOString() }
+    : { ...timer, totalSec: total, remainingSec: left };
+}
+
+export function isRestOver(timer: RestTimer | null, now: Date = new Date()): boolean {
+  return timer !== null && restLeft(timer, now) === 0;
+}
+
+/** Part du repos déjà écoulée, de 0 à 1 — pour l'anneau. */
+export function restProgress(timer: RestTimer | null, now: Date = new Date()): number {
+  if (!timer || timer.totalSec <= 0) return 0;
+  return Math.min(1, Math.max(0, 1 - restLeft(timer, now) / timer.totalSec));
 }

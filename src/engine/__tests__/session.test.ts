@@ -4,6 +4,9 @@ import {
   pauseSession, resumeSession, startSession, validatedDates,
   type CompletedWorkout,
 } from '../session';
+import {
+  addRest, isRestOver, pauseRest, restLeft, restProgress, resumeRest, startRest,
+} from '../session';
 import { computeStreak } from '../streak';
 
 const t = (iso: string) => new Date(iso);
@@ -100,5 +103,60 @@ describe('séance terminée', () => {
       [done('2026-09-24', 'w1')],
     );
     expect(dates).toEqual(['2026-09-24']);
+  });
+});
+
+
+describe('récupération entre les séries', () => {
+  /*
+   * Le minuteur retient l'instant de FIN, pas un décompte. Un décompte
+   * incrémenté se serait figé dès l'écran éteint — précisément le moment où
+   * l'on pose son téléphone entre deux séries.
+   */
+  it('décompte depuis l\'instant de fin', () => {
+    const r = startRest('squat_barre', 105, t('2026-09-24T18:00:00Z'));
+    expect(restLeft(r, t('2026-09-24T18:00:00Z'))).toBe(105);
+    expect(restLeft(r, t('2026-09-24T18:00:45Z'))).toBe(60);
+    // Écran éteint une minute : au retour, le temps restant est juste.
+    expect(restLeft(r, t('2026-09-24T18:01:45Z'))).toBe(0);
+  });
+
+  it('ne descend jamais sous zéro', () => {
+    const r = startRest('squat_barre', 60, t('2026-09-24T18:00:00Z'));
+    expect(restLeft(r, t('2026-09-24T18:10:00Z'))).toBe(0);
+    expect(isRestOver(r, t('2026-09-24T18:10:00Z'))).toBe(true);
+    expect(isRestOver(r, t('2026-09-24T18:00:30Z'))).toBe(false);
+    expect(restLeft(null)).toBe(0);
+  });
+
+  it('fige le décompte en pause et le reprend là où il en était', () => {
+    let r = startRest('squat_barre', 120, t('2026-09-24T18:00:00Z'));
+    r = pauseRest(r, t('2026-09-24T18:00:30Z'));
+    expect(restLeft(r, t('2026-09-24T18:05:00Z'))).toBe(90);   // la pause ne court pas
+    r = resumeRest(r, t('2026-09-24T18:05:00Z'));
+    expect(restLeft(r, t('2026-09-24T18:05:30Z'))).toBe(60);
+  });
+
+  it('allonge le repos sans faire déborder la jauge', () => {
+    // `totalSec` suit l'ajout : sinon l'anneau afficherait plus que plein.
+    let r = startRest('squat_barre', 60, t('2026-09-24T18:00:00Z'));
+    r = addRest(r, 30, t('2026-09-24T18:00:10Z'));
+    expect(restLeft(r, t('2026-09-24T18:00:10Z'))).toBe(80);
+    expect(r.totalSec).toBe(90);
+    expect(restProgress(r, t('2026-09-24T18:00:10Z'))).toBeCloseTo(10 / 90, 3);
+  });
+
+  it('peut être rallongé une fois terminé', () => {
+    const fini = startRest('squat_barre', 30, t('2026-09-24T18:00:00Z'));
+    const relance = addRest(fini, 30, t('2026-09-24T18:05:00Z'));
+    expect(restLeft(relance, t('2026-09-24T18:05:00Z'))).toBe(30);
+  });
+
+  it('remplit l\'anneau de zéro à un, sans jamais sortir', () => {
+    const r = startRest('squat_barre', 100, t('2026-09-24T18:00:00Z'));
+    expect(restProgress(r, t('2026-09-24T18:00:00Z'))).toBe(0);
+    expect(restProgress(r, t('2026-09-24T18:00:50Z'))).toBeCloseTo(0.5, 2);
+    expect(restProgress(r, t('2026-09-24T18:09:00Z'))).toBe(1);
+    expect(restProgress(null)).toBe(0);
   });
 });

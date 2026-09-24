@@ -74,7 +74,7 @@ export default function App() {
     <div className="app">
       {screen === 'home' && <Dashboard go={setScreen} />}
       {screen === 'week' && <Week go={setScreen} />}
-      {screen === 'training' && <Training go={setScreen} />}
+      {screen === 'training' && <Training />}
       {screen === 'nutrition' && <Nutrition go={setScreen} />}
       {screen === 'shopping' && <Shopping go={setScreen} />}
       {screen === 'coach' && <Coach />}

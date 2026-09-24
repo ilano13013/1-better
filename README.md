@@ -520,9 +520,9 @@ sportif diplômé — Instagram [@ddm_personal_trainer](https://www.instagram.co
 
 Sa fiche a son propre onglet, **Coach**, à côté de Nutrition : portrait,
 identité, lien vers son compte, périmètre de validation. Une carte d'appel
-mène à cet onglet depuis l'écran Training, et l'ouvre en feuille sur l'écran
-d'accueil, où la navigation n'existe pas encore. Les deux affichent le même
-composant : il n'y a pas deux versions du texte à tenir à jour.
+l'ouvre en feuille depuis l'écran d'accueil, où la navigation n'existe pas
+encore. Les deux affichent le même composant : il n'y a pas deux versions du
+texte à tenir à jour.
 
 La barre passe donc de cinq à six onglets ; sous 400 px les libellés se
 resserrent au lieu de se tronquer.
@@ -706,7 +706,7 @@ vaut mieux qu'une barre nue.
 ## Le guide pas à pas
 
 Lancé une fois le jour de départ choisi, sur une application complète. Dix
-étapes : le niveau, la journée en cours, les séances, le chronomètre, les repas,
+étapes : le niveau, la journée en cours, les séances, la récupération, les repas,
 le journal, les courses, le coach, les réglages, puis un mot de fin.
 
 **Une zone éclairée, le reste dans l'ombre.** C'est la raison d'être du
@@ -736,23 +736,38 @@ Relançable à tout moment depuis le profil.
 
 ---
 
-## Le chronomètre et « séance terminée »
+## La récupération et « séance terminée »
 
-Sous l'en-tête de la séance : un chronomètre et un bouton qui valide la
+Sous l'en-tête de la séance : un minuteur de repos et un bouton qui valide la
 journée.
 
-### Le chronomètre ne compte pas, il lit l'heure
+### Le minuteur retient l'instant de fin, il ne décompte pas
 
-L'état ne retient que **l'instant de démarrage** et les secondes déjà
-accumulées avant la pause en cours. Le temps affiché s'en déduit.
+Un décompte incrémenté par un `setInterval` se serait figé dès l'écran éteint —
+précisément le moment où l'on pose son téléphone entre deux séries — et serait
+reparti de zéro au moindre rechargement. Ici, l'état retient **l'instant de
+fin** ; le temps restant s'en déduit. Revenir sur l'application affiche donc le
+temps réellement restant, ou zéro.
 
-Un compteur incrémenté par un `setInterval` aurait dérivé dès que l'onglet
-passe en arrière-plan — le navigateur y ralentit les minuteries — et serait
-reparti de zéro au moindre rechargement. Ici la minuterie ne sert qu'à
-rafraîchir l'affichage : le rendu peut s'arrêter, le temps continue.
+La minuterie du composant ne sert qu'à rafraîchir l'anneau. Une horloge qui
+recule ne fait pas reculer le décompte : l'écart est borné à zéro.
 
-Une horloge qui recule — changement d'heure, correction réseau — ne fait pas
-reculer le chronomètre : l'écart est borné à zéro.
+### Il part du temps de repos de l'exercice
+
+Chaque exercice porte le sien — 105 s sur un développé couché, 45 s sur des
+mollets. Le bouton **Repos** de sa carte lance ce temps-là, et une saisie de
+charge le lance toute seule : enregistrer une série, c'est en avoir fini une.
+
+« +30 s » allonge le repos **et sa durée totale**, sinon l'anneau afficherait
+plus que plein après un ajout — un repos rallongé reste un repos, pas un
+dépassement. À zéro, l'anneau passe au signal et l'appareil vibre s'il sait le
+faire ; le son n'étant garanti par aucun navigateur, rien n'en dépend.
+
+### La durée de séance
+
+Le premier repos lancé marque le début de la séance : c'est la première trace
+horodatée disponible, et elle est vraie. Elle sert à comparer la durée réelle à
+l'estimation du programme au moment de valider.
 
 ### « Séance terminée » est un fait distinct des charges
 
@@ -848,7 +863,7 @@ officiel d'enseigne : aucun des trois ne peut être simulé honnêtement.
 npm test
 ```
 
-189 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+195 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
 substitutions (dont la protection de la densité protéique), couverture de tous
@@ -874,8 +889,9 @@ sur l'autre adresse et seulement après une erreur de serveur), date de départ
 doublon) et cycle 1 % (repos neutre, séance manquée qui remet à zéro, journée en
 cours qui ne casse rien, bouclage à cent et facteur composé), et le placement de
 la bulle du guide (dessous, dessus, centrée, halo borné à la fenêtre), le
-chronomètre de séance (temps déduit de l'horloge, pause qui fige, horloge qui
-recule sans effet) et la validation d'une séance sans aucune charge notée.
+minuteur de repos (décompte déduit de l'instant de fin, pause qui fige, ajout
+qui n'est pas un dépassement, jamais de valeur négative) et la validation d'une
+séance sans aucune charge notée.
 
 Le test de fumée `npm run smoke` va plus loin : il compte les jours réellement
 planifiés en gratuit (3) puis après activation (7), crée un compte e-mail, vérifie
