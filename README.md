@@ -1164,12 +1164,32 @@ inclus, et seul le scanner appelle l'extérieur. Un cache mal invalidé aurait e
 revanche servi une ancienne version à des gens qui ne comprendraient pas
 pourquoi leur correctif n'arrive pas : le coût réel dépassait le gain.
 
+### La forme juridique change ce qui est exigible
+
+Deux règles que le module applique, parce qu'elles décident de ce qu'il faut
+demander et de ce qu'il ne faut pas :
+
+- **Pas de capital social chez un entrepreneur individuel.** Signaler la
+  mention comme manquante, même « recommandée », ferait chercher une valeur qui
+  ne peut pas exister. `isSoleTrader()` reconnaît entreprise individuelle,
+  entrepreneur individuel, micro et auto-entrepreneur, et `EI` ; la ligne
+  disparaît alors des documents au lieu d'y laisser un trou.
+- **La dénomination doit porter « EI ».** Depuis le 15 mai 2022, un
+  entrepreneur individuel exerce sous son nom précédé ou suivi de « EI » ou
+  « entrepreneur individuel » (C. com., art. L526-22 et R123-237-1).
+  `complianceWarnings()` le signale : « Guedj » devient « Guedj EI ».
+
+Ce second contrôle ouvre une catégorie distincte des mentions manquantes. **Une
+absence se voit ; une mention renseignée mais fausse, non** — d'où un second
+encadré, affiché qu'il reste ou non des trous à combler.
+
 ### Ce qui reste à faire, et qui n'est pas du code
 
 Rien de ce qui suit ne peut être écrit depuis ce dépôt :
 
 1. Renseigner les **seize variables `VITE_LEGAL_*`** (voir `.env.example` et le
-   workflow de publication). Les douze obligatoires débloquent `publishReady()`.
+   workflow de publication). Les douze obligatoires débloquent `publishReady()`
+   — dont le **numéro SIREN**, qui s'obtient à l'immatriculation.
 2. Faire **relire les six documents** par un professionnel du droit.
 3. **Adhérer à un médiateur de la consommation** — c'est une adhésion payante,
    obligatoire dès qu'on vend à des particuliers, pas une mention à recopier.
@@ -1222,7 +1242,7 @@ de paiement.
 npm test
 ```
 
-242 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+248 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
 substitutions (dont la protection de la densité protéique), couverture de tous

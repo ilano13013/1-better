@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { APP_VERSION, PUBLISHER } from '../config/legal';
 import {
-  LEGAL_UPDATED, blockingMentions, envKeyFor, legalDocuments, missingMentions,
-  publishReady, type Block, type LegalDoc, type LegalDocId,
+  LEGAL_UPDATED, blockingMentions, complianceWarnings, envKeyFor, legalDocuments,
+  missingMentions, publishReady, type Block, type LegalDoc, type LegalDocId,
 } from '../engine/legal';
 import { Sheet, day } from './ui';
 
@@ -82,37 +82,63 @@ function Document({ doc }: { doc: LegalDoc }) {
 export function PublishState() {
   const blocking = blockingMentions(PUBLISHER);
   const optional = missingMentions(PUBLISHER).filter((m) => !m.required);
-  if (publishReady(PUBLISHER)) {
-    return (
-      <div className="card card-flat">
-        <div className="card-title" style={{ margin: 0 }}>Mentions obligatoires complètes</div>
-        <p className="sm muted" style={{ marginTop: 6 }}>
-          L'identité de l'éditeur, celle de l'hébergeur et le médiateur de la
-          consommation sont renseignés.
-          {optional.length > 0
-            && ` Reste ${optional.length} mention${optional.length > 1 ? 's' : ''} recommandée${optional.length > 1 ? 's' : ''}.`}
-        </p>
-      </div>
-    );
-  }
-  return (
+  const warnings = complianceWarnings(PUBLISHER);
+
+  /* Une mention renseignée mais fautive ne se voit pas toute seule : elle est
+     signalée à part, qu'il reste ou non des trous à combler. */
+  const warningCard = warnings.length > 0 && (
     <div className="card card-alert">
       <div className="card-title" style={{ margin: 0 }}>
-        Pas encore publiable — {blocking.length} mention{blocking.length > 1 ? 's' : ''} obligatoire{blocking.length > 1 ? 's' : ''} manquante{blocking.length > 1 ? 's' : ''}
+        {warnings.length} mention{warnings.length > 1 ? 's' : ''} à corriger
       </div>
-      <p className="sm notice" style={{ marginTop: 6 }}>
-        Ces mentions désignent une personne réelle. L'application ne les invente
-        pas : elle laisse le trou visible, à sa place, dans chaque document
-        concerné.
-      </p>
       <ul className="bullets sm" style={{ marginTop: 8 }}>
-        {blocking.map((m) => (
-          <li key={m.field}>
-            {m.label} — <code>{envKeyFor(m.field)}</code>
+        {warnings.map((w) => (
+          <li key={w.field}>
+            <span className="strong">{w.label}.</span> {w.detail}{' '}
+            <span className="dim">{w.law} — <code>{envKeyFor(w.field)}</code>.</span>
           </li>
         ))}
       </ul>
     </div>
+  );
+
+  if (publishReady(PUBLISHER)) {
+    return (
+      <>
+        <div className="card card-flat">
+          <div className="card-title" style={{ margin: 0 }}>Mentions obligatoires complètes</div>
+          <p className="sm muted" style={{ marginTop: 6 }}>
+            L'identité de l'éditeur, celle de l'hébergeur et le médiateur de la
+            consommation sont renseignés.
+            {optional.length > 0
+              && ` Reste ${optional.length} mention${optional.length > 1 ? 's' : ''} recommandée${optional.length > 1 ? 's' : ''}.`}
+          </p>
+        </div>
+        {warningCard}
+      </>
+    );
+  }
+  return (
+    <>
+      <div className="card card-alert">
+        <div className="card-title" style={{ margin: 0 }}>
+          Pas encore publiable — {blocking.length} mention{blocking.length > 1 ? 's' : ''} obligatoire{blocking.length > 1 ? 's' : ''} manquante{blocking.length > 1 ? 's' : ''}
+        </div>
+        <p className="sm notice" style={{ marginTop: 6 }}>
+          Ces mentions désignent une personne réelle. L'application ne les invente
+          pas : elle laisse le trou visible, à sa place, dans chaque document
+          concerné.
+        </p>
+        <ul className="bullets sm" style={{ marginTop: 8 }}>
+          {blocking.map((m) => (
+            <li key={m.field}>
+              {m.label} — <code>{envKeyFor(m.field)}</code>
+            </li>
+          ))}
+        </ul>
+      </div>
+      {warningCard}
+    </>
   );
 }
 

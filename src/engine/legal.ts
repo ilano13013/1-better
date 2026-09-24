@@ -206,10 +206,74 @@ export const MENTIONS: Mention[] = [
   },
 ];
 
+/**
+ * Vrai pour un entrepreneur individuel — entreprise individuelle, micro ou
+ * auto-entrepreneur, désignés `EI` depuis 2022.
+ *
+ * La forme juridique change ce qui est exigible : un entrepreneur individuel
+ * n'a pas de capital social, et signaler cette mention comme « recommandée »
+ * reviendrait à réclamer une valeur qui n'existe pas.
+ */
+export function isSoleTrader(pub: Publisher): boolean {
+  const form = pub.legalForm.trim().toLowerCase();
+  // « EI » seul est la forme abrégée ; les autres se reconnaissent à leur
+  // racine, sans limite de mot finale — « micro-entrepreneur » continue après.
+  if (form === 'ei') return true;
+  return /entreprise individuelle|entrepreneur individuel|micro[- ]?entrepr|auto[- ]?entrepr/
+    .test(form);
+}
+
+/** Mentions sans objet pour cette forme juridique : ni exigées, ni signalées. */
+function notApplicable(pub: Publisher): (keyof Publisher)[] {
+  return isSoleTrader(pub) ? ['capital'] : [];
+}
+
 /** Les mentions non renseignées, obligatoires d'abord. */
 export function missingMentions(pub: Publisher): Mention[] {
-  return MENTIONS.filter((m) => pub[m.field] === '')
+  const skip = notApplicable(pub);
+  return MENTIONS.filter((m) => pub[m.field] === '' && !skip.includes(m.field))
     .sort((a, b) => Number(b.required) - Number(a.required));
+}
+
+/* ------------------------- Contrôles de cohérence ------------------------- */
+
+export interface Warning {
+  label: string;
+  law: string;
+  detail: string;
+  /** La variable à corriger. */
+  field: keyof Publisher;
+}
+
+/**
+ * Ce qui est renseigné, mais mal.
+ *
+ * Distinct des mentions manquantes : ici la valeur existe, elle ne satisfait
+ * simplement pas la règle. Une absence se voit ; une mention fausse, non — et
+ * c'est précisément pour cela qu'elle mérite d'être signalée.
+ */
+export function complianceWarnings(pub: Publisher): Warning[] {
+  const out: Warning[] = [];
+
+  /*
+   * Depuis le 15 mai 2022, un entrepreneur individuel exerce sous une
+   * dénomination composée de son nom, précédé ou suivi de « EI » ou
+   * « entrepreneur individuel ». Un nom seul ne suffit plus, et l'omission est
+   * d'autant plus facile qu'elle ne saute pas aux yeux.
+   */
+  if (isSoleTrader(pub) && pub.name !== ''
+      && !/\b(ei|entrepreneur individuel)\b/i.test(pub.name)) {
+    out.push({
+      field: 'name',
+      label: "La dénomination doit porter « EI »",
+      law: 'C. com., art. L526-22 et R123-237-1',
+      detail: `Un entrepreneur individuel exerce sous son nom suivi ou précédé
+               de « EI » ou « entrepreneur individuel » : « ${pub.name} EI »
+               plutôt que « ${pub.name} ».`,
+    });
+  }
+
+  return out.map((w) => ({ ...w, detail: tidy(w.detail) }));
 }
 
 /** Les seules qui empêchent de publier. */
@@ -260,16 +324,41 @@ function mention(field: keyof Publisher): Mention {
   return found;
 }
 
-/** Une ligne « Libellé : valeur », ou le trou nommé si la valeur manque. */
-function line(pub: Publisher, field: keyof Publisher, label: string): Block {
+/**
+ * Une ligne « Libellé : valeur », ou le trou nommé si la valeur manque.
+ *
+ * `null` quand la mention est sans objet pour cette forme juridique : un
+ * entrepreneur individuel n'a pas de capital social, et afficher le trou
+ * reviendrait à réclamer une valeur qui ne peut pas exister.
+ */
+function line(pub: Publisher, field: keyof Publisher, label: string): Block | null {
+  if (notApplicable(pub).includes(field)) return null;
   const value = pub[field];
   if (value === '') return { kind: 'missing', mention: mention(field) };
   return { kind: 'p', text: `${label} : ${value}` };
 }
 
+/** Assemble une section en écartant les lignes sans objet. */
+function rows(...items: (Block | null)[]): Block[] {
+  return items.filter((b): b is Block => b !== null);
+}
+
 /** Le nom de l'éditeur dans le corps d'un texte, ou une désignation neutre. */
 function editor(pub: Publisher): string {
   return pub.name || "l'éditeur";
+}
+
+/**
+ * « de » élidé devant une voyelle : « d'Ilan GUEDJ EI », pas « de Ilan ».
+ *
+ * Détail d'apparence, mais ces phrases sont un document public que des gens
+ * liront ; une faute d'élision y est aussi voyante qu'ailleurs. Le `h` est
+ * inclus faute de pouvoir distinguer l'aspiré du muet sur un nom propre —
+ * « d'Hubert » est correct, et le cas d'un nom à h aspiré reste rare.
+ */
+function ofEditor(pub: Publisher): string {
+  const name = editor(pub);
+  return /^[aàâeéèêëiîïoôuùûüyh]/i.test(name) ? `d'${name}` : `de ${name}`;
 }
 
 function mentionsDoc(pub: Publisher): LegalDoc {
@@ -280,7 +369,7 @@ function mentionsDoc(pub: Publisher): LegalDoc {
     sections: [
       {
         heading: 'Éditeur',
-        blocks: [
+        blocks: rows(
           line(pub, 'name', 'Dénomination'),
           line(pub, 'legalForm', 'Forme juridique'),
           line(pub, 'capital', 'Capital social'),
@@ -289,23 +378,23 @@ function mentionsDoc(pub: Publisher): LegalDoc {
           line(pub, 'vat', 'TVA intracommunautaire'),
           line(pub, 'email', 'Contact'),
           line(pub, 'phone', 'Téléphone'),
-        ],
+        ),
       },
       {
         heading: 'Directeur de la publication',
-        blocks: [line(pub, 'director', 'Directeur de la publication')],
+        blocks: rows(line(pub, 'director', 'Directeur de la publication')),
       },
       {
         heading: 'Hébergeur',
-        blocks: [
+        blocks: rows(
           line(pub, 'hostName', 'Hébergeur'),
           line(pub, 'hostAddress', 'Adresse'),
           line(pub, 'hostPhone', 'Téléphone'),
-        ],
+        ),
       },
       {
         heading: 'Service concerné',
-        blocks: [
+        blocks: rows(
           line(pub, 'siteUrl', 'Adresse'),
           {
             kind: 'p',
@@ -313,7 +402,7 @@ function mentionsDoc(pub: Publisher): LegalDoc {
                    alimentaire. Les présentes mentions s'appliquent à cette
                    adresse et à elle seule.`,
           },
-        ],
+        ),
       },
       {
         heading: 'Propriété intellectuelle',
@@ -323,8 +412,8 @@ function mentionsDoc(pub: Publisher): LegalDoc {
             text: `Les textes, la charte graphique, les recettes rédigées pour
                    l'application et le code qui la fait fonctionner sont
                    protégés. Toute reprise en dehors de l'usage personnel prévu
-                   par les conditions d'utilisation suppose l'accord écrit de
-                   ${editor(pub)}.`,
+                   par les conditions d'utilisation suppose l'accord écrit
+                   ${ofEditor(pub)}.`,
           },
           {
             kind: 'p',
@@ -373,11 +462,11 @@ function privacyDoc(pub: Publisher): LegalDoc {
       },
       {
         heading: 'Responsable du traitement',
-        blocks: [
+        blocks: rows(
           line(pub, 'name', 'Responsable'),
           line(pub, 'address', 'Adresse'),
           line(pub, 'privacyEmail', 'Contact protection des données'),
-        ],
+        ),
       },
       {
         heading: 'Données enregistrées, et pourquoi',
@@ -651,12 +740,12 @@ function salesDoc(pub: Publisher): LegalDoc {
     sections: [
       {
         heading: 'Vendeur',
-        blocks: [
+        blocks: rows(
           line(pub, 'name', 'Vendeur'),
           line(pub, 'address', 'Adresse'),
           line(pub, 'registration', 'Immatriculation'),
           line(pub, 'email', 'Contact'),
-        ],
+        ),
       },
       {
         heading: 'Ce qui est vendu',
@@ -772,7 +861,7 @@ function salesDoc(pub: Publisher): LegalDoc {
       },
       {
         heading: 'Médiation de la consommation',
-        blocks: [
+        blocks: rows(
           {
             kind: 'p',
             text: `Après une réclamation écrite restée sans solution, tu peux
@@ -781,7 +870,7 @@ function salesDoc(pub: Publisher): LegalDoc {
           },
           line(pub, 'mediator', 'Médiateur'),
           line(pub, 'mediatorUrl', 'Coordonnées'),
-        ],
+        ),
       },
     ],
   };

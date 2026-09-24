@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  EMPTY_PUBLISHER, LEGAL_UPDATED, MENTIONS, blockingMentions, envKeyFor,
-  legalDocument, legalDocuments, missingMentions, publishReady, readPublisher,
-  tidy, type Block, type Publisher,
+  EMPTY_PUBLISHER, LEGAL_UPDATED, MENTIONS, blockingMentions, complianceWarnings,
+  envKeyFor, isSoleTrader, legalDocument, legalDocuments, missingMentions,
+  publishReady, readPublisher, tidy, type Block, type Publisher,
 } from '../legal';
 import { PRICES, TRIAL_DAYS } from '../entitlements';
 
@@ -158,5 +158,81 @@ describe('documents', () => {
 
   it('la date de révision est une date ISO', () => {
     expect(LEGAL_UPDATED).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe('forme juridique', () => {
+  const EI: Publisher = {
+    ...FULL,
+    name: 'Ilan GUEDJ EI',
+    legalForm: 'Entreprise individuelle',
+    capital: '',
+  };
+
+  it('reconnaît un entrepreneur individuel sous ses différents noms', () => {
+    for (const forme of [
+      'Entreprise individuelle', 'entrepreneur individuel',
+      'Micro-entrepreneur', 'auto-entrepreneur', 'EI',
+    ]) {
+      expect(isSoleTrader({ ...FULL, legalForm: forme })).toBe(true);
+    }
+    expect(isSoleTrader({ ...FULL, legalForm: 'Société par actions simplifiée' })).toBe(false);
+  });
+
+  /*
+   * Un entrepreneur individuel n'a pas de capital social. Le réclamer, même
+   * comme « recommandé », serait demander une valeur qui n'existe pas.
+   */
+  it('ne réclame pas de capital social à un entrepreneur individuel', () => {
+    expect(missingMentions(EI)).toEqual([]);
+    expect(missingMentions({ ...FULL, legalForm: 'SAS', capital: '' })
+      .map((m) => m.field)).toEqual(['capital']);
+  });
+
+  it('exige la mention « EI » dans la dénomination', () => {
+    const sans = complianceWarnings({ ...EI, name: 'Guedj' });
+    expect(sans).toHaveLength(1);
+    expect(sans[0].field).toBe('name');
+    expect(sans[0].law).toContain('L526-22');
+    expect(sans[0].detail).toContain('Guedj EI');
+
+    expect(complianceWarnings(EI)).toEqual([]);
+    expect(complianceWarnings({ ...EI, name: 'Ilan Guedj entrepreneur individuel' })).toEqual([]);
+  });
+
+  it("ne reproche rien à une société, ni à une dénomination vide", () => {
+    expect(complianceWarnings({ ...FULL, name: 'Exemple SAS' })).toEqual([]);
+    expect(complianceWarnings({ ...EI, name: '' })).toEqual([]);
+  });
+});
+
+describe('mentions sans objet', () => {
+  const EI: Publisher = {
+    ...EMPTY_PUBLISHER,
+    legalForm: 'Entreprise individuelle',
+    name: 'Ilan GUEDJ EI',
+  };
+
+  /*
+   * Un trou signalé pour une valeur qui ne peut pas exister est un faux
+   * manque : il ferait chercher indéfiniment un capital social qu'un
+   * entrepreneur individuel n'a pas.
+   */
+  it('le capital social ne laisse aucun trou chez un entrepreneur individuel', () => {
+    const fields = legalDocuments(EI)
+      .flatMap((d) => d.sections.flatMap((s) => s.blocks))
+      .filter((b) => b.kind === 'missing')
+      .map((b) => (b.kind === 'missing' ? b.mention.field : ''));
+    expect(fields).not.toContain('capital');
+    expect(fields).toContain('registration'); // les vrais manques restent
+  });
+
+  it('une société, elle, voit le trou', () => {
+    const sas: Publisher = { ...EMPTY_PUBLISHER, legalForm: 'SAS', name: 'Exemple SAS' };
+    const fields = legalDocuments(sas)
+      .flatMap((d) => d.sections.flatMap((s) => s.blocks))
+      .filter((b) => b.kind === 'missing')
+      .map((b) => (b.kind === 'missing' ? b.mention.field : ''));
+    expect(fields).toContain('capital');
   });
 });
