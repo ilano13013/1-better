@@ -849,6 +849,62 @@ se fait maintenant en pixels réels, mesurés sur le conteneur.
 
 ---
 
+## Les champs chiffrés sur mobile
+
+Deux défauts de mise en page sur l'écran « Parle-nous de toi », signalés depuis
+un téléphone : **les deux colonnes se chevauchaient**, et **l'unité flottait au
+milieu de la case**, loin du nombre.
+
+### Pourquoi les colonnes débordaient
+
+`.field-row` était un simple `display: flex`. Un champ numérique a une largeur
+intrinsèque — la largeur de son contenu, boutons de pas compris — que le
+navigateur refuse de réduire par défaut. À 320 px de large, deux champs côte à
+côte réclamaient plus que la ligne et débordaient l'un sur l'autre.
+
+La correction tient en deux déclarations sur les enfants :
+
+```css
+.field-row > * { flex: 1 1 0; min-width: 0; }
+```
+
+`flex: 1 1 0` répartit la largeur à parts égales au lieu de partir du contenu ;
+`min-width: 0` lève le plancher implicite qui empêchait la réduction. Sans la
+seconde, la première ne suffit pas : c'est ce plancher qui causait le
+débordement.
+
+### Pourquoi l'unité était au milieu
+
+`.suffix > span` était positionné en absolu (`right: 14px; top: 50%`) au-dessus
+du champ. Le nombre étant aligné à gauche, on lisait « 175 » d'un côté de la
+case et « cm » de l'autre, comme deux informations sans rapport — et le texte
+saisi pouvait passer dessous.
+
+L'unité est maintenant **dans le flux** : `.suffix` est une boîte flex qui porte
+la bordure, le fond et le padding — c'est elle qui fait office de champ — et
+l'`input` à l'intérieur est transparent, sans bordure, aligné à droite. Le
+nombre vient donc buter contre son unité : « 175 cm » se lit d'un bloc.
+
+Le halo de focus passe de l'`input` à l'encadré, via `:focus-within`, sans quoi
+la bordure visible et la bordure active auraient désigné deux rectangles
+différents.
+
+### Vérifié
+
+Aux deux largeurs extrêmes d'un téléphone, la ligne mesure exactement la
+largeur de son contenu — aucun débordement horizontal — et les deux colonnes
+sont égales :
+
+| Fenêtre | Ligne | Contenu | Colonnes |
+| --- | --- | --- | --- |
+| 320 px | 280 px | 280 px | 135 px · 135 px |
+| 390 px | 350 px | 350 px | 170 px · 170 px |
+
+La règle sert treize champs — âge, taille, poids, objectif de poids, budget,
+« il me reste X € », quantité au scanner — tous corrigés du même coup.
+
+---
+
 ## Le bouton « Préparer mon Drive »
 
 **Aucune enseigne française ne publie d'API permettant à une application tierce
