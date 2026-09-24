@@ -6,12 +6,11 @@ import {
 import { computeStreak, cycleReward, formatPercent, nextMilestone } from '../streak';
 import { buildPlan } from '../planner';
 import { demoState } from '../../store/state';
-import type { DayIndex, Performance } from '../../types';
+import type { DayIndex } from '../../types';
 
-const perf = (date: string): Performance => ({
-  id: `p${date}`, exerciseId: 'developpe_couche_halteres', date,
-  sets: [{ weightKg: 20, reps: 10 }], cleanExecution: true,
-});
+/** Une date validée, quelle qu'en soit la preuve : charge notée ou séance
+ *  déclarée terminée. */
+const perf = (date: string): string => date;
 
 /** Lundi 21 septembre 2026. */
 const LUNDI = '2026-09-21';
@@ -132,7 +131,7 @@ describe('cycle 1 %', () => {
       cursor = new Date(cursor.getTime() + 86_400_000);
     }
     const dernier = dates[dates.length - 1];
-    const s = computeStreak(dates.map(perf), jours, at(dernier));
+    const s = computeStreak(dates, jours, at(dernier));
     expect(s.total).toBe(100);
     expect(s.percent).toBe(100);
     expect(s.cycles).toBe(1);

@@ -56,6 +56,15 @@ export const TOUR_STEPS: TourStep[] = [
       + "le déroulé du mouvement, et « Saisir » enregistre tes charges.",
   },
   {
+    id: 'session',
+    screen: 'training',
+    target: 'session',
+    title: 'Le chronomètre',
+    body: 'Démarre-le en arrivant à la salle, mets-le en pause si tu es '
+      + "interrompu. « Séance terminée » valide la journée pour ton cycle, même "
+      + 'sans charge enregistrée.',
+  },
+  {
     id: 'nutrition',
     screen: 'nutrition',
     target: 'tab-nutrition',

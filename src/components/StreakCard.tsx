@@ -3,6 +3,7 @@ import { useApp } from '../store/AppContext';
 import {
   MILESTONES, computeStreak, cycleReward, formatPercent, nextMilestone, type Streak,
 } from '../engine/streak';
+import { validatedDates } from '../engine/session';
 import { Sheet } from './ui';
 
 /**
@@ -26,7 +27,7 @@ export function StreakRing() {
   const [open, setOpen] = useState(false);
 
   const streak = computeStreak(
-    state.performances,
+    validatedDates(state.performances, state.completedWorkouts),
     plan.workoutPlan.workouts.map((w) => w.day),
     new Date(),
     state.startDate,

@@ -862,6 +862,26 @@ input[type='range']::-moz-range-thumb {
 .start-day { padding-top: 34px; }
 .start-head .display { font-size: clamp(30px, 8.5vw, 40px); margin-top: 8px; }
 
+/* Chronomètre de séance */
+.session-bar { padding: 16px; }
+.chrono {
+  font-size: 30px; font-weight: 700; letter-spacing: -.04em; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.chrono-dot {
+  width: 9px; height: 9px; flex: none;
+  border-radius: var(--radius-full);
+  background: var(--line-strong);
+}
+.chrono-dot.is-running {
+  background: var(--ink);
+  animation: chrono-pulse 1.6s var(--ease) infinite;
+}
+@keyframes chrono-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .45; transform: scale(.82); }
+}
+
 /* Guide pas à pas : une zone éclairée, le reste dans l'ombre */
 .tour { position: fixed; inset: 0; z-index: 90; }
 .tour-catch { position: absolute; inset: 0; }

@@ -1,4 +1,4 @@
-import type { DayIndex, Performance } from '../types';
+import type { DayIndex } from '../types';
 import { addDays, daysBetween, toDay, weekdayOf } from './schedule';
 
 /**
@@ -50,13 +50,13 @@ export function trainingWeekdays(workoutDays: DayIndex[]): Set<number> {
  * en cours est par définition celle qui touche aujourd'hui.
  */
 export function computeStreak(
-  performances: Performance[],
+  validated: string[],
   workoutDays: DayIndex[],
   today: Date = new Date(),
   startDate: string | null = null,
   maxLookbackDays = 500,
 ): Streak {
-  const trained = new Set(performances.map((p) => p.date));
+  const trained = new Set(validated);
   const scheduled = trainingWeekdays(workoutDays);
   const todayIso = toDay(today);
 

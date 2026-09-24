@@ -414,6 +414,8 @@ export interface CheckInAdjustment {
 /* État applicatif                                                      */
 /* ------------------------------------------------------------------ */
 
+export type { ActiveSession, CompletedWorkout } from '../engine/session';
+import type { ActiveSession, CompletedWorkout } from '../engine/session';
 export type { IntakeEntry } from '../engine/intake';
 import type { IntakeEntry } from '../engine/intake';
 export type { Plan, Subscription } from '../engine/entitlements';
@@ -432,6 +434,10 @@ export interface AppState {
   startDate: string | null;
   /** Le guide pas à pas a-t-il déjà été suivi ou passé ? */
   tourSeen: boolean;
+  /** Chronomètre de séance en cours, `null` s'il n'y en a pas. */
+  activeSession: ActiveSession | null;
+  /** Séances déclarées terminées. */
+  completedWorkouts: CompletedWorkout[];
   profile: Profile;
   targetsOverride: Macros | null;
   pantry: PantryItem[];

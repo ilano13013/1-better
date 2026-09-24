@@ -76,6 +76,8 @@ export function createInitialState(): AppState {
     intake: [],
     startDate: null,
     tourSeen: false,
+    activeSession: null,
+    completedWorkouts: [],
     profile: { ...EMPTY_PROFILE },
     targetsOverride: null,
     pantry: [],

@@ -14,6 +14,9 @@ import { loadSession, saveSession } from './session';
 import type { Session } from '../engine/auth';
 import { startSubscription, type BillingPeriod } from '../engine/entitlements';
 import type { IntakeEntry } from '../engine/intake';
+import {
+  elapsedSec, findCompleted, pauseSession, resumeSession, startSession,
+} from '../engine/session';
 
 /**
  * État global et cascade de recalcul.
@@ -54,6 +57,12 @@ type Action =
   | { type: 'removeIntake'; id: string }
   | { type: 'setStartDate'; date: string }
   | { type: 'setTourSeen'; seen: boolean }
+  | { type: 'startChrono'; workoutId: string; date: string }
+  | { type: 'pauseChrono' }
+  | { type: 'resumeChrono' }
+  | { type: 'stopChrono' }
+  | { type: 'completeWorkout'; workoutId: string; date: string; estimatedMin: number }
+  | { type: 'uncompleteWorkout'; id: string }
   | { type: 'regeneratePlan' };
 
 /** Champs du profil dont la modification invalide les choix manuels. */
@@ -93,6 +102,49 @@ function reducer(state: AppState, action: Action): AppState {
     // Le guide ne touche à rien : il ne fait que se souvenir d'avoir été vu.
     case 'setTourSeen':
       return { ...state, tourSeen: action.seen };
+
+    /* --- Chronomètre et séance terminée : aucun effet sur le plan. --- */
+
+    case 'startChrono':
+      return { ...state, activeSession: startSession(action.workoutId, action.date) };
+
+    case 'pauseChrono':
+      return state.activeSession
+        ? { ...state, activeSession: pauseSession(state.activeSession) }
+        : state;
+
+    case 'resumeChrono':
+      return state.activeSession
+        ? { ...state, activeSession: resumeSession(state.activeSession) }
+        : state;
+
+    case 'stopChrono':
+      return { ...state, activeSession: null };
+
+    case 'completeWorkout': {
+      // Une séance déjà déclarée terminée ne compte pas deux fois.
+      if (findCompleted(state.completedWorkouts, action.date, action.workoutId)) return state;
+      const session = state.activeSession;
+      const duration = session && session.workoutId === action.workoutId && session.date === action.date
+        ? elapsedSec(session)
+        : 0;
+      return {
+        ...state,
+        activeSession: null,
+        completedWorkouts: [...state.completedWorkouts, {
+          id: `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+          date: action.date,
+          workoutId: action.workoutId,
+          durationSec: duration,
+        }],
+      };
+    }
+
+    case 'uncompleteWorkout':
+      return {
+        ...state,
+        completedWorkouts: state.completedWorkouts.filter((c) => c.id !== action.id),
+      };
 
     case 'loadDemo':
       return demoState();

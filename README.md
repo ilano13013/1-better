@@ -90,6 +90,7 @@ Rien n'est une maquette statique. Toutes les interactions recalculent l'état :
 | Créer un compte e-mail | Les données du compte sont chiffrées avec une clé dérivée du mot de passe |
 | Pointer un repas ou ajouter un aliment | La barre et les macros du jour suivent ; le plan, lui, ne bouge pas |
 | Déplacer le départ du programme | Les jours planifiés se recalent sur le nouveau premier jour |
+| Valider « séance terminée » | Le cycle avance d'un point, même sans charge enregistrée |
 
 ---
 
@@ -704,9 +705,9 @@ vaut mieux qu'une barre nue.
 
 ## Le guide pas à pas
 
-Lancé une fois le jour de départ choisi, sur une application complète. Neuf
-étapes : le niveau, la journée en cours, les séances, les repas, le journal, les
-courses, le coach, les réglages, puis un mot de fin.
+Lancé une fois le jour de départ choisi, sur une application complète. Dix
+étapes : le niveau, la journée en cours, les séances, le chronomètre, les repas,
+le journal, les courses, le coach, les réglages, puis un mot de fin.
 
 **Une zone éclairée, le reste dans l'ombre.** C'est la raison d'être du
 procédé : une explication qui montre tout n'explique rien. À chaque étape, une
@@ -732,6 +733,43 @@ par se désaligner quand la cible bouge ; un seul élément ne le peut pas.
   le bas est trop court, centrée si ni l'un ni l'autre ne tient.
 
 Relançable à tout moment depuis le profil.
+
+---
+
+## Le chronomètre et « séance terminée »
+
+Sous l'en-tête de la séance : un chronomètre et un bouton qui valide la
+journée.
+
+### Le chronomètre ne compte pas, il lit l'heure
+
+L'état ne retient que **l'instant de démarrage** et les secondes déjà
+accumulées avant la pause en cours. Le temps affiché s'en déduit.
+
+Un compteur incrémenté par un `setInterval` aurait dérivé dès que l'onglet
+passe en arrière-plan — le navigateur y ralentit les minuteries — et serait
+reparti de zéro au moindre rechargement. Ici la minuterie ne sert qu'à
+rafraîchir l'affichage : le rendu peut s'arrêter, le temps continue.
+
+Une horloge qui recule — changement d'heure, correction réseau — ne fait pas
+reculer le chronomètre : l'écart est borné à zéro.
+
+### « Séance terminée » est un fait distinct des charges
+
+Quelqu'un qui s'entraîne sans rien noter a fait sa séance, et **son cycle doit
+en tenir compte**. Fabriquer des performances vides pour le lui accorder aurait
+pollué son historique et faussé ses records ; la séance terminée est donc
+enregistrée à part.
+
+Le cycle 1 % valide une journée sur l'une **ou** l'autre preuve — une charge
+enregistrée, ou un appui sur le bouton. Les doublons sont écartés : deux
+preuves du même jour ne font pas deux points.
+
+La durée réelle est comparée à l'estimation du programme (« 52 min, soit 7 de
+plus que l'estimation »). Sans chronomètre, aucune durée n'est inventée : la
+carte se contente de rappeler l'estimation.
+
+Validable et annulable : rouvrir une séance retire son point.
 
 ---
 
@@ -810,7 +848,7 @@ officiel d'enseigne : aucun des trois ne peut être simulé honnêtement.
 npm test
 ```
 
-179 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+189 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
 substitutions (dont la protection de la densité protéique), couverture de tous
@@ -835,7 +873,9 @@ sur l'autre adresse et seulement après une erreur de serveur), date de départ
 (décalage réel des jours planifiés, bouclage sur la semaine, options sans
 doublon) et cycle 1 % (repos neutre, séance manquée qui remet à zéro, journée en
 cours qui ne casse rien, bouclage à cent et facteur composé), et le placement de
-la bulle du guide (dessous, dessus, centrée, halo borné à la fenêtre).
+la bulle du guide (dessous, dessus, centrée, halo borné à la fenêtre), le
+chronomètre de séance (temps déduit de l'horloge, pause qui fige, horloge qui
+recule sans effet) et la validation d'une séance sans aucune charge notée.
 
 Le test de fumée `npm run smoke` va plus loin : il compte les jours réellement
 planifiés en gratuit (3) puis après activation (7), crée un compte e-mail, vérifie

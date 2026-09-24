@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import type { DayIndex, Performance, PerformanceSet, Workout, WorkoutExercise } from '../types';
 import { useApp } from '../store/AppContext';
 import type { Screen } from '../App';
-import { todayIndex } from '../store/state';
+import { isoForDay, todayIndex } from '../store/state';
+import { SessionBar } from '../components/SessionBar';
 import { MUSCLE_LABELS, getExercise } from '../data/exercises';
 import { EQUIPMENT_LABELS, GYM_BY_ID } from '../data/gyms';
 import { DAY_NAMES, DAY_SHORT, findReplacements } from '../engine/training';
@@ -115,6 +116,8 @@ export default function Training({ go }: { go: (s: Screen) => void }) {
               {workout.focus.map((m) => <span key={m} className="badge">{MUSCLE_LABELS[m]}</span>)}
             </div>
           </Card>
+
+          <SessionBar workout={workout} date={isoForDay(selectedDay)} />
 
           {workout.exercises.map((we, index) => (
             <ExerciseCard

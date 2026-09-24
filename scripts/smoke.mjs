@@ -237,6 +237,39 @@ await page.locator('.list-row button.option-mark').first().click();
 await page.waitForTimeout(500);
 console.log('   chariot:', (await page.locator('.card.card-flat', { hasText: 'Déjà dans le chariot' }).innerText()).replace(/\n/g, ' '));
 
+console.log('→ chronomètre et séance terminée');
+await page.locator('.tabbar button', { hasText: 'Training' }).click();
+await page.waitForTimeout(500);
+// On choisit un jour avec séance : le sélecteur ouvre sur la prochaine.
+const barre = page.locator('.session-bar');
+if (await barre.count()) {
+  await page.getByRole('button', { name: /Démarrer/ }).click();
+  await page.waitForTimeout(2100);
+  const chrono = (await page.locator('.chrono').innerText()).trim();
+  console.log('   chronomètre après 2 s :', chrono);
+  if (chrono === '0:00') errors.push('chronomètre : resté à zéro');
+  await page.getByRole('button', { name: 'Pause' }).click();
+  await page.waitForTimeout(1500);
+  const fige = (await page.locator('.chrono').innerText()).trim();
+  if (fige !== chrono) errors.push(`chronomètre : a couru en pause (${chrono} → ${fige})`);
+  console.log('   en pause :', fige, '— figé');
+  await shot('e2e-chrono');
+  await page.getByRole('button', { name: 'Séance terminée' }).click();
+  await page.waitForTimeout(800);
+  console.log('   ', (await page.locator('.session-bar .sm').first().innerText()).trim());
+  // La série doit avoir avancé sans qu'aucune charge n'ait été notée.
+  await page.locator('.tabbar button', { hasText: 'Accueil' }).click();
+  await page.waitForTimeout(500);
+  const niveau = (await page.locator('.level-value').innerText()).trim();
+  console.log('   cycle après validation :', niveau, '%');
+  if (niveau === '0') errors.push("séance terminée : le cycle n'a pas avancé");
+  await shot('e2e-niveau');
+  await page.locator('.tabbar button', { hasText: 'Training' }).click();
+  await page.waitForTimeout(500);
+} else {
+  console.log('   aucune séance ce jour-là');
+}
+
 console.log('→ remplacement d\'exercice');
 await page.locator('.tabbar button', { hasText: 'Training' }).click();
 await page.waitForTimeout(500);
