@@ -74,6 +74,7 @@ export function createInitialState(): AppState {
     plan: 'free',
     subscription: null,
     intake: [],
+    startDate: null,
     profile: { ...EMPTY_PROFILE },
     targetsOverride: null,
     pantry: [],
@@ -102,6 +103,7 @@ export function demoState(): AppState {
     // La démonstration montre le produit entier : sept jours, quatre séances,
     // liste complète. C'est ce que décrit le cahier des charges.
     plan: 'plus',
+    startDate: currentWeekStart(),
     subscription: startSubscription('yearly'),
     profile: { ...DEMO_PROFILE },
     pantry: DEMO_PANTRY.map((p) => ({ ...p })),

@@ -9,6 +9,7 @@ import { bestScale, recipeCost, recipeMacros } from './recipes';
 import { addMacros, buildDaySlots, emptyMacros, slotTarget } from './nutrition';
 import { Basket, basketFromPlan, commitRecipe, createBasket, marginalCost } from './basket';
 import { LIMITS, type Limits } from './entitlements';
+import { plannedDays as plannedWeekdays } from './schedule';
 
 /**
  * Moteur de planification alimentaire, déterministe.
@@ -39,6 +40,8 @@ export interface MealPlanOptions {
   swaps?: Record<string, string>;
   /** Limites de la formule active. Par défaut, aucune. */
   limits?: Limits;
+  /** Jour de la semaine où le programme commence, 0 = lundi. */
+  startWeekday?: DayIndex;
 }
 
 /** Une recette n'est retenue que si chacun de ses ingrédients est achetable. */
@@ -221,6 +224,9 @@ function buildPass(
   const exclude = new Set(options.exclude ?? []);
   const limits = options.limits ?? LIMITS.plus;
   const horizon = Math.max(1, Math.min(7, limits.mealPlanDays));
+  // Une semaine qui commence le jeudi planifie jeudi, vendredi, samedi — et
+  // non lundi, mardi, mercredi, déjà passés au moment du choix.
+  const horizonDays = plannedWeekdays(options.startWeekday ?? 0, horizon);
   const regenerate = options.days ? new Set(options.days) : null;
   const plannedDays = regenerate ? Math.max(1, regenerate.size) : horizon;
 
@@ -238,7 +244,7 @@ function buildPass(
     }
   }
 
-  for (let d = 0 as DayIndex; d < horizon; d = (d + 1) as DayIndex) {
+  for (const d of horizonDays) {
     if (regenerate && !regenerate.has(d)) {
       const kept = options.base?.days.find((x) => x.day === d);
       if (kept) { days.push(kept); continue; }

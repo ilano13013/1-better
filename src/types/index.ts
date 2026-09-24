@@ -428,6 +428,8 @@ export interface AppState {
   subscription: Subscription | null;
   /** Journal de ce qui a réellement été mangé. Facultatif par construction. */
   intake: IntakeEntry[];
+  /** Jour où le programme commence. `null` tant que le choix n'a pas été fait. */
+  startDate: string | null;
   profile: Profile;
   targetsOverride: Macros | null;
   pantry: PantryItem[];

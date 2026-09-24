@@ -11,6 +11,7 @@ import { getRecipe } from '../data/recipes';
 import { getExercise } from '../data/exercises';
 import { resolveEquipment } from '../data/gyms';
 import { BASIC_EQUIPMENT, effectivePlan, limitsFor, type Limits } from './entitlements';
+import { weekdayOf } from './schedule';
 
 /**
  * MOTEUR DE PLANIFICATION — cœur déterministe de l'application.
@@ -132,6 +133,7 @@ export function buildPlan(state: AppState): PlanResult {
     pantry: state.pantry,
     swaps: state.foodSwaps,
     limits,
+    startWeekday: state.startDate ? weekdayOf(state.startDate) : 0,
   });
   mealPlan = applyMealOverrides(mealPlan, state.mealOverrides);
   mealPlan = applySwapsToPlan(mealPlan, state.foodSwaps);

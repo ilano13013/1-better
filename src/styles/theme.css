@@ -825,6 +825,31 @@ input[type='range']::-moz-range-thumb {
 }
 .price-unit { font-size: var(--fs-xs); font-weight: 560; color: var(--ink-3); margin-left: 3px; }
 
+/* Le cycle 1 % */
+.streak-card { width: 100%; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.streak-card:active { transform: scale(.994); }
+.streak-pct {
+  font-size: 44px; font-weight: 700; letter-spacing: -.05em; line-height: 1;
+  margin-top: 4px;
+}
+.streak-sign { font-size: .42em; letter-spacing: -.02em; margin-left: .06em; }
+.streak-rail {
+  height: 3px; border-radius: var(--radius-full);
+  background: var(--track); overflow: hidden;
+}
+.streak-rail > i {
+  display: block; height: 100%; background: var(--ink);
+  border-radius: var(--radius-full); transition: width .5s var(--ease);
+}
+.move-mark-todo {
+  background: transparent; color: var(--ink-3);
+  border: 1px solid var(--line-strong); font-size: 10px;
+}
+
+/* Écran « On commence quand ? » */
+.start-day { padding-top: 34px; }
+.start-head .display { font-size: clamp(30px, 8.5vw, 40px); margin-top: 8px; }
+
 /* Journal : bouton « j'ai mangé », lecteur de code-barres */
 .eat-btn { justify-content: center; }
 .eat-btn.is-eaten {

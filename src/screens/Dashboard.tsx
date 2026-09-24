@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useApp } from '../store/AppContext';
 import { dayPlanFor } from '../engine/mealPlan';
+import { StreakCard } from '../components/StreakCard';
+import { daysUntilStart, hasStarted, longDate } from '../engine/schedule';
 import { entriesForDay, intakeTotals, isMealLogged } from '../engine/intake';
 import { isoForDay, todayIndex } from '../store/state';
 import { GOALS } from '../data/goals';
@@ -78,6 +80,25 @@ export default function Dashboard({ go }: { go: (s: Screen) => void }) {
         {streak > 0 && (
           <span className="badge badge-ink"><IconMedal size={13} /> {streak} sem.</span>
         )}
+      </div>
+
+      {/* Le programme n'a pas encore commencé : rien n'est attendu d'ici là. */}
+      {!hasStarted(state.startDate) && state.startDate && (
+        <div style={{ marginBottom: 16 }}>
+        <Card className="card-notice">
+          <div className="card-title">Départ programmé</div>
+          <p className="sm">
+            Le programme commence <span className="strong">{longDate(state.startDate)}</span>,
+            dans {daysUntilStart(state.startDate)} jour
+            {daysUntilStart(state.startDate) > 1 ? 's' : ''}. D'ici là, rien n'est
+            attendu — tu peux déjà faire les courses.
+          </p>
+        </Card>
+        </div>
+      )}
+
+      <div style={{ marginBottom: 16 }}>
+        <StreakCard />
       </div>
 
       <div className="stack">

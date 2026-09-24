@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from './store/AppContext';
 import Splash from './screens/Splash';
+import StartDay from './screens/StartDay';
 import SignIn from './screens/SignIn';
 import Onboarding from './screens/Onboarding';
 import BuildingWeek from './screens/BuildingWeek';
@@ -28,6 +29,7 @@ export default function App() {
   const { state, toast, session, lockedSession, signIn } = useApp();
   const [screen, setScreen] = useState<Screen>('home');
   const [splash, setSplash] = useState(true);
+  const [asking, setAsking] = useState(false);
   const [building, setBuilding] = useState(false);
 
   // Le questionnaire vient d'être validé : on montre la construction du plan
@@ -53,10 +55,16 @@ export default function App() {
     return <div className="app"><Onboarding /></div>;
   }
 
+  // « On commence quand ? » : posé une fois le plan construit, parce que la
+  // réponse change ce qui est planifié.
+  if (asking || (!building && state.startDate === null)) {
+    return <div className="app"><StartDay onDone={() => setAsking(false)} /></div>;
+  }
+
   if (building) {
     return (
       <div className="app">
-        <BuildingWeek onDone={() => setBuilding(false)} />
+        <BuildingWeek onDone={() => { setBuilding(false); setAsking(state.startDate === null); }} />
       </div>
     );
   }

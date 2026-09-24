@@ -10,6 +10,7 @@ import { DAY_NAMES } from '../engine/training';
 import { movingAverage, sortedEntries, weeklyTrendPct } from '../engine/weight';
 import { providerLabel } from '../engine/auth';
 import { PLAN_LABELS, effectivePlan, withinHistory } from '../engine/entitlements';
+import { longDate, startOptions, weekdayOf } from '../engine/schedule';
 import { PlanSheet } from '../components/Plus';
 import { evaluateCheckIn, isCheckInDue } from '../engine/checkin';
 import { buildBadges, sessionCount, weekStreak, progressToGoal } from '../engine/gamification';
@@ -26,7 +27,7 @@ export default function ProfileScreen() {
   const { state, plan, dispatch, notify, session, signOut, eraseAccount } = useApp();
   const [sheet, setSheet] = useState<
     null | 'weight' | 'checkin' | 'macros' | 'goal' | 'gym' | 'store' | 'budget'
-    | 'diet' | 'schedule'
+    | 'diet' | 'schedule' | 'start'
   >(null);
   const [plans, setPlans] = useState(false);
 
@@ -136,6 +137,9 @@ export default function ProfileScreen() {
               mark={store && <StoreMark store={store} size={20} />} />
             <SettingRow label="Budget" value={`${eur(state.profile.weeklyBudget)} / sem.`} onClick={() => setSheet('budget')} />
             <SettingRow label="Alimentation" value={DIET_LABELS[state.profile.diet]} onClick={() => setSheet('diet')} />
+            <SettingRow label="Départ du programme"
+              value={state.startDate ? longDate(state.startDate) : '—'}
+              onClick={() => setSheet('start')} />
           </Card>
         </div>
 
@@ -315,6 +319,10 @@ export default function ProfileScreen() {
 
       <Sheet open={sheet === 'schedule'} onClose={() => setSheet(null)} title={<div className="strong">Disponibilités</div>}>
         <ScheduleEditor />
+      </Sheet>
+
+      <Sheet open={sheet === 'start'} onClose={() => setSheet(null)} title={<div className="strong">Départ du programme</div>}>
+        <StartEditor onDone={() => setSheet(null)} />
       </Sheet>
 
       <Sheet open={sheet === 'store'} onClose={() => setSheet(null)} title={<div className="strong">Supermarché</div>}>
@@ -809,6 +817,51 @@ function DietEditor() {
           hint="Ces aliments sont exclus de toutes les recettes proposées."
         />
       )}
+    </div>
+  );
+}
+
+
+/**
+ * Changer le départ après coup. Le plan suit : les jours planifiés partent du
+ * nouveau jour choisi.
+ */
+function StartEditor({ onDone }: { onDone: () => void }) {
+  const { state, plan, dispatch, notify } = useApp();
+  const [date, setDate] = useState(state.startDate ?? startOptions()[0].date);
+
+  const jours = Array.from({ length: plan.limits.mealPlanDays }, (_, i) =>
+    DAY_NAMES[(weekdayOf(date) + i) % 7].toLowerCase()).join(', ');
+
+  return (
+    <div className="stack">
+      <div className="stack-sm">
+        {startOptions().map((o) => (
+          <button key={o.id} type="button" className="option" aria-pressed={date === o.date}
+            onClick={() => setDate(o.date)}>
+            <span className="option-mark">{date === o.date && <IconCheck />}</span>
+            <span className="grow">
+              <span className="strong" style={{ display: 'block' }}>{o.label}</span>
+              <span className="sm dim">{longDate(o.date)}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      <Field label="Ou une autre date">
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      </Field>
+      <Card className="card-flat">
+        <div className="card-title">Jours planifiés</div>
+        <p className="sm muted">{jours}.</p>
+      </Card>
+      <button type="button" className="btn btn-primary btn-block"
+        onClick={() => {
+          dispatch({ type: 'setStartDate', date });
+          notify('Départ déplacé — plan régénéré');
+          onDone();
+        }}>
+        Enregistrer
+      </button>
     </div>
   );
 }

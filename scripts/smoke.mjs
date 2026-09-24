@@ -91,11 +91,21 @@ await page.locator('.building').click();
 await page.waitForTimeout(600);
 await shot('e2e-dashboard');
 
+console.log('→ on commence quand');
+// Le départ choisi décide des jours planifiés, pas seulement de l'affichage.
+await page.getByRole('button', { name: "C'est parti" }).waitFor({ timeout: 15000 });
+await shot('e2e-depart');
+const joursAnnonces = (await page.locator('.card-ink .sm').first().innerText()).trim();
+console.log('  ', joursAnnonces);
+await page.getByRole('button', { name: "C'est parti" }).click();
+await page.waitForTimeout(700);
+
 console.log('→ formule gratuite');
 // Les limites sont appliquées dans les moteurs : on vérifie donc ce que
 // l'application calcule vraiment, pas seulement ce qu'elle affiche.
 await page.locator('.tabbar button', { hasText: 'Nutrition' }).click();
 await page.waitForTimeout(500);
+await shot('e2e-accueil-serie');
 const kcalParJour = await page.locator('.scroller button .num').allInnerTexts();
 const planifies = kcalParJour.filter((t) => t.trim() !== '—').length;
 console.log('   jours planifiés :', planifies, '/ 7');

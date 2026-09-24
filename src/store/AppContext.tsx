@@ -52,6 +52,7 @@ type Action =
   | { type: 'unsubscribe' }
   | { type: 'logIntake'; entry: IntakeEntry }
   | { type: 'removeIntake'; id: string }
+  | { type: 'setStartDate'; date: string }
   | { type: 'regeneratePlan' };
 
 /** Champs du profil dont la modification invalide les choix manuels. */
@@ -83,6 +84,10 @@ function reducer(state: AppState, action: Action): AppState {
 
     case 'removeIntake':
       return { ...state, intake: state.intake.filter((e) => e.id !== action.id) };
+
+    // Le départ décide quels jours sont planifiés : le plan est reconstruit.
+    case 'setStartDate':
+      return { ...clearPlanOverrides(state), startDate: action.date };
 
     case 'loadDemo':
       return demoState();

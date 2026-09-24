@@ -89,6 +89,7 @@ Rien n'est une maquette statique. Toutes les interactions recalculent l'état :
 | Changer de compte | La semaine, les performances et les images du compte chargé remplacent les précédentes |
 | Créer un compte e-mail | Les données du compte sont chiffrées avec une clé dérivée du mot de passe |
 | Pointer un repas ou ajouter un aliment | La barre et les macros du jour suivent ; le plan, lui, ne bouge pas |
+| Déplacer le départ du programme | Les jours planifiés se recalent sur le nouveau premier jour |
 
 ---
 
@@ -638,6 +639,65 @@ refuse un enregistrement dont toutes les valeurs sont à zéro.
 
 ---
 
+## Le départ et la série
+
+### « On commence quand ? »
+
+La question est posée **une fois le plan construit**, pas dans le questionnaire :
+la réponse change ce qui est planifié, et on choisit mieux devant un plan qu'on
+a sous les yeux. Trois départs — aujourd'hui, demain, lundi prochain — plus une
+date libre.
+
+**Le départ décide des jours planifiés, pas seulement de l'affichage.** Une
+semaine qui commence le jeudi planifie jeudi, vendredi, samedi ; pas lundi,
+mardi, mercredi, déjà passés au moment du choix. C'est ce qui rend la formule
+gratuite utilisable un jeudi soir : ses trois jours sont les trois prochains.
+
+Les indices de jour restent ceux de la semaine (0 = lundi). C'est ce qui permet
+aux disponibilités d'entraînement, saisies en jours de la semaine, de rester
+vraies : « je m'entraîne mardi et jeudi » veut dire mardi et jeudi, pas « le
+deuxième et le quatrième jour ».
+
+« Lundi prochain » disparaît quand il ferait doublon — un lundi avec
+« aujourd'hui », un dimanche avec « demain ».
+
+### Le cycle 1 %
+
+Une séance validée ajoute **un point de pourcentage**. Cent séances font un
+cycle. Trois règles, et elles sont dites dans l'application :
+
+| | |
+| --- | --- |
+| Séance validée | +1 % |
+| Jour de repos | Ne compte pas, ne casse rien — il est prévu |
+| Séance prévue et manquée | Remise à zéro |
+
+La journée en cours ne casse jamais rien : tant qu'elle n'est pas finie, une
+séance non encore faite n'est pas une séance manquée. Et rien n'est attendu
+avant la date de départ.
+
+Le calcul remonte le temps depuis aujourd'hui jusqu'à ce que la chaîne casse —
+remonter plutôt que descendre évite d'avoir à choisir une origine, puisque la
+série en cours est par définition celle qui touche aujourd'hui.
+
+#### Ce qu'on gagne à 100 %
+
+Pas une médaille : **un chiffre vrai**. Progresser de 1 % par jour n'additionne
+pas, cela compose.
+
+    1,01^100 = 2,70
+
+Cent séances ne rendent donc pas « 100 % meilleur » : elles multiplient par
+2,7. C'est la promesse du nom prise au mot, et elle continue — deux cents
+séances, ×7,32. Le facteur composé est affiché en permanence à côté du
+pourcentage, et le cycle suivant repart de 1 % sans perdre ce qui est acquis.
+
+Les paliers — premier pour cent, dix séances, un quart, la moitié, trois
+quarts, cycle complet — ne débloquent rien. Ils nomment où l'on en est, ce qui
+vaut mieux qu'une barre nue.
+
+---
+
 ## Le bouton « Préparer mon Drive »
 
 **Aucune enseigne française ne publie d'API permettant à une application tierce
@@ -713,7 +773,7 @@ officiel d'enseigne : aucun des trois ne peut être simulé honnêtement.
 npm test
 ```
 
-156 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+172 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
 substitutions (dont la protection de la densité protéique), couverture de tous
@@ -734,7 +794,10 @@ arobase parasite, journal de consommation (totaux par jour, quantité négative
 sans effet, aliment à la pièce converti ou refusé, quota ne comptant que les
 recherches en ligne) et lecture de code-barres (clé de contrôle, kilojoules
 convertis, champs manquants signalés, cause d'échec nommée selon le contexte, second essai
-sur l'autre adresse et seulement après une erreur de serveur).
+sur l'autre adresse et seulement après une erreur de serveur), date de départ
+(décalage réel des jours planifiés, bouclage sur la semaine, options sans
+doublon) et cycle 1 % (repos neutre, séance manquée qui remet à zéro, journée en
+cours qui ne casse rien, bouclage à cent et facteur composé).
 
 Le test de fumée `npm run smoke` va plus loin : il compte les jours réellement
 planifiés en gratuit (3) puis après activation (7), crée un compte e-mail, vérifie
