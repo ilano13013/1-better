@@ -1070,6 +1070,46 @@ santé et où elles vont, avec un lien vers la politique et l'avertissement sant
 connexion porte les mêmes liens ; l'écran des formules ajoute les conditions de
 vente.
 
+### Résilier ne doit pas dépendre du cadre
+
+« Revenir à la formule gratuite » ne faisait rien. Le bouton était juste ;
+c'est la garde qui le neutralisait.
+
+L'application s'ouvre aussi dans un `iframe` en bac à sable — c'est ce
+qu'utilise n'importe quelle visionneuse intégrée. Là, `window.confirm()`
+n'affiche rien et **renvoie `false`** :
+
+```
+Ignored call to 'confirm()'. The document is sandboxed,
+and the 'allow-modals' keyword is not set.
+```
+
+Le motif `if (!window.confirm(…)) return;` avale alors l'action en silence :
+pas de boîte, pas d'erreur, pas d'effet. Trois boutons en dépendaient — la
+résiliation, l'arrêt d'essai et l'effacement des données.
+
+Pour une résiliation, ce n'est pas un défaut d'affichage : l'article
+L224-45-1 veut qu'elle soit aussi simple que la souscription, et un bouton muet
+ne l'est pas.
+
+Les trois passent désormais par `components/Confirm.tsx`, rendu par
+l'application elle-même. Il ne dépend plus des permissions du cadre, porte la
+mise en garde dans le style du reste, et **son bouton nomme l'action** —
+« Arrêter maintenant », « Effacer définitivement », jamais « OK ». Aucun appel
+à `window.confirm`, `alert` ou `prompt` ne subsiste dans le code.
+
+**Un second parcours de fumée garde la porte**, parce qu'un bug qui n'existe
+que dans un cadre restreint ne se voit pas dans un onglet ordinaire :
+
+```bash
+npm run smoke:embed
+```
+
+Il charge l'application dans un `iframe` sans `allow-modals`, y résilie, y
+efface les données, vérifie que les deux prennent réellement effet — la formule
+retombe à « Gratuit », les jours planifiés à trois — et **échoue si le
+navigateur signale la moindre boîte native ignorée**.
+
 ### Stockage local et traceurs
 
 Aucun cookie publicitaire, aucune mesure d'audience, aucun traceur tiers. Le

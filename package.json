@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "smoke": "node scripts/smoke.mjs",
-    "bundle": "node scripts/build-artifact.mjs"
+    "bundle": "node scripts/build-artifact.mjs",
+    "smoke:embed": "node scripts/smoke-embed.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

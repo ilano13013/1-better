@@ -9,6 +9,7 @@ import {
 import { findLocalAccount, listLocalAccounts, removeLocalAccount } from '../store/accounts';
 import { saveLocalAccount } from '../store/accounts';
 import { clearState } from '../store/persistence';
+import { Confirm } from '../components/Confirm';
 import { LegalSheet } from '../components/Legal';
 import type { LegalDocId } from '../engine/legal';
 
@@ -422,17 +423,15 @@ function EmailForm({
 function Forgot({ email, onBack }: { email: string; onBack: () => void }) {
   const [target, setTarget] = useState(email);
   const [done, setDone] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const accounts = listLocalAccounts();
 
+  const found = findLocalAccount(localAccountId(target || 'x@x.xx'));
+
   const erase = () => {
-    const account = findLocalAccount(localAccountId(target || 'x@x.xx'));
-    if (!account) return;
-    if (!window.confirm(
-      `Supprimer définitivement le compte ${account.email} et toutes ses données ? `
-      + 'Elles sont chiffrées : personne ne pourra les récupérer.',
-    )) return;
-    clearState(account.accountId);
-    removeLocalAccount(account.accountId);
+    if (!found) return;
+    clearState(found.accountId);
+    removeLocalAccount(found.accountId);
     setDone(true);
   };
 
@@ -476,12 +475,26 @@ function Forgot({ email, onBack }: { email: string; onBack: () => void }) {
             </div>
 
             <button type="button" className="btn btn-alert btn-block"
-              onClick={erase} disabled={!target}>
+              onClick={() => setConfirming(true)} disabled={!found}>
               Supprimer ce compte et repartir de zéro
             </button>
             <button type="button" className="btn btn-ghost btn-block" onClick={onBack}>
               Retour
             </button>
+
+            <Confirm
+              open={confirming}
+              title="Supprimer ce compte"
+              confirmLabel="Supprimer définitivement"
+              cancelLabel="Annuler"
+              destructive
+              onConfirm={erase}
+              onClose={() => setConfirming(false)}
+            >
+              Le compte {found?.email} et toutes ses données sont supprimés de
+              cet appareil. Elles sont chiffrées avec le mot de passe oublié :
+              personne, pas même nous, ne peut les récupérer.
+            </Confirm>
           </>
         )}
       </div>

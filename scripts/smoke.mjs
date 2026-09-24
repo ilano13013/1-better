@@ -17,8 +17,10 @@ const browser = await chromium.launch(executablePath ? { executablePath } : {});
 const page = await browser.newPage({ viewport: { width: 400, height: 860 }, deviceScaleFactor: 2 });
 const errors = [];
 page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message));
-// Les confirmations (arrêt d'essai, effacement) bloqueraient le parcours.
-page.on('dialog', (d) => d.accept());
+// Plus aucune boîte native : elles sont ignorées dans un cadre en bac à sable,
+// ce qui avalait l'action en silence. Les confirmations sont rendues par
+// l'application (voir `components/Confirm.tsx` et `npm run smoke:embed`).
+page.on('dialog', (d) => { errors.push(`boîte native : ${d.message()}`); d.dismiss(); });
 page.on('console', (m) => { if (m.type() === 'error' && !m.text().includes('404')) errors.push(m.text()); });
 
 /** Capture d'écran, seulement si un dossier de sortie a été fourni. */
@@ -177,6 +179,8 @@ console.log('   ', carteEnCours.trim());
 if (!/essai gratuit en cours/i.test(carteEnCours)) errors.push("essai : l'abonnement ne se dit pas en essai");
 if (!/0,00 €/.test(carteEnCours)) errors.push("essai : un montant est réclamé pendant l'essai");
 await page.getByRole('button', { name: "Arrêter l'essai" }).click();
+await page.waitForTimeout(400);
+await page.getByRole('button', { name: 'Arrêter maintenant' }).click();
 await page.waitForTimeout(800);
 
 console.log('→ passage en 1% Better+');

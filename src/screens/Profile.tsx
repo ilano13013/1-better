@@ -12,6 +12,7 @@ import { providerLabel } from '../engine/auth';
 import { PLAN_LABELS, effectivePlan, withinHistory } from '../engine/entitlements';
 import { longDate, startOptions, weekdayOf } from '../engine/schedule';
 import { PlanSheet } from '../components/Plus';
+import { Confirm } from '../components/Confirm';
 import { LegalSheet } from '../components/Legal';
 import { APP_VERSION, PUBLISHER } from '../config/legal';
 import { legalDocuments } from '../engine/legal';
@@ -38,6 +39,7 @@ export default function ProfileScreen() {
   const [plans, setPlans] = useState(false);
   const [legal, setLegal] = useState<LegalDocId | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [erasing, setErasing] = useState(false);
 
   // La fenêtre d'historique de la formule ne supprime rien : elle borne la
   // lecture, et tout réapparaît si la formule change.
@@ -284,10 +286,7 @@ export default function ProfileScreen() {
               Exporter mes données
             </button>
             <button type="button" className="btn btn-alert btn-block"
-              onClick={() => {
-                if (!window.confirm('Effacer toutes tes données locales, images comprises ? Cette action est définitive.')) return;
-                eraseAccount();
-              }}>
+              onClick={() => setErasing(true)}>
               Effacer toutes mes données
             </button>
           </div>
@@ -316,6 +315,20 @@ export default function ProfileScreen() {
           </p>
         </div>
       </div>
+
+      <Confirm
+        open={erasing}
+        title="Effacer toutes mes données"
+        confirmLabel="Effacer définitivement"
+        cancelLabel="Garder mes données"
+        destructive
+        onConfirm={eraseAccount}
+        onClose={() => setErasing(false)}
+      >
+        Profil, séances, pesées, journal, photos importées : tout est supprimé
+        de cet appareil. Il n'existe aucune copie ailleurs, donc rien à
+        récupérer. Exporte tes données d'abord si tu veux les garder.
+      </Confirm>
 
       <LegalSheet open={legal !== null} docId={legal} onClose={() => setLegal(null)} />
       <ExportSheet open={exporting} onClose={() => setExporting(false)} />

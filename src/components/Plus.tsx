@@ -7,6 +7,7 @@ import {
 } from '../engine/entitlements';
 import type { LegalDocId } from '../engine/legal';
 import { useApp } from '../store/AppContext';
+import { Confirm } from './Confirm';
 import { LegalSheet } from './Legal';
 import { Sheet, day, eur } from './ui';
 
@@ -96,6 +97,7 @@ export function PlanSheet({ open, onClose }: { open: boolean; onClose: () => voi
   const { state, dispatch, notify } = useApp();
   const [period, setPeriod] = useState<BillingPeriod>('yearly');
   const [legal, setLegal] = useState<LegalDocId | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const active = effectivePlan(state);
   const sub = state.subscription;
   const today = new Date().toISOString().slice(0, 10);
@@ -115,10 +117,6 @@ export function PlanSheet({ open, onClose }: { open: boolean; onClose: () => voi
   };
 
   const cancel = () => {
-    const message = running
-      ? `Arrêter l'essai maintenant ? Rien n'a été et ne sera prélevé. Le plan repasse à 3 jours et 3 séances.`
-      : 'Revenir à la formule gratuite ? Le plan repasse à 3 jours et 3 séances.';
-    if (!window.confirm(message)) return;
     dispatch({ type: 'unsubscribe' });
     notify(running ? 'Essai arrêté' : 'Retour à la formule gratuite');
     onClose();
@@ -177,9 +175,29 @@ export function PlanSheet({ open, onClose }: { open: boolean; onClose: () => voi
                 </div>
               )}
             </div>
-            <button type="button" className="btn btn-ghost btn-block" onClick={cancel}>
+            <button type="button" className="btn btn-ghost btn-block"
+              onClick={() => setConfirming(true)}>
               {running ? "Arrêter l'essai" : 'Revenir à la formule gratuite'}
             </button>
+
+            {/* La résiliation doit être aussi simple que la souscription
+                (C. conso., art. L224-45-1) : une confirmation, au même
+                endroit, et rien de plus. */}
+            <Confirm
+              open={confirming}
+              title={running ? "Arrêter l'essai" : 'Revenir à la formule gratuite'}
+              confirmLabel={running ? 'Arrêter maintenant' : 'Revenir au gratuit'}
+              cancelLabel={running ? "Continuer l'essai" : "Garder l'abonnement"}
+              onConfirm={cancel}
+              onClose={() => setConfirming(false)}
+            >
+              {running
+                ? `Rien n'a été prélevé et rien ne le sera. Le plan repasse
+                   à 3 jours de repas et 3 séances par semaine, et l'essai ne
+                   pourra pas être rouvert.`
+                : `Le plan repasse à 3 jours de repas et 3 séances par semaine.
+                   Tes données, elles, restent intactes.`}
+            </Confirm>
           </>
         ) : (
           <>
