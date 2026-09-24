@@ -3,6 +3,7 @@ import type { DayIndex, Performance, PerformanceSet, Workout, WorkoutExercise } 
 import { useApp } from '../store/AppContext';
 import { isoForDay, todayIndex } from '../store/state';
 import { SessionBar } from '../components/SessionBar';
+import { sessionDateFor } from '../engine/session';
 import { MUSCLE_LABELS, getExercise } from '../data/exercises';
 import { EQUIPMENT_LABELS, GYM_BY_ID } from '../data/gyms';
 import { DAY_NAMES, DAY_SHORT, findReplacements } from '../engine/training';
@@ -36,13 +37,17 @@ export default function Training() {
   const [detail, setDetail] = useState<string | null>(null);
   const [plans, setPlans] = useState(false);
 
+  /** Date portée au crédit d'une séance validée depuis cet onglet de jour. */
+  const sessionDate = (day: DayIndex) =>
+    sessionDateFor(isoForDay(day), new Date().toISOString().slice(0, 10));
+
   /** Lance la récupération de cet exercice, à son temps de repos prévu. */
   const startRest = (w: Workout, we: WorkoutExercise) => dispatch({
     type: 'startRest',
     exerciseId: we.exerciseId,
     totalSec: we.restSec,
     workoutId: w.id,
-    date: isoForDay(w.day),
+    date: sessionDate(w.day),
   });
 
   const gym = GYM_BY_ID[state.profile.gymId];
@@ -124,7 +129,7 @@ export default function Training() {
             </div>
           </Card>
 
-          <SessionBar workout={workout} date={isoForDay(selectedDay)} />
+          <SessionBar workout={workout} date={sessionDate(selectedDay)} />
 
           {workout.exercises.map((we, index) => (
             <ExerciseCard

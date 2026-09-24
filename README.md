@@ -763,6 +763,22 @@ plus que plein après un ajout — un repos rallongé reste un repos, pas un
 dépassement. À zéro, l'anneau passe au signal et l'appareil vibre s'il sait le
 faire ; le son n'étant garanti par aucun navigateur, rien n'en dépend.
 
+### Le jour crédité
+
+L'écran Training ouvre sur la **prochaine** séance, souvent à venir. Valider y
+enregistrait une date future, que la série — qui remonte le temps depuis
+aujourd'hui — n'atteignait jamais : le pourcentage ne bougeait pas.
+
+Une séance d'un jour à venir, faite en avance, est donc portée à **aujourd'hui**.
+Une séance d'un jour passé garde sa date : c'est une saisie rétroactive, et elle
+est légitime.
+
+Dans le même mouvement, la règle de la série a été corrigée : **une séance
+validée compte quel que soit le jour**. S'entraîner un mercredi quand le
+programme disait jeudi reste s'entraîner — ne rien accorder aurait puni
+quelqu'un d'avoir décalé sa séance d'un jour. Seule une séance *prévue* et
+*passée* sans rien de validé casse la série.
+
 ### La durée de séance
 
 Le premier repos lancé marque le début de la séance : c'est la première trace
@@ -863,7 +879,7 @@ officiel d'enseigne : aucun des trois ne peut être simulé honnêtement.
 npm test
 ```
 
-195 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+201 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
 substitutions (dont la protection de la densité protéique), couverture de tous
@@ -891,7 +907,8 @@ cours qui ne casse rien, bouclage à cent et facteur composé), et le placement 
 la bulle du guide (dessous, dessus, centrée, halo borné à la fenêtre), le
 minuteur de repos (décompte déduit de l'instant de fin, pause qui fige, ajout
 qui n'est pas un dépassement, jamais de valeur négative) et la validation d'une
-séance sans aucune charge notée.
+séance sans aucune charge notée — dont le jour crédité quand la séance est
+faite en avance, et le point accordé à une séance décalée.
 
 Le test de fumée `npm run smoke` va plus loin : il compte les jours réellement
 planifiés en gratuit (3) puis après activation (7), crée un compte e-mail, vérifie

@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   durationMin, durationNote, elapsedSec, findCompleted, formatChrono, isRunning,
-  pauseSession, resumeSession, startSession, validatedDates,
+  pauseSession, resumeSession, sessionDateFor, startSession, validatedDates,
   type CompletedWorkout,
 } from '../session';
 import {
   addRest, isRestOver, pauseRest, restLeft, restProgress, resumeRest, startRest,
 } from '../session';
 import { computeStreak } from '../streak';
+import type { DayIndex } from '../../types';
 
 const t = (iso: string) => new Date(iso);
 
@@ -158,5 +159,50 @@ describe('récupération entre les séries', () => {
     expect(restProgress(r, t('2026-09-24T18:00:50Z'))).toBeCloseTo(0.5, 2);
     expect(restProgress(r, t('2026-09-24T18:09:00Z'))).toBe(1);
     expect(restProgress(null)).toBe(0);
+  });
+});
+
+describe('date portée au crédit d\'une séance', () => {
+  /*
+   * Le défaut trouvé à l'usage : l'écran Training ouvre sur la PROCHAINE
+   * séance, souvent à venir. Valider enregistrait alors une date future, que
+   * la série — qui remonte le temps depuis aujourd'hui — n'atteignait jamais.
+   * Le pourcentage ne bougeait pas.
+   */
+  it('porte à aujourd\'hui une séance faite en avance', () => {
+    expect(sessionDateFor('2026-09-26', '2026-09-24')).toBe('2026-09-24');
+  });
+
+  it('laisse sa date à une séance déjà passée', () => {
+    // Saisie rétroactive : elle est légitime, on ne la déplace pas.
+    expect(sessionDateFor('2026-09-22', '2026-09-24')).toBe('2026-09-22');
+  });
+
+  it('ne touche à rien le jour même', () => {
+    expect(sessionDateFor('2026-09-24', '2026-09-24')).toBe('2026-09-24');
+  });
+
+  it('fait bien avancer le cycle, bout en bout', () => {
+    // Le cas signalé : on est mercredi, l'écran montre la séance de jeudi.
+    const jours: DayIndex[] = [1, 3, 5];           // mardi, jeudi, samedi
+    const today = '2026-09-23';                    // mercredi
+    const date = sessionDateFor('2026-09-24', today);
+    const dates = validatedDates([], [{ id: 'a', date, workoutId: 'w1', durationSec: 0 }]);
+    expect(computeStreak(dates, jours, t('2026-09-23T20:00:00')).total).toBe(1);
+  });
+});
+
+describe('une séance compte quel que soit le jour', () => {
+  it('accorde son point à une séance décalée', () => {
+    // Prévu mardi, jeudi, samedi ; fait le mercredi. S'entraîner un jour plus
+    // tard reste s'entraîner : ne rien accorder aurait puni le décalage.
+    const dates = validatedDates([], [{ id: 'a', date: '2026-09-23', workoutId: 'w1', durationSec: 0 }]);
+    expect(computeStreak(dates, [1, 3, 5] as DayIndex[], t('2026-09-23T20:00:00')).total).toBe(1);
+  });
+
+  it('casse toujours sur une séance prévue et manquée', () => {
+    // Le décalage est accordé, l'absence non : jeudi prévu, rien fait.
+    const dates = ['2026-09-22', '2026-09-26'];    // mardi et samedi
+    expect(computeStreak(dates, [1, 3, 5] as DayIndex[], t('2026-09-26T20:00:00')).total).toBe(1);
   });
 });

@@ -75,6 +75,21 @@ export function durationMin(sec: number): number {
   return Math.max(1, Math.round(sec / 60));
 }
 
+/**
+ * Date à porter au crédit d'une séance validée.
+ *
+ * L'écran Training ouvre sur la **prochaine** séance, souvent à venir. Valider
+ * enregistrait alors une date future, que la série — qui remonte le temps
+ * depuis aujourd'hui — n'atteignait jamais : le pourcentage ne bougeait pas.
+ *
+ * Une séance d'un jour à venir faite en avance est donc portée à aujourd'hui.
+ * Une séance d'un jour passé garde sa date : c'est une saisie rétroactive, et
+ * elle est légitime.
+ */
+export function sessionDateFor(selectedIso: string, todayIso: string): string {
+  return selectedIso <= todayIso ? selectedIso : todayIso;
+}
+
 export function findCompleted(
   logs: CompletedWorkout[], date: string, workoutId: string,
 ): CompletedWorkout | null {

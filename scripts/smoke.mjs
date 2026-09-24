@@ -260,9 +260,26 @@ if (await barre.count()) {
   await page.waitForTimeout(300);
   console.log('   après +30 s :', (await page.locator('.rest-value').innerText()).trim());
   await shot('e2e-repos');
+  // Cas du défaut trouvé à l'usage : valider depuis un jour À VENIR doit
+  // créditer aujourd'hui, sinon la série ne l'atteint jamais.
+  const joursTraining = page.locator('.scroller button');
+  for (let i = (await joursTraining.count()) - 1; i >= 0; i--) {
+    if (!(await joursTraining.nth(i).innerText()).includes('Repos')) {
+      await joursTraining.nth(i).click();
+      break;
+    }
+  }
+  await page.waitForTimeout(500);
   await page.getByRole('button', { name: 'Séance terminée' }).click();
   await page.waitForTimeout(800);
-  console.log('   ', (await page.locator('.session-bar .sm').first().innerText()).trim());
+  const credit = await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('one-better:state:v1'));
+    return { today: new Date().toISOString().slice(0, 10), dates: s.completedWorkouts.map((c) => c.date) };
+  });
+  console.log('   validée depuis un jour à venir, créditée le', credit.dates.join(', '));
+  if (!credit.dates.includes(credit.today)) {
+    errors.push(`séance validée créditée ${credit.dates} au lieu d'aujourd'hui`);
+  }
   // La série doit avoir avancé sans qu'aucune charge n'ait été notée.
   await page.locator('.tabbar button', { hasText: 'Accueil' }).click();
   await page.waitForTimeout(500);

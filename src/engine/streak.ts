@@ -68,15 +68,18 @@ export function computeStreak(
     // Rien n'est attendu avant le début du programme.
     if (startDate && daysBetween(startDate, cursor) < 0) break;
 
-    if (scheduled.has(weekdayOf(cursor))) {
-      if (trained.has(cursor)) {
-        total++;
-        if (!lastDate) lastDate = cursor;
-      } else if (cursor !== todayIso) {
-        break;                       // séance prévue et manquée : la série casse
-      }
-      // Aujourd'hui sans séance encore faite : la journée n'est pas finie.
+    /*
+     * Une séance validée compte, quel que soit le jour. S'entraîner un mercredi
+     * quand le programme disait jeudi reste s'entraîner — ne rien accorder
+     * aurait puni quelqu'un d'avoir décalé sa séance d'un jour.
+     */
+    if (trained.has(cursor)) {
+      total++;
+      if (!lastDate) lastDate = cursor;
+    } else if (scheduled.has(weekdayOf(cursor)) && cursor !== todayIso) {
+      break;                         // séance prévue et manquée : la série casse
     }
+    // Reste : un jour sans séance prévue, ou aujourd'hui pas encore fait.
     cursor = addDays(cursor, -1);
   }
 
