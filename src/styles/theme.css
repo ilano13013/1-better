@@ -862,6 +862,28 @@ input[type='range']::-moz-range-thumb {
 .start-day { padding-top: 34px; }
 .start-head .display { font-size: clamp(30px, 8.5vw, 40px); margin-top: 8px; }
 
+/* Courbe de poids */
+.chart-tag {
+  font-size: 11px; font-weight: 640; fill: var(--ink);
+  font-variant-numeric: tabular-nums;
+  /* Liseré à la couleur du fond : l'étiquette reste lisible là où la courbe
+     la traverse, sans cadre ni pastille. */
+  stroke: var(--paper); stroke-width: 3px; paint-order: stroke fill;
+}
+.chart-tag-goal { fill: var(--signal-ink); font-weight: 600; }
+.chart-axis {
+  font-size: 10px; fill: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.key-line {
+  width: 14px; height: 2px; border-radius: var(--radius-full);
+  background: var(--ink); flex: none;
+}
+.key-dot {
+  width: 7px; height: 7px; border-radius: var(--radius-full);
+  border: 1.5px solid var(--ink-3); background: var(--ground); flex: none;
+}
+
 /* Récupération entre les séries */
 .session-bar { padding: 16px; }
 .rest { display: flex; align-items: center; gap: 16px; }

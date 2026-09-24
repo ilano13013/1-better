@@ -7,11 +7,12 @@ import { STORES } from '../data/stores';
 import { computeTargets, kcalFromMacros } from '../engine/nutrition';
 import { DIET_LABELS, RESTRICTION_LABELS } from '../engine/filters';
 import { DAY_NAMES } from '../engine/training';
-import { movingAverage, sortedEntries, weeklyTrendPct } from '../engine/weight';
+import { sortedEntries, weeklyTrendPct } from '../engine/weight';
 import { providerLabel } from '../engine/auth';
 import { PLAN_LABELS, effectivePlan, withinHistory } from '../engine/entitlements';
 import { longDate, startOptions, weekdayOf } from '../engine/schedule';
 import { PlanSheet } from '../components/Plus';
+import { WeightChart } from '../components/WeightChart';
 import { evaluateCheckIn, isCheckInDue } from '../engine/checkin';
 import { buildBadges, sessionCount, weekStreak, progressToGoal } from '../engine/gamification';
 import { personalRecords } from '../engine/progression';
@@ -87,10 +88,10 @@ export default function ProfileScreen() {
             <Bar value={goalProgress * 100} max={100} tone="muted" />
           </div>
 
-          <WeightChart entries={entries} />
+          <WeightChart entries={entries} target={state.profile.targetWeightKg} />
 
           <p className="xs dim" style={{ marginTop: 10 }}>
-            La courbe claire est la moyenne glissante : elle seule sert aux
+            Le trait plein est la moyenne glissante : elle seule sert aux
             décisions d'ajustement. Une pesée isolée ne signifie rien.
           </p>
         </Card>
@@ -364,39 +365,6 @@ function SettingRow({
       {mark}
       <span className="sm strong truncate">{value}</span>
     </button>
-  );
-}
-
-function WeightChart({ entries }: { entries: { date: string; weightKg: number }[] }) {
-  if (entries.length < 2) {
-    return <div className="sm dim" style={{ marginTop: 14 }}>Enregistre au moins deux pesées pour voir la courbe.</div>;
-  }
-  const avg = movingAverage(entries);
-  const values = entries.map((e) => e.weightKg);
-  const min = Math.min(...values, ...avg.map((a) => a.value)) - 0.4;
-  const max = Math.max(...values, ...avg.map((a) => a.value)) + 0.4;
-  const w = 100;
-  const h = 46;
-  const x = (i: number) => (i / (entries.length - 1)) * w;
-  const y = (v: number) => h - ((v - min) / Math.max(0.1, max - min)) * h;
-
-  const path = (pts: number[]) => pts.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(v).toFixed(2)}`).join(' ');
-
-  return (
-    <div style={{ marginTop: 16 }}>
-      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: '100%', height: 92, overflow: 'visible' }}>
-        <path d={path(values)} fill="none" stroke="var(--line-strong)" strokeWidth="0.8" vectorEffect="non-scaling-stroke" />
-        <path d={path(avg.map((a) => a.value))} fill="none" stroke="var(--ink)" strokeWidth="2"
-          strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-        {values.map((v, i) => (
-          <circle key={i} cx={x(i)} cy={y(v)} r="1.4" fill="var(--ink-3)" vectorEffect="non-scaling-stroke" />
-        ))}
-      </svg>
-      <div className="row-between xs dim num" style={{ marginTop: 6 }}>
-        <span>{entries[0].weightKg.toFixed(1).replace('.', ',')} kg</span>
-        <span>{entries[entries.length - 1].weightKg.toFixed(1).replace('.', ',')} kg</span>
-      </div>
-    </div>
   );
 }
 

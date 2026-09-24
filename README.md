@@ -804,6 +804,51 @@ Validable et annulable : rouvrir une séance retire son point.
 
 ---
 
+## La courbe de poids
+
+Refaite parce qu'elle mentait sur trois points.
+
+### L'abscisse suit les dates, pas le rang
+
+Les points étaient espacés régulièrement : deux pesées à un jour d'écart et
+deux pesées à trois semaines se ressemblaient. **La pente affichée n'était pas
+la pente réelle.** Elle l'est désormais.
+
+### Les pesées ne sont plus reliées
+
+Relier les pesées brutes donne à du bruit l'allure d'un signal — alors que
+toute l'application répète qu'une pesée isolée ne signifie rien. Seule la
+moyenne glissante est une courbe ; les pesées sont des points.
+
+Au passage, **la légende désignait la mauvaise courbe** : elle annonçait « la
+courbe claire est la moyenne glissante » alors que la claire était la donnée
+brute et la moyenne le trait épais. Une légende qui désigne la mauvaise série
+est pire qu'aucune légende — c'est elle qui dit sur quoi décider.
+
+### Le dessin n'est plus déformé
+
+Le `viewBox` était étiré (`preserveAspectRatio="none"`) : les points devenaient
+des ellipses et les épaisseurs variaient avec la largeur de l'écran. Le tracé
+se fait maintenant en pixels réels, mesurés sur le conteneur.
+
+### Ce qui a été ajouté
+
+- **L'objectif**, tracé en ligne de repère avec sa valeur. La carte annonçait
+  « objectif 66,0 kg » et la courbe ne le montrait pas. Il entre dans l'échelle
+  tant qu'il reste à moins de cinq kilos ; au-delà, c'est un objectif de long
+  terme et l'afficher écraserait la courbe.
+- **Une amplitude minimale de 2 kg.** Sans plancher, trois pesées à 200 g
+  d'écart dessinaient des montagnes russes.
+- **Les bornes de période et d'échelle**, sous la courbe.
+- **Le survol** : repère vertical, point désigné, valeur et date. La recherche
+  se fait en abscisse seulement — on désigne une date, pas un pixel.
+- **Une légende** pour les deux séries, distinguées sans couleur : trait plein
+  contre point cerclé. Le reste de l'interface étant achromatique, aucune
+  palette catégorielle n'est en jeu ; la seule couleur est celle du signal, sur
+  l'objectif, où elle marque un repère et non une série.
+
+---
+
 ## Le bouton « Préparer mon Drive »
 
 **Aucune enseigne française ne publie d'API permettant à une application tierce
@@ -879,7 +924,7 @@ officiel d'enseigne : aucun des trois ne peut être simulé honnêtement.
 npm test
 ```
 
-201 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+213 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
 substitutions (dont la protection de la densité protéique), couverture de tous
@@ -908,7 +953,9 @@ la bulle du guide (dessous, dessus, centrée, halo borné à la fenêtre), le
 minuteur de repos (décompte déduit de l'instant de fin, pause qui fige, ajout
 qui n'est pas un dépassement, jamais de valeur négative) et la validation d'une
 séance sans aucune charge notée — dont le jour crédité quand la séance est
-faite en avance, et le point accordé à une séance décalée.
+faite en avance, et le point accordé à une séance décalée —, et la géométrie de
+la courbe de poids (abscisse proportionnelle aux dates, amplitude minimale,
+objectif inclus ou écarté, point désigné au survol).
 
 Le test de fumée `npm run smoke` va plus loin : il compte les jours réellement
 planifiés en gratuit (3) puis après activation (7), crée un compte e-mail, vérifie
