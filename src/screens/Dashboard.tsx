@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useApp } from '../store/AppContext';
 import { dayPlanFor } from '../engine/mealPlan';
-import { StreakCard } from '../components/StreakCard';
+import { StreakRing } from '../components/StreakCard';
 import { daysUntilStart, hasStarted, longDate } from '../engine/schedule';
 import { entriesForDay, intakeTotals, isMealLogged } from '../engine/intake';
 import { isoForDay, todayIndex } from '../store/state';
@@ -77,9 +77,12 @@ export default function Dashboard({ go }: { go: (s: Screen) => void }) {
           <div className="eyebrow">{DAY_NAMES[today]}</div>
           <h1>Bonjour{state.profile.firstName ? ` ${state.profile.firstName}` : ''} 👋</h1>
         </div>
-        {streak > 0 && (
-          <span className="badge badge-ink"><IconMedal size={13} /> {streak} sem.</span>
-        )}
+        <div className="row" style={{ gap: 10, flex: 'none' }}>
+          {streak > 0 && (
+            <span className="badge badge-ink"><IconMedal size={13} /> {streak} sem.</span>
+          )}
+          <StreakRing />
+        </div>
       </div>
 
       {/* Le programme n'a pas encore commencé : rien n'est attendu d'ici là. */}
@@ -96,10 +99,6 @@ export default function Dashboard({ go }: { go: (s: Screen) => void }) {
         </Card>
         </div>
       )}
-
-      <div style={{ marginBottom: 16 }}>
-        <StreakCard />
-      </div>
 
       <div className="stack">
         {/* Nutrition du jour */}
@@ -140,7 +139,7 @@ export default function Dashboard({ go }: { go: (s: Screen) => void }) {
           </Card>
 
           {/* Séance du jour */}
-          <Card onClick={() => go('training')}>
+          <Card onClick={() => go('training')} tour="today">
             <div className="card-title">Aujourd'hui</div>
             {workout ? (
               <>

@@ -24,19 +24,22 @@ export function day(iso: string): string {
 /* ------------------------------------------------------------ primitives */
 
 export function Card({
-  children, className = '', onClick, as = 'div',
+  children, className = '', onClick, as = 'div', tour,
 }: {
   children: ReactNode; className?: string; onClick?: () => void; as?: 'div' | 'button';
+  /** Cible du guide pas à pas, posée sur le vrai élément. */
+  tour?: string;
 }) {
   const cls = `card ${onClick ? 'clickable' : ''} ${className}`.trim();
   if (onClick || as === 'button') {
     return (
-      <button type="button" className={cls} onClick={onClick} style={{ textAlign: 'left', width: '100%' }}>
+      <button type="button" className={cls} onClick={onClick} data-tour={tour}
+        style={{ textAlign: 'left', width: '100%' }}>
         {children}
       </button>
     );
   }
-  return <div className={cls}>{children}</div>;
+  return <div className={cls} data-tour={tour}>{children}</div>;
 }
 
 export function Option({

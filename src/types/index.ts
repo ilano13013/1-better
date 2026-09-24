@@ -430,6 +430,8 @@ export interface AppState {
   intake: IntakeEntry[];
   /** Jour où le programme commence. `null` tant que le choix n'a pas été fait. */
   startDate: string | null;
+  /** Le guide pas à pas a-t-il déjà été suivi ou passé ? */
+  tourSeen: boolean;
   profile: Profile;
   targetsOverride: Macros | null;
   pantry: PantryItem[];

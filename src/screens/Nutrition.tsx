@@ -86,7 +86,8 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
           <div className="eyebrow">{DAY_NAMES[day]}</div>
           <h1>Nutrition</h1>
         </div>
-        <button type="button" className="btn btn-sm btn-primary" onClick={() => go('shopping')}>
+        <button type="button" className="btn btn-sm btn-primary" data-tour="courses"
+          onClick={() => go('shopping')}>
           <IconCart size={15} /> Courses
         </button>
       </div>
@@ -177,7 +178,7 @@ export default function Nutrition({ go }: { go: (s: Screen) => void }) {
         )}
 
         {/* Journal du jour */}
-        <div>
+        <div data-tour="journal">
           <div className="row-between" style={{ marginBottom: 10 }}>
             <div className="card-title" style={{ margin: 0 }}>Journal du jour</div>
             <button type="button" className="btn btn-sm" onClick={() => setAdding(true)}>

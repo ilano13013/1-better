@@ -75,6 +75,7 @@ export function createInitialState(): AppState {
     subscription: null,
     intake: [],
     startDate: null,
+    tourSeen: false,
     profile: { ...EMPTY_PROFILE },
     targetsOverride: null,
     pantry: [],
@@ -104,6 +105,7 @@ export function demoState(): AppState {
     // liste complète. C'est ce que décrit le cahier des charges.
     plan: 'plus',
     startDate: currentWeekStart(),
+    tourSeen: true,
     subscription: startSubscription('yearly'),
     profile: { ...DEMO_PROFILE },
     pantry: DEMO_PANTRY.map((p) => ({ ...p })),

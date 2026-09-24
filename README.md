@@ -663,6 +663,10 @@ deuxième et le quatrième jour ».
 
 ### Le cycle 1 %
 
+Affiché comme un **niveau** : un anneau en haut à droite de l'accueil, visible à
+chaque ouverture sans rien déplacer. **L'anneau est la barre de progression** —
+un arc qui se referme, le pourcentage au centre, le numéro de cycle en dessous.
+
 Une séance validée ajoute **un point de pourcentage**. Cent séances font un
 cycle. Trois règles, et elles sont dites dans l'application :
 
@@ -695,6 +699,39 @@ pourcentage, et le cycle suivant repart de 1 % sans perdre ce qui est acquis.
 Les paliers — premier pour cent, dix séances, un quart, la moitié, trois
 quarts, cycle complet — ne débloquent rien. Ils nomment où l'on en est, ce qui
 vaut mieux qu'une barre nue.
+
+---
+
+## Le guide pas à pas
+
+Lancé une fois le jour de départ choisi, sur une application complète. Neuf
+étapes : le niveau, la journée en cours, les séances, les repas, le journal, les
+courses, le coach, les réglages, puis un mot de fin.
+
+**Une zone éclairée, le reste dans l'ombre.** C'est la raison d'être du
+procédé : une explication qui montre tout n'explique rien. À chaque étape, une
+seule chose est désignée.
+
+L'ombre n'est pas un calque séparé : c'est **l'ombre portée du trou**, un
+`box-shadow` de 9999 px sur un seul élément. Quatre pans distincts finiraient
+par se désaligner quand la cible bouge ; un seul élément ne le peut pas.
+
+### Ce qui le garde honnête
+
+- **Les cibles sont de vrais éléments**, désignés par des attributs `data-tour`
+  posés sur les composants eux-mêmes — pas des captures, pas des copies. Un
+  guide qui décrit une interface d'hier ment.
+- **Le guide pilote la navigation** : chaque étape déclare son écran, le guide
+  l'y emmène, fait défiler jusqu'à la cible, puis mesure. Mesurer avant que
+  l'écran soit monté donnerait un rectangle vide.
+- **Une étape dont la cible est absente est sautée**, jamais affichée sur du
+  vide. Ce tri ne peut pas se faire au montage — à cet instant aucun écran n'est
+  encore dans le document et tout paraîtrait absent. Chaque étape est donc
+  évaluée sur son propre écran, au moment de l'afficher.
+- **La bulle se place où il y a la place** : en dessous par défaut, au-dessus si
+  le bas est trop court, centrée si ni l'un ni l'autre ne tient.
+
+Relançable à tout moment depuis le profil.
 
 ---
 
@@ -773,7 +810,7 @@ officiel d'enseigne : aucun des trois ne peut être simulé honnêtement.
 npm test
 ```
 
-172 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+179 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
 substitutions (dont la protection de la densité protéique), couverture de tous
@@ -797,7 +834,8 @@ convertis, champs manquants signalés, cause d'échec nommée selon le contexte,
 sur l'autre adresse et seulement après une erreur de serveur), date de départ
 (décalage réel des jours planifiés, bouclage sur la semaine, options sans
 doublon) et cycle 1 % (repos neutre, séance manquée qui remet à zéro, journée en
-cours qui ne casse rien, bouclage à cent et facteur composé).
+cours qui ne casse rien, bouclage à cent et facteur composé), et le placement de
+la bulle du guide (dessous, dessus, centrée, halo borné à la fenêtre).
 
 Le test de fumée `npm run smoke` va plus loin : il compte les jours réellement
 planifiés en gratuit (3) puis après activation (7), crée un compte e-mail, vérifie

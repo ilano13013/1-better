@@ -100,6 +100,26 @@ console.log('  ', joursAnnonces);
 await page.getByRole('button', { name: "C'est parti" }).click();
 await page.waitForTimeout(700);
 
+console.log('→ guide pas à pas');
+// Le guide éclaire de vrais éléments : on vérifie qu'il en trouve un à chaque
+// étape, et que l'ombre couvre le reste.
+await page.locator('.tour-pop').waitFor({ timeout: 15000 });
+await page.waitForTimeout(500);
+await shot('e2e-guide-1');
+const etapes = await page.locator('.tour-steps > i').count();
+console.log('   étapes :', etapes);
+for (let i = 0; i < etapes; i++) {
+  const titre = (await page.locator('.tour-title').innerText()).trim();
+  const trou = await page.locator('.tour-hole').count();
+  if (i === 0 && trou === 0) errors.push("guide : première étape sans zone éclairée");
+  if (i === 2) await shot('e2e-guide-3');
+  await page.getByRole('button', { name: i === etapes - 1 ? 'Terminer' : 'Suivant' }).click();
+  await page.waitForTimeout(450);
+  if (!titre) errors.push(`guide : étape ${i + 1} sans titre`);
+}
+await page.locator('.tour-pop').waitFor({ state: 'detached', timeout: 5000 });
+console.log('   guide terminé, retour à l\'accueil');
+
 console.log('→ formule gratuite');
 // Les limites sont appliquées dans les moteurs : on vérifie donc ce que
 // l'application calcule vraiment, pas seulement ce qu'elle affiche.
@@ -110,7 +130,9 @@ const kcalParJour = await page.locator('.scroller button .num').allInnerTexts();
 const planifies = kcalParJour.filter((t) => t.trim() !== '—').length;
 console.log('   jours planifiés :', planifies, '/ 7');
 if (planifies !== 3) errors.push(`gratuit : ${planifies} jours planifiés au lieu de 3`);
-await page.locator('.scroller button').nth(5).click();
+// Un jour hors des trois planifiés : celui-ci dépend du départ choisi.
+const horsPlan = kcalParJour.findIndex((t) => t.trim() === '—');
+await page.locator('.scroller button').nth(horsPlan).click();
 await page.waitForTimeout(400);
 await page.locator('.plus-lock').waitFor({ timeout: 5000 });
 await shot('e2e-gratuit-jour');

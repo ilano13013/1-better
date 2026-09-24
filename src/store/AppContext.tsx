@@ -53,6 +53,7 @@ type Action =
   | { type: 'logIntake'; entry: IntakeEntry }
   | { type: 'removeIntake'; id: string }
   | { type: 'setStartDate'; date: string }
+  | { type: 'setTourSeen'; seen: boolean }
   | { type: 'regeneratePlan' };
 
 /** Champs du profil dont la modification invalide les choix manuels. */
@@ -88,6 +89,10 @@ function reducer(state: AppState, action: Action): AppState {
     // Le départ décide quels jours sont planifiés : le plan est reconstruit.
     case 'setStartDate':
       return { ...clearPlanOverrides(state), startDate: action.date };
+
+    // Le guide ne touche à rien : il ne fait que se souvenir d'avoir été vu.
+    case 'setTourSeen':
+      return { ...state, tourSeen: action.seen };
 
     case 'loadDemo':
       return demoState();

@@ -250,6 +250,10 @@ export default function ProfileScreen() {
               <IconSpark size={15} /> Régénérer mon plan
             </button>
             <button type="button" className="btn btn-ghost btn-block"
+              onClick={() => { dispatch({ type: 'setTourSeen', seen: false }); notify('Guide relancé'); }}>
+              Revoir le guide pas à pas
+            </button>
+            <button type="button" className="btn btn-ghost btn-block"
               onClick={() => { dispatch({ type: 'loadDemo' }); notify('Profil de démonstration chargé'); }}>
               Charger le profil de démonstration
             </button>

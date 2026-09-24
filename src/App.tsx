@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from './store/AppContext';
 import Splash from './screens/Splash';
+import Tour from './components/Tour';
 import StartDay from './screens/StartDay';
 import SignIn from './screens/SignIn';
 import Onboarding from './screens/Onboarding';
@@ -26,7 +27,7 @@ const TABS: { id: Screen; label: string; icon: JSX.Element }[] = [
 ];
 
 export default function App() {
-  const { state, toast, session, lockedSession, signIn } = useApp();
+  const { state, toast, session, lockedSession, signIn, dispatch } = useApp();
   const [screen, setScreen] = useState<Screen>('home');
   const [splash, setSplash] = useState(true);
   const [asking, setAsking] = useState(false);
@@ -85,6 +86,7 @@ export default function App() {
             key={tab.id}
             type="button"
             aria-current={screen === tab.id || (screen === 'shopping' && tab.id === 'nutrition')}
+            data-tour={`tab-${tab.id}`}
             onClick={() => setScreen(tab.id)}
           >
             {tab.icon}
@@ -92,6 +94,15 @@ export default function App() {
           </button>
         ))}
       </nav>
+
+      {/* Le guide vient après le choix du jour de départ, sur une application
+          complète : il désigne de vrais éléments, pas des captures. */}
+      {!state.tourSeen && !asking && (
+        <Tour
+          go={setScreen}
+          onDone={() => { dispatch({ type: 'setTourSeen', seen: true }); setScreen('home'); }}
+        />
+      )}
 
       {toast && <div className="toast">{toast}</div>}
     </div>
