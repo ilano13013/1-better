@@ -53,6 +53,29 @@ jobs:
           VITE_APPLE_CLIENT_ID: ${{ vars.VITE_APPLE_CLIENT_ID }}
           VITE_APPLE_REDIRECT_URI: ${{ vars.VITE_APPLE_REDIRECT_URI }}
 
+          # Mentions légales obligatoires. Elles désignent une personne réelle
+          # et ne peuvent donc pas être devinées : tant qu'elles manquent,
+          # l'écran « Informations légales » affiche à leur place le nom de la
+          # mention et le texte de loi qui l'impose, et indique que le service
+          # n'est pas publiable en l'état. Ce sont des mentions destinées à
+          # être publiques : des variables, pas des secrets.
+          VITE_LEGAL_NAME: ${{ vars.VITE_LEGAL_NAME }}
+          VITE_LEGAL_FORM: ${{ vars.VITE_LEGAL_FORM }}
+          VITE_LEGAL_CAPITAL: ${{ vars.VITE_LEGAL_CAPITAL }}
+          VITE_LEGAL_ADDRESS: ${{ vars.VITE_LEGAL_ADDRESS }}
+          VITE_LEGAL_REGISTRATION: ${{ vars.VITE_LEGAL_REGISTRATION }}
+          VITE_LEGAL_VAT: ${{ vars.VITE_LEGAL_VAT }}
+          VITE_LEGAL_DIRECTOR: ${{ vars.VITE_LEGAL_DIRECTOR }}
+          VITE_LEGAL_EMAIL: ${{ vars.VITE_LEGAL_EMAIL }}
+          VITE_LEGAL_PHONE: ${{ vars.VITE_LEGAL_PHONE }}
+          VITE_LEGAL_HOST_NAME: ${{ vars.VITE_LEGAL_HOST_NAME }}
+          VITE_LEGAL_HOST_ADDRESS: ${{ vars.VITE_LEGAL_HOST_ADDRESS }}
+          VITE_LEGAL_HOST_PHONE: ${{ vars.VITE_LEGAL_HOST_PHONE }}
+          VITE_LEGAL_PRIVACY_EMAIL: ${{ vars.VITE_LEGAL_PRIVACY_EMAIL }}
+          VITE_LEGAL_MEDIATOR: ${{ vars.VITE_LEGAL_MEDIATOR }}
+          VITE_LEGAL_MEDIATOR_URL: ${{ vars.VITE_LEGAL_MEDIATOR_URL }}
+          VITE_LEGAL_SITE_URL: ${{ vars.VITE_LEGAL_SITE_URL }}
+
       - name: Préparer le site
         run: |
           # Empêche Jekyll d'ignorer les fichiers commençant par un underscore.

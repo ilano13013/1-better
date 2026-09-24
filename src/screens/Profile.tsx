@@ -12,6 +12,11 @@ import { providerLabel } from '../engine/auth';
 import { PLAN_LABELS, effectivePlan, withinHistory } from '../engine/entitlements';
 import { longDate, startOptions, weekdayOf } from '../engine/schedule';
 import { PlanSheet } from '../components/Plus';
+import { LegalSheet } from '../components/Legal';
+import { APP_VERSION, PUBLISHER } from '../config/legal';
+import { legalDocuments } from '../engine/legal';
+import type { LegalDocId } from '../engine/legal';
+import { ExportSheet } from '../components/ExportSheet';
 import { WeightChart } from '../components/WeightChart';
 import { evaluateCheckIn, isCheckInDue } from '../engine/checkin';
 import { buildBadges, sessionCount, weekStreak, progressToGoal } from '../engine/gamification';
@@ -31,6 +36,8 @@ export default function ProfileScreen() {
     | 'diet' | 'schedule' | 'start'
   >(null);
   const [plans, setPlans] = useState(false);
+  const [legal, setLegal] = useState<LegalDocId | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   // La fenêtre d'historique de la formule ne supprime rien : elle borne la
   // lecture, et tout réapparaît si la formule change.
@@ -258,13 +265,6 @@ export default function ProfileScreen() {
               onClick={() => { dispatch({ type: 'loadDemo' }); notify('Profil de démonstration chargé'); }}>
               Charger le profil de démonstration
             </button>
-            <button type="button" className="btn btn-alert btn-block"
-              onClick={() => {
-                if (!window.confirm('Effacer toutes tes données locales, images comprises ? Cette action est définitive.')) return;
-                eraseAccount();
-              }}>
-              Tout effacer
-            </button>
           </div>
           <p className="xs dim" style={{ marginTop: 12 }}>
             Toutes tes données restent sur cet appareil. Le seul échange avec
@@ -272,7 +272,53 @@ export default function ProfileScreen() {
             à Open Food Facts, et rien d'autre.
           </p>
         </div>
+
+        {/* Droits sur les données — RGPD, articles 15, 17 et 20.
+            Réunis sous un titre qui le dit : un droit rangé dans « réglages »
+            n'est pas un droit exerçable. */}
+        <div>
+          <div className="card-title">Tes droits</div>
+          <div className="stack-sm">
+            <button type="button" className="btn btn-ghost btn-block"
+              onClick={() => setExporting(true)}>
+              Exporter mes données
+            </button>
+            <button type="button" className="btn btn-alert btn-block"
+              onClick={() => {
+                if (!window.confirm('Effacer toutes tes données locales, images comprises ? Cette action est définitive.')) return;
+                eraseAccount();
+              }}>
+              Effacer toutes mes données
+            </button>
+          </div>
+          <p className="xs dim" style={{ marginTop: 12 }}>
+            L'export restitue tout ce qui est enregistré, dans un fichier lisible
+            (droit d'accès et de portabilité). L'effacement est immédiat et sans
+            retour : il n'existe aucune copie ailleurs, donc rien à récupérer.
+          </p>
+        </div>
+
+        {/* Informations légales */}
+        <div>
+          <div className="card-title">Informations légales</div>
+          <div className="stack-sm">
+            {legalDocuments(PUBLISHER).map((d) => (
+              <button key={d.id} type="button" className="btn btn-ghost btn-block"
+                onClick={() => setLegal(d.id)}>
+                {d.title}
+              </button>
+            ))}
+          </div>
+          <p className="xs dim" style={{ marginTop: 12 }}>
+            1% Better, version {APP_VERSION}. Application de planification :
+            les valeurs affichées sont des estimations et ne remplacent pas
+            l'avis d'un professionnel de santé ou de nutrition.
+          </p>
+        </div>
       </div>
+
+      <LegalSheet open={legal !== null} docId={legal} onClose={() => setLegal(null)} />
+      <ExportSheet open={exporting} onClose={() => setExporting(false)} />
 
       {/* --- feuilles --- */}
       <Sheet open={sheet === 'weight'} onClose={() => setSheet(null)} title={<div className="strong">Enregistrer mon poids</div>}>

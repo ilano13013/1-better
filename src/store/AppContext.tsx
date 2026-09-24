@@ -12,7 +12,7 @@ import {
 } from './persistence';
 import { loadSession, saveSession } from './session';
 import type { Session } from '../engine/auth';
-import { startSubscription, type BillingPeriod } from '../engine/entitlements';
+import { startSubscription, trialAvailable, type BillingPeriod } from '../engine/entitlements';
 import type { IntakeEntry } from '../engine/intake';
 import {
   addRest, elapsedSec, findCompleted, pauseRest, resumeRest, startRest, startSession,
@@ -79,13 +79,19 @@ function reducer(state: AppState, action: Action): AppState {
 
     // Changer de formule change ce que les moteurs calculent : tout repasse par
     // `buildPlan`, comme n'importe quelle autre modification structurelle.
-    case 'subscribe':
+    // L'essai n'est ouvert que si la formule en propose un et qu'il n'a pas
+    // déjà été consommé : c'est ici que la règle tient, pas dans le bouton.
+    case 'subscribe': {
+      const trial = trialAvailable(state, action.period);
       return {
         ...clearPlanOverrides(state),
         plan: 'plus',
-        subscription: startSubscription(action.period),
+        subscription: startSubscription(action.period, new Date(), trial),
+        trialUsed: state.trialUsed || trial,
       };
+    }
 
+    // `trialUsed` survit volontairement : résilier ne rend pas l'essai.
     case 'unsubscribe':
       return { ...clearPlanOverrides(state), plan: 'free', subscription: null };
 

@@ -3,11 +3,46 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0B0D10" />
-    <title>1·Better</title>
+
+    <title>1% Better — sport, nutrition et courses planifiés</title>
+    <meta name="description" content="Ton objectif, ta salle, ton supermarché et ton budget : toute ta semaine est planifiée. Programme, repas et liste de courses calculés sans intelligence artificielle." />
+    <meta name="author" content="1% Better" />
+    <meta name="application-name" content="1% Better" />
+
+    <!-- Deux couleurs de barre, une par thème : une seule valeur donnait une
+         barre noire sur une application affichée en clair. -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FAFAFA" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0B0D10" />
+    <meta name="color-scheme" content="dark light" />
+
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icons/icon-192.png" sizes="192x192" type="image/png" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="1% Better" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- Partage : sans ces balises, un lien envoyé dans une conversation
+         n'affiche qu'une adresse nue. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="1% Better" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:title" content="1% Better" />
+    <meta property="og:description" content="Ton objectif, ta salle, ton supermarché et ton budget : toute ta semaine est planifiée." />
+    <meta property="og:image" content="./icons/icon-512.png" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="1% Better" />
+    <meta name="twitter:description" content="Ton objectif, ta salle, ton supermarché et ton budget : toute ta semaine est planifiée." />
+    <meta name="twitter:image" content="./icons/icon-512.png" />
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      1% Better calcule le programme et les repas dans le navigateur : il faut
+      donc activer JavaScript pour l'utiliser. Aucune donnée n'est envoyée à un
+      serveur.
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

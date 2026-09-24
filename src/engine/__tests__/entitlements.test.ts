@@ -3,9 +3,9 @@ import { buildPlan } from '../planner';
 import { eligibleRecipes } from '../mealPlan';
 import { suggestNext } from '../progression';
 import {
-  LIMITS, PRICES, daysLeft, effectivePlan, isSubscriptionActive, limitsFor,
-  monthlyEquivalent, renewalDate, startSubscription, withinHistory, yearlySavings,
-  yearlySavingsPct,
+  LIMITS, PRICES, TRIAL_DAYS, daysLeft, dueToday, effectivePlan, inTrial,
+  isSubscriptionActive, limitsFor, monthlyEquivalent, periodHasTrial, renewalDate,
+  startSubscription, trialAvailable, withinHistory, yearlySavings, yearlySavingsPct,
 } from '../entitlements';
 import { demoState } from '../../store/state';
 import type { AppState, Performance } from '../../types';
@@ -163,5 +163,71 @@ describe('abonnement', () => {
     const sub = startSubscription('monthly', new Date(2026, 8, 23));
     expect(daysLeft(sub, new Date(2026, 8, 23))).toBe(30);
     expect(daysLeft(sub, new Date(2027, 0, 1))).toBe(0);
+  });
+});
+
+describe('essai gratuit', () => {
+  const at = (iso: string) => new Date(`${iso}T12:00:00`);
+
+  it("n'existe que sur le mensuel", () => {
+    expect(periodHasTrial('monthly')).toBe(true);
+    expect(periodHasTrial('yearly')).toBe(false);
+    expect(trialAvailable({ trialUsed: false }, 'yearly')).toBe(false);
+  });
+
+  it('dure sept jours, et son dernier jour est l’échéance', () => {
+    const sub = startSubscription('monthly', at('2026-09-24'), true);
+    expect(TRIAL_DAYS).toBe(7);
+    expect(sub.trialEndsAt).toBe('2026-10-01');
+    expect(sub.renewsAt).toBe('2026-10-01');
+    expect(daysLeft(sub, at('2026-09-24'))).toBe(7);
+  });
+
+  it('ne coûte rien tant qu’il court, puis le tarif mensuel', () => {
+    const sub = startSubscription('monthly', at('2026-09-24'), true);
+    expect(dueToday(sub, at('2026-09-24'))).toBe(0);
+    expect(dueToday(sub, at('2026-09-30'))).toBe(0);
+    expect(inTrial(sub, at('2026-10-01'))).toBe(true);   // dernier jour inclus
+    expect(inTrial(sub, at('2026-10-02'))).toBe(false);
+    expect(dueToday(sub, at('2026-10-02'))).toBe(PRICES.monthly);
+  });
+
+  it('une souscription sans essai facture dès le départ', () => {
+    const sub = startSubscription('monthly', at('2026-09-24'), false);
+    expect(sub.trialEndsAt).toBeNull();
+    expect(sub.renewsAt).toBe('2026-10-24');
+    expect(inTrial(sub, at('2026-09-25'))).toBe(false);
+    expect(dueToday(sub, at('2026-09-24'))).toBe(PRICES.monthly);
+  });
+
+  /*
+   * La règle qui évite l'abonnement gratuit à vie : `withTrial` ne suffit pas,
+   * c'est `trialAvailable` qui doit avoir dit oui — et il regarde `trialUsed`.
+   */
+  it('un essai déjà consommé ne se rouvre pas', () => {
+    expect(trialAvailable({ trialUsed: true }, 'monthly')).toBe(false);
+    expect(trialAvailable({ trialUsed: false }, 'monthly')).toBe(true);
+  });
+
+  it("demander un essai sur l'annuel n'en ouvre aucun", () => {
+    const sub = startSubscription('yearly', at('2026-09-24'), true);
+    expect(sub.trialEndsAt).toBeNull();
+    expect(sub.renewsAt).toBe('2027-09-24');
+  });
+
+  it("un abonnement d'avant l'essai reste lisible", () => {
+    // Les états enregistrés avant cette fonctionnalité n'ont pas le champ.
+    const legacy = { period: 'monthly', startedAt: '2026-09-01', renewsAt: '2026-10-01' };
+    expect(inTrial(legacy as never, at('2026-09-10'))).toBe(false);
+    expect(dueToday(legacy as never, at('2026-09-10'))).toBe(PRICES.monthly);
+  });
+
+  it("l'essai expiré retombe en gratuit, faute de renouvellement", () => {
+    const state = {
+      plan: 'plus' as const,
+      subscription: startSubscription('monthly', at('2026-09-24'), true),
+    };
+    expect(effectivePlan(state, at('2026-10-01'))).toBe('plus');
+    expect(effectivePlan(state, at('2026-10-02'))).toBe('free');
   });
 });

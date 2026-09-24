@@ -72,15 +72,21 @@ export default function App() {
 
   return (
     <div className="app">
-      {screen === 'home' && <Dashboard go={setScreen} />}
-      {screen === 'week' && <Week go={setScreen} />}
-      {screen === 'training' && <Training />}
-      {screen === 'nutrition' && <Nutrition go={setScreen} />}
-      {screen === 'shopping' && <Shopping go={setScreen} />}
-      {screen === 'coach' && <Coach />}
-      {screen === 'profile' && <ProfileScreen />}
+      {/* Lien d'évitement : au clavier, six onglets se traversent avant
+          d'atteindre le contenu. Il n'apparaît qu'une fois ciblé. */}
+      <a className="skip-link" href="#contenu">Aller au contenu</a>
 
-      <nav className="tabbar">
+      <main id="contenu" tabIndex={-1}>
+        {screen === 'home' && <Dashboard go={setScreen} />}
+        {screen === 'week' && <Week go={setScreen} />}
+        {screen === 'training' && <Training />}
+        {screen === 'nutrition' && <Nutrition go={setScreen} />}
+        {screen === 'shopping' && <Shopping go={setScreen} />}
+        {screen === 'coach' && <Coach />}
+        {screen === 'profile' && <ProfileScreen />}
+      </main>
+
+      <nav className="tabbar" aria-label="Navigation principale">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -104,7 +110,11 @@ export default function App() {
         />
       )}
 
-      {toast && <div className="toast">{toast}</div>}
+      {/* Les confirmations sont annoncées : « Séance validée » ne doit pas
+          être une information réservée à qui regarde l'écran. */}
+      <div className="toast-live" role="status" aria-live="polite">
+        {toast && <div className="toast">{toast}</div>}
+      </div>
     </div>
   );
 }

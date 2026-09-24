@@ -9,6 +9,8 @@ import {
 import { findLocalAccount, listLocalAccounts, removeLocalAccount } from '../store/accounts';
 import { saveLocalAccount } from '../store/accounts';
 import { clearState } from '../store/persistence';
+import { LegalSheet } from '../components/Legal';
+import type { LegalDocId } from '../engine/legal';
 
 /**
  * Écran de connexion.
@@ -81,6 +83,7 @@ interface Props {
 
 export default function SignIn({ onSignIn, locked = null }: Props) {
   const [mode, setMode] = useState<Mode>(locked ? 'login' : 'choose');
+  const [legal, setLegal] = useState<LegalDocId | null>(null);
   const [appleBusy, setAppleBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const googleSlot = useRef<HTMLDivElement>(null);
@@ -236,7 +239,31 @@ export default function SignIn({ onSignIn, locked = null }: Props) {
           onClick={() => void onSignIn(LOCAL_SESSION)}>
           Continuer sans compte
         </button>
+
+        {/* Les conditions se lisent avant de s'inscrire, pas après. Elles sont
+            consultables ici sans quitter l'écran ni créer de compte. */}
+        <p className="xs dim center" style={{ lineHeight: 1.6 }}>
+          En continuant, tu acceptes les{' '}
+          <button type="button" className="link" onClick={() => setLegal('cgu')}>
+            conditions d'utilisation
+          </button>{' '}
+          et la{' '}
+          <button type="button" className="link" onClick={() => setLegal('confidentialite')}>
+            politique de confidentialité
+          </button>. Tes données restent sur cet appareil.
+        </p>
+        <p className="xs dim center">
+          <button type="button" className="link" onClick={() => setLegal('sante')}>
+            Avertissement santé
+          </button>
+          {' · '}
+          <button type="button" className="link" onClick={() => setLegal('mentions')}>
+            Mentions légales
+          </button>
+        </p>
       </div>
+
+      <LegalSheet open={legal !== null} docId={legal} onClose={() => setLegal(null)} />
     </div>
   );
 }

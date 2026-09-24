@@ -17,6 +17,8 @@ const browser = await chromium.launch(executablePath ? { executablePath } : {});
 const page = await browser.newPage({ viewport: { width: 400, height: 860 }, deviceScaleFactor: 2 });
 const errors = [];
 page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message));
+// Les confirmations (arrêt d'essai, effacement) bloqueraient le parcours.
+page.on('dialog', (d) => d.accept());
 page.on('console', (m) => { if (m.type() === 'error' && !m.text().includes('404')) errors.push(m.text()); });
 
 /** Capture d'écran, seulement si un dossier de sortie a été fourni. */
@@ -142,13 +144,51 @@ await page.waitForTimeout(500);
 await page.locator('.plus-lock').first().waitFor({ timeout: 5000 });
 await shot('e2e-gratuit-training');
 
-console.log('→ passage en 1% Better+');
+console.log('→ essai gratuit de 7 jours');
 await page.locator('.tabbar button', { hasText: 'Profil' }).click();
 await page.waitForTimeout(400);
 await page.getByRole('button', { name: 'Comparer' }).click();
 await page.waitForTimeout(500);
 await shot('e2e-formules');
+// Le mensuel met l'essai en avant, et dit ce qu'il coûte ensuite.
+const carteMensuel = page.locator('.price-option').first();
+const offreEssai = (await carteMensuel.innerText()).replace(/\s+/g, ' ').trim();
+console.log('   carte mensuelle :', offreEssai);
+if (!/7 jours\s*gratuits/.test(offreEssai)) errors.push('essai : la carte mensuelle ne propose pas 7 jours');
+if (!/puis 4,99 €/.test(offreEssai)) errors.push('essai : le prix après essai n\'est pas annoncé');
+await carteMensuel.click();
+await page.waitForTimeout(300);
+await shot('e2e-essai');
+await page.getByRole('button', { name: /^Commencer l'essai/ }).click();
+await page.waitForTimeout(800);
+// L'essai ouvre bien la formule complète.
+await page.locator('.tabbar button', { hasText: 'Nutrition' }).click();
+await page.waitForTimeout(600);
+const joursEssai = (await page.locator('.scroller button .num').allInnerTexts())
+  .filter((t) => t.trim() !== '—').length;
+console.log('   jours planifiés pendant l\'essai :', joursEssai, '/ 7');
+if (joursEssai !== 7) errors.push(`essai : ${joursEssai} jours planifiés au lieu de 7`);
+await page.locator('.tabbar button', { hasText: 'Profil' }).click();
+await page.waitForTimeout(400);
+await page.getByRole('button', { name: 'Gérer' }).click();
+await page.waitForTimeout(500);
+const carteEnCours = (await page.locator('.sheet .card-ink').first().innerText()).replace(/\s+/g, ' ');
+console.log('   ', carteEnCours.trim());
+if (!/essai gratuit en cours/i.test(carteEnCours)) errors.push("essai : l'abonnement ne se dit pas en essai");
+if (!/0,00 €/.test(carteEnCours)) errors.push("essai : un montant est réclamé pendant l'essai");
+await page.getByRole('button', { name: "Arrêter l'essai" }).click();
+await page.waitForTimeout(800);
+
+console.log('→ passage en 1% Better+');
+await page.getByRole('button', { name: 'Comparer' }).click();
+await page.waitForTimeout(500);
+// L'essai est consommé : il ne doit plus être proposé.
+const mensuelApres = (await page.locator('.price-option').first().innerText()).replace(/\s+/g, ' ');
+console.log('   carte mensuelle après essai :', mensuelApres.trim());
+if (/7 jours\s*gratuits/.test(mensuelApres)) errors.push('essai : un second essai est proposé');
 // Deux tarifs proposés ; on prend l'annuel, sélectionné par défaut.
+await page.locator('.price-option').nth(1).click();
+await page.waitForTimeout(200);
 const tarifs = await page.locator('.price-option .price-amount').allInnerTexts();
 console.log('   tarifs proposés :', tarifs.map((t) => t.replace(/\s+/g, ' ').trim()).join(' · '));
 await page.getByRole('button', { name: /^Activer — / }).click();
@@ -322,6 +362,41 @@ await page.locator('.sheet input[type=number]').first().fill('12');
 await page.getByRole('button', { name: /^Enregistrer$/ }).click();
 await page.waitForTimeout(700);
 await shot('e2e-training');
+
+console.log('→ informations légales');
+await page.locator('.tabbar button', { hasText: 'Profil' }).click();
+await page.waitForTimeout(400);
+await page.getByRole('button', { name: 'Conditions générales de vente' }).click();
+await page.waitForTimeout(400);
+await shot('e2e-legal');
+const cgv = (await page.locator('.sheet-body').innerText()).replace(/\s+/g, ' ');
+// Les trois obligations d'un abonnement vendu à des particuliers.
+for (const attendu of ['rétractation', 'reconduit tacitement', 'Essai gratuit de 7 jours', 'L221-18']) {
+  if (!new RegExp(attendu, 'i').test(cgv)) errors.push(`CGV : « ${attendu} » absent`);
+}
+// Une mention obligatoire non renseignée doit laisser un trou visible, nommé.
+const trous = await page.locator('.legal-missing').count();
+console.log('   mentions obligatoires manquantes signalées :', trous);
+if (trous === 0) errors.push('légal : aucun trou signalé alors que rien n\'est configuré');
+const bandeau = (await page.locator('.card-alert').first().innerText()).replace(/\s+/g, ' ');
+console.log('   ', bandeau.split('.')[0].trim());
+await page.locator('.sheet .icon-btn').last().click();
+await page.waitForTimeout(400);
+
+console.log('→ export des données');
+await page.getByRole('button', { name: 'Exporter mes données' }).click();
+await page.waitForTimeout(500);
+await page.getByRole('button', { name: 'Afficher' }).click();
+await page.waitForTimeout(400);
+await shot('e2e-export');
+const dump = await page.locator('.export-dump').inputValue();
+const archive = JSON.parse(dump);
+console.log('   archive :', archive.format, '·', Object.keys(archive.data).length, 'clés');
+if (archive.format !== 'one-better/export') errors.push('export : format inattendu');
+if (!archive.data.profile || !archive.data.weightEntries) errors.push('export : état incomplet');
+if (/motdepasse-solide/.test(dump)) errors.push('export : un mot de passe figure dans l\'archive');
+await page.locator('.sheet .icon-btn').last().click();
+await page.waitForTimeout(400);
 
 console.log('→ bascule de thème');
 await page.locator('.tabbar button', { hasText: 'Profil' }).click();

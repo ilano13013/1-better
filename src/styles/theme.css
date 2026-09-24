@@ -859,7 +859,7 @@ input[type='range']::-moz-range-thumb {
 .price-amount {
   font-size: 22px; font-weight: 680; letter-spacing: -.03em; line-height: 1.1;
 }
-.price-unit { font-size: var(--fs-xs); font-weight: 560; color: var(--ink-3); margin-left: 3px; }
+.price-unit { font-size: var(--fs-xs); font-weight: 560; color: var(--ink-3); margin-left: 4px; }
 
 /* Le cycle 1 %, affiché comme un niveau */
 .level {
@@ -1235,4 +1235,125 @@ input[type='range']::-moz-range-thumb {
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* --- Liens en ligne, listes à puces, documents légaux --- */
+
+/* `.linkish` est un lien centré, posé seul sous un bloc. `.link` est un lien
+   *dans* une phrase : il doit se comporter comme le mot qu'il remplace, donc
+   rester en ligne et hériter de la taille du texte qui l'entoure. */
+.link {
+  display: inline;
+  background: none; border: none; padding: 0;
+  font: inherit; color: var(--ink);
+  text-decoration: underline; text-underline-offset: 2px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.link:active { opacity: .6; }
+
+.bullets {
+  margin: 0; padding-left: 18px;
+  color: var(--ink-2); line-height: 1.55;
+}
+.bullets > li { margin-bottom: 6px; }
+.bullets > li::marker { color: var(--ink-3); }
+
+.legal-title { margin: 0 0 4px; font-size: var(--fs-title); font-weight: 600; }
+.legal-p { color: var(--ink-2); line-height: 1.6; margin: 0 0 8px; }
+.legal-p:last-child { margin-bottom: 0; }
+
+/* Les onglets défilent : six titres de documents ne tiennent pas sur une
+   largeur de téléphone, et les tronquer rendrait deux d'entre eux
+   indiscernables. */
+.legal-tabs {
+  display: flex; gap: 8px;
+  overflow-x: auto; scrollbar-width: none;
+  margin: 0 calc(-1 * var(--pad)); padding: 2px var(--pad);
+}
+.legal-tabs::-webkit-scrollbar { display: none; }
+.legal-tabs > .chip { flex: none; }
+
+/* Mention obligatoire absente.
+   Elle est encadrée et nommée plutôt que remplacée par une valeur plausible :
+   une mention légale inventée trompe le lecteur et engage quelqu'un qui
+   n'existe pas. Le trou doit se voir. */
+.legal-missing {
+  border: 1px dashed var(--signal-line-strong);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.legal-missing.is-optional { border-color: var(--line-strong); }
+.legal-missing > p { margin: 4px 0 0; }
+.legal-missing-tag {
+  margin-left: 8px;
+  font-size: var(--fs-xs); font-weight: 400;
+  color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em;
+}
+/* `--block-bg` est la couleur des blocs *inversés* : la prendre ici rendait
+   les noms de variables noirs sur un encadré clair. C'est `--paper` qu'il
+   faut, le fond des surfaces posées sur le fond de page. */
+.legal-missing code, .bullets code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .92em;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  padding: 1px 4px;
+  word-break: break-word;
+}
+
+/* L'export affiché : monospace, hauteur bornée, jamais modifiable. */
+.export-dump {
+  width: 100%; min-height: 180px; max-height: 40vh;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--fs-xs); line-height: 1.45;
+  white-space: pre; overflow: auto;
+}
+
+/* --- Accessibilité : évitement, annonces, cibles tactiles --- */
+
+/* Le lien d'évitement reste dans le flux du clavier mais hors de l'écran, et
+   revient au premier plan une fois ciblé. Le masquer par `display: none`
+   l'aurait aussi retiré de l'ordre de tabulation — c'est-à-dire supprimé. */
+.skip-link {
+  position: fixed;
+  top: 8px; left: 50%;
+  transform: translate(-50%, -200%);
+  z-index: 200;
+  background: var(--invert-bg); color: var(--invert-fg);
+  padding: 10px 18px;
+  border-radius: var(--radius-full);
+  font-size: var(--fs-sm); font-weight: 560;
+  text-decoration: none;
+  transition: transform 0.15s var(--ease);
+}
+/* Le contour de focus commun est de la couleur de l'encre, invisible sur une
+   pastille déjà noire : le lien porte donc le sien, tiré du fond. */
+.skip-link:focus-visible {
+  transform: translate(-50%, 0);
+  outline: 2px solid var(--ground);
+  outline-offset: -5px;
+}
+
+/* La cible du lien d'évitement ne doit pas dessiner de contour : elle reçoit
+   le focus par programme, pas par navigation. */
+main:focus { outline: none; }
+
+/* La région d'annonce existe toujours, vide ou non : un lecteur d'écran
+   n'annonce pas le contenu d'un élément qui vient d'apparaître. */
+.toast-live { position: fixed; inset: auto; pointer-events: none; }
+.toast-live .toast { pointer-events: auto; }
+
+/* Cible tactile des boutons ronds.
+   Le cercle visible fait 33 px — la taille juste dans un en-tête de feuille.
+   La zone sensible est portée à 45 px par une surface transparente, sans
+   toucher au dessin : agrandir le bouton lui-même déséquilibrerait la barre. */
+.icon-btn { position: relative; }
+.icon-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
 }

@@ -16,6 +16,8 @@ import { DAY_NAMES } from '../engine/training';
 import { Card, Checkbox, Chip, Field, Option, Segmented, eur, num } from '../components/ui';
 import { GymMark, StoreMark } from '../components/BrandMark';
 import { IconBack, IconSpark } from '../components/icons';
+import { LegalSheet } from '../components/Legal';
+import type { LegalDocId } from '../engine/legal';
 
 /**
  * Onboarding : une question principale par écran, barre de progression,
@@ -139,6 +141,7 @@ function Head({ title, hint }: { title: string; hint?: string }) {
 /* ---------------------------------------------------------------- écrans */
 
 function Welcome({ onStart, onDemo }: { onStart: () => void; onDemo: () => void }) {
+  const [legal, setLegal] = useState<LegalDocId | null>(null);
   return (
     <div className="screen" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', justifyContent: 'center', gap: 28 }}>
       <div>
@@ -160,6 +163,24 @@ function Welcome({ onStart, onDemo }: { onStart: () => void; onDemo: () => void 
           Essayer avec le profil de démonstration
         </button>
       </div>
+
+      {/* Le questionnaire demande le poids, l'âge et les allergies : des
+          données de santé. Le dire avant de les saisir, et non dans une
+          politique qu'on lira peut-être, est ce que le consentement explicite
+          suppose (RGPD, art. 9-2-a). */}
+      <p className="xs dim" style={{ lineHeight: 1.6 }}>
+        Le questionnaire demande ton poids, ton âge et tes allergies : des
+        données de santé. Elles restent sur cet appareil, ne sont transmises à
+        personne, et s'effacent en une action.{' '}
+        <button type="button" className="link" onClick={() => setLegal('confidentialite')}>
+          Confidentialité
+        </button>{' · '}
+        <button type="button" className="link" onClick={() => setLegal('sante')}>
+          Avertissement santé
+        </button>
+      </p>
+
+      <LegalSheet open={legal !== null} docId={legal} onClose={() => setLegal(null)} />
     </div>
   );
 }

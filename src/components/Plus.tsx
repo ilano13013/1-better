@@ -1,10 +1,13 @@
 import { useState, type ReactNode } from 'react';
 import {
-  PERIOD_LABELS, PLAN_LABELS, PLAN_TABLE, PRICES, daysLeft, effectivePlan,
-  isSubscriptionActive, monthlyEquivalent, renewalDate, yearlySavings, yearlySavingsPct,
+  PERIOD_LABELS, PLAN_LABELS, PLAN_TABLE, PRICES, TRIAL_DAYS, daysLeft, effectivePlan,
+  inTrial, isSubscriptionActive, monthlyEquivalent, renewalDate, trialAvailable,
+  trialEndDate, yearlySavings, yearlySavingsPct,
   type BillingPeriod,
 } from '../engine/entitlements';
+import type { LegalDocId } from '../engine/legal';
 import { useApp } from '../store/AppContext';
+import { LegalSheet } from './Legal';
 import { Sheet, day, eur } from './ui';
 
 /**
@@ -42,9 +45,17 @@ function Mark({ value }: { value: string }) {
   return <span className="plan-value">{value}</span>;
 }
 
+/**
+ * Une formule.
+ *
+ * Le mensuel met l'essai en avant *à la place* du prix quand il est encore
+ * disponible : annoncer « 4,99 € » en gros au-dessus de « 7 jours gratuits »
+ * ferait de l'offre une petite ligne. Le prix qui suit l'essai reste écrit
+ * juste en dessous, jamais renvoyé aux conditions générales.
+ */
 function PriceOption({
-  period, selected, onSelect,
-}: { period: BillingPeriod; selected: boolean; onSelect: () => void }) {
+  period, selected, trial, onSelect,
+}: { period: BillingPeriod; selected: boolean; trial: boolean; onSelect: () => void }) {
   const yearly = period === 'yearly';
   return (
     <button
@@ -56,15 +67,25 @@ function PriceOption({
       <span className="price-head">
         <span className="strong">{PERIOD_LABELS[period]}</span>
         {yearly && <PlusBadge>−{yearlySavingsPct()} %</PlusBadge>}
+        {trial && <PlusBadge>{TRIAL_DAYS} jours offerts</PlusBadge>}
       </span>
-      <span className="price-amount num">
-        {price(PRICES[period])}
-        <span className="price-unit">{yearly ? '/ an' : '/ mois'}</span>
-      </span>
+      {trial ? (
+        <span className="price-amount num">
+          {TRIAL_DAYS} jours
+          <span className="price-unit">gratuits</span>
+        </span>
+      ) : (
+        <span className="price-amount num">
+          {price(PRICES[period])}
+          <span className="price-unit">{yearly ? '/ an' : '/ mois'}</span>
+        </span>
+      )}
       <span className="xs dim">
-        {yearly
-          ? `${price(monthlyEquivalent('yearly'))} par mois — ${price(yearlySavings())} économisés`
-          : 'Sans engagement'}
+        {trial
+          ? `puis ${price(PRICES.monthly)} / mois — sans engagement`
+          : yearly
+            ? `${price(monthlyEquivalent('yearly'))} par mois — ${price(yearlySavings())} économisés`
+            : 'Sans engagement'}
       </span>
     </button>
   );
@@ -74,19 +95,32 @@ function PriceOption({
 export function PlanSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { state, dispatch, notify } = useApp();
   const [period, setPeriod] = useState<BillingPeriod>('yearly');
+  const [legal, setLegal] = useState<LegalDocId | null>(null);
   const active = effectivePlan(state);
   const sub = state.subscription;
+  const today = new Date().toISOString().slice(0, 10);
+
+  /* L'essai suit la formule sélectionnée : c'est le moteur qui dit s'il reste
+     ouvert, jamais l'écran. */
+  const trial = trialAvailable(state, period);
+  const trialEnd = trialEndDate(today);
+  const running = inTrial(sub);
 
   const subscribe = () => {
     dispatch({ type: 'subscribe', period });
-    notify(`1% Better+ activé — ${PERIOD_LABELS[period].toLowerCase()}`);
+    notify(trial
+      ? `Essai de ${TRIAL_DAYS} jours ouvert`
+      : `1% Better+ activé — ${PERIOD_LABELS[period].toLowerCase()}`);
     onClose();
   };
 
   const cancel = () => {
-    if (!window.confirm('Revenir à la formule gratuite ? Le plan repasse à 3 jours et 3 séances.')) return;
+    const message = running
+      ? `Arrêter l'essai maintenant ? Rien n'a été et ne sera prélevé. Le plan repasse à 3 jours et 3 séances.`
+      : 'Revenir à la formule gratuite ? Le plan repasse à 3 jours et 3 séances.';
+    if (!window.confirm(message)) return;
     dispatch({ type: 'unsubscribe' });
-    notify('Retour à la formule gratuite');
+    notify(running ? 'Essai arrêté' : 'Retour à la formule gratuite');
     onClose();
   };
 
@@ -125,18 +159,26 @@ export function PlanSheet({ open, onClose }: { open: boolean; onClose: () => voi
         {active === 'plus' && sub ? (
           <>
             <div className="card card-ink">
-              <div className="card-title" style={{ margin: 0 }}>Abonnement en cours</div>
+              <div className="card-title" style={{ margin: 0 }}>
+                {running ? 'Essai gratuit en cours' : 'Abonnement en cours'}
+              </div>
               <div className="metric num" style={{ marginTop: 4 }}>
-                {price(PRICES[sub.period])}
-                <span className="sm"> {sub.period === 'yearly' ? '/ an' : '/ mois'}</span>
+                {running ? '0,00 €' : price(PRICES[sub.period])}
+                <span className="sm"> {running ? 'aujourd\u2019hui' : sub.period === 'yearly' ? '/ an' : '/ mois'}</span>
               </div>
               <div className="sm" style={{ marginTop: 8 }}>
-                Échéance le {day(sub.renewsAt)} — {daysLeft(sub)} jour
+                {running ? 'Essai jusqu\u2019au' : 'Échéance le'} {day(sub.renewsAt)} — {daysLeft(sub)} jour
                 {daysLeft(sub) > 1 ? 's' : ''} restant{daysLeft(sub) > 1 ? 's' : ''}.
               </div>
+              {running && (
+                <div className="sm" style={{ marginTop: 6 }}>
+                  Ensuite {price(PRICES.monthly)} / mois. Arrête avant cette date
+                  et rien n'est dû.
+                </div>
+              )}
             </div>
             <button type="button" className="btn btn-ghost btn-block" onClick={cancel}>
-              Revenir à la formule gratuite
+              {running ? "Arrêter l'essai" : 'Revenir à la formule gratuite'}
             </button>
           </>
         ) : (
@@ -153,9 +195,42 @@ export function PlanSheet({ open, onClose }: { open: boolean; onClose: () => voi
             <div className="card-title" style={{ margin: 0 }}>1% Better+</div>
             <div className="price-grid">
               <PriceOption period="monthly" selected={period === 'monthly'}
+                trial={trialAvailable(state, 'monthly')}
                 onSelect={() => setPeriod('monthly')} />
               <PriceOption period="yearly" selected={period === 'yearly'}
+                trial={false}
                 onSelect={() => setPeriod('yearly')} />
+            </div>
+
+            {/* Récapitulatif avant engagement : durée, prix, échéance et
+                résiliation, sur le même écran que le bouton. Les boutiques
+                d'applications l'exigent, et c'est de toute façon ce qu'on
+                voudrait lire avant d'appuyer. */}
+            <div className="card card-flat">
+              <div className="card-title" style={{ margin: 0 }}>Ce que tu engages</div>
+              <ul className="bullets sm" style={{ marginTop: 8 }}>
+                {trial ? (
+                  <>
+                    <li>{TRIAL_DAYS} jours gratuits, jusqu'au {day(trialEnd)}.</li>
+                    <li>Puis {price(PRICES.monthly)} par mois, le premier
+                      prélèvement au {day(trialEnd)}.</li>
+                    <li>Arrêt possible à tout moment avant cette date : rien
+                      n'est prélevé.</li>
+                    <li>Un seul essai par appareil.</li>
+                  </>
+                ) : (
+                  <>
+                    <li>{price(PRICES[period])} TTC{period === 'yearly' ? ' par an' : ' par mois'}, prélevés à la
+                      souscription.</li>
+                    <li>Période jusqu'au {day(renewalDate(today, period))}.</li>
+                    <li>Sans engagement : la résiliation prend effet à la fin de
+                      la période en cours.</li>
+                    {!trialAvailable(state, 'monthly') && state.trialUsed && period === 'monthly' && (
+                      <li>Essai gratuit déjà utilisé sur cet appareil.</li>
+                    )}
+                  </>
+                )}
+              </ul>
             </div>
 
             <div className="card card-notice">
@@ -163,23 +238,52 @@ export function PlanSheet({ open, onClose }: { open: boolean; onClose: () => voi
               <p className="sm muted">
                 Il n'y a pas de serveur, donc ni encaissement ni vérification
                 d'abonnement : le bouton active la formule sur cet appareil
-                jusqu'au {day(renewalDate(new Date().toISOString().slice(0, 10), period))},
-                sans rien débiter. Les tarifs ci-dessus sont l'offre prévue, pas
-                une transaction.
+                jusqu'au {day(trial ? trialEnd : renewalDate(today, period))},
+                sans rien débiter, et rien ne se reconduit — la formule gratuite
+                revient d'elle-même à l'échéance. Les tarifs ci-dessus sont
+                l'offre prévue, pas une transaction.
               </p>
             </div>
 
             <button type="button" className="btn btn-primary btn-block" onClick={subscribe}>
-              Activer — {price(PRICES[period])}{period === 'yearly' ? ' / an' : ' / mois'}
+              {trial
+                ? `Commencer l'essai — ${TRIAL_DAYS} jours gratuits`
+                : `Activer — ${price(PRICES[period])}${period === 'yearly' ? ' / an' : ' / mois'}`}
             </button>
+            {trial && (
+              <p className="xs dim center">
+                Puis {price(PRICES.monthly)} / mois à partir du {day(trialEnd)}.
+              </p>
+            )}
             <p className="xs dim center">
-              Prix TTC annoncés. Les conditions de vente restent à écrire avec le
-              prestataire de paiement.
+              Prix TTC. En souscrivant, tu acceptes les{' '}
+              <button type="button" className="link" onClick={() => setLegal('cgv')}>
+                conditions de vente
+              </button>{' '}
+              et la{' '}
+              <button type="button" className="link" onClick={() => setLegal('confidentialite')}>
+                politique de confidentialité
+              </button>.
             </p>
           </>
         )}
 
+        <div className="divider" />
+        <div className="row" style={{ gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button type="button" className="link xs" onClick={() => setLegal('cgv')}>
+            Conditions de vente
+          </button>
+          <button type="button" className="link xs" onClick={() => setLegal('confidentialite')}>
+            Confidentialité
+          </button>
+          <button type="button" className="link xs" onClick={() => setLegal('mentions')}>
+            Mentions légales
+          </button>
+        </div>
+
         <p className="xs dim center">Formule active : {PLAN_LABELS[active]}</p>
+
+        <LegalSheet open={legal !== null} docId={legal} onClose={() => setLegal(null)} />
       </div>
     </Sheet>
   );

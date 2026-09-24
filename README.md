@@ -468,10 +468,10 @@ en formule complète fait réapparaître les données.
 
 ### Tarifs
 
-| | Prix | Par mois | Économie |
-| --- | --- | --- | --- |
-| Mensuel | 4,99 € / mois | 4,99 € | — |
-| Annuel | 39,00 € / an | 3,25 € | 20,88 €, soit 35 % |
+| | Prix | Par mois | Économie | Essai |
+| --- | --- | --- | --- | --- |
+| Mensuel | 4,99 € / mois | 4,99 € | — | 7 jours gratuits |
+| Annuel | 39,00 € / an | 3,25 € | 20,88 €, soit 35 % | — |
 
 Les montants sont stockés **en centimes**, jamais en flottants : `4.99 * 12` ne
 vaut pas exactement `59.88` en virgule flottante, et une remise calculée dessus
@@ -489,6 +489,40 @@ traitées pour de bon plutôt qu'approximées :
   enregistre l'intention, l'abonnement décide, et les moteurs repassent à trois
   jours sans qu'aucun écran n'ait à y penser.
 
+### L'essai de sept jours
+
+Sur le mensuel seulement. L'annuel n'en propose pas : un essai sert à décider
+avant de s'engager, et l'engagement annuel se décide justement après un mois
+d'usage — offrir sept jours à qui a déjà choisi serait une remise déguisée, pas
+un essai.
+
+Trois règles, toutes dans `engine/entitlements.ts`, parce que l'interface ne
+doit pas pouvoir les contredire :
+
+1. **Un seul essai par appareil.** `trialUsed` est marqué à l'*ouverture*, pas
+   à la fin. Sans cela, résilier puis réactiver donnerait un abonnement gratuit
+   à vie. Résilier ne rend pas l'essai — c'est explicite dans le réducteur, et
+   c'est un test.
+2. **L'essai *est* la première période.** Son dernier jour est l'échéance :
+   `renewsAt` porte donc la date du premier prélèvement. Tout ce qui lisait
+   déjà `renewsAt` — jours restants, expiration, retour au gratuit — fonctionne
+   sans savoir qu'un essai existe. Aucun écran n'a eu à apprendre un nouveau
+   concept.
+3. **Rien n'est dû pendant l'essai.** `dueToday()` vaut zéro tant qu'il court.
+   C'est cette fonction que l'écran affiche, pas le tarif de la formule :
+   annoncer « 4,99 € » le premier jour d'un essai gratuit serait faux.
+
+C'est aussi pourquoi le choix de la formule décide `withTrial`, mais ne
+l'impose pas : `startSubscription` demande à `periodHasTrial`, et le réducteur
+demande à `trialAvailable`. Un appel malintentionné depuis la console n'ouvre
+pas un second essai.
+
+**Ce que l'écran annonce avant le bouton** — durée, date de fin, prix qui suit,
+possibilité d'arrêter sans être débité, unicité de l'essai. Les boutiques
+d'applications l'exigent sur l'écran d'achat lui-même ; c'est de toute façon ce
+qu'on voudrait lire avant d'appuyer, plutôt que de le chercher dans les
+conditions générales.
+
 ### Ce qui manque pour vendre
 
 **Aucun paiement n'est encaissé**, et c'est structurel : sans serveur, il n'y a
@@ -501,8 +535,9 @@ demandé nulle part**, puisqu'il n'y aurait rien pour les traiter.
 Vendre demanderait, dans l'ordre : un backend, un processeur de paiement
 (Stripe, ou les achats intégrés Apple et Google si l'application est
 distribuée sur leurs magasins), une vérification du droit d'accès côté serveur
-— puisqu'un client ne peut pas s'auto-certifier abonné — et des conditions
-générales de vente, qui restent à écrire.
+— puisqu'un client ne peut pas s'auto-certifier abonné. Les conditions
+générales de vente, elles, sont écrites : voir « Publier dans les normes »
+plus bas.
 
 ### Deux lignes annoncées, pas encore construites
 
@@ -944,6 +979,166 @@ catalogue, sélection des formats, panier préparé. `registerDriveConnector()`
 suffit à le brancher, et l'étape manuelle disparaît. Le contrat s'arrête
 délibérément à un panier **préparé** : la validation reste à l'utilisateur.
 
+## Publier dans les normes
+
+Une application qui annonce un prix en euros et traite du poids, de l'âge et
+des allergies n'est pas publiable sans un socle précis. Voici ce qui a été
+construit, et — c'est le point important — ce qui ne pouvait pas l'être.
+
+### Le principe : un trou nommé plutôt qu'une identité inventée
+
+Les mentions obligatoires désignent **une personne réelle** : une raison
+sociale, une adresse, un numéro d'immatriculation, un hébergeur, un médiateur
+de la consommation. Rien de cela ne se devine, et une mention légale inventée
+est pire que pas de mention du tout : elle trompe le lecteur et engage
+quelqu'un qui n'existe pas.
+
+`engine/legal.ts` ne remplit donc rien. Il lit la configuration, dresse la
+liste de ce qui manque **avec le texte de loi correspondant**, et les documents
+affichent à la place de la valeur absente un encadré qui nomme la mention, dit
+à quoi elle sert et donne la variable à renseigner. En tête de l'écran, un
+bandeau tranche sans nuance :
+
+> **Pas encore publiable — 12 mentions obligatoires manquantes**
+
+C'est la même règle que pour les prix et pour le diplôme du coach : l'absence
+se montre, elle ne se comble pas.
+
+`publishReady()` répond `false` tant qu'une mention obligatoire manque. La
+réponse est volontairement binaire — « presque prêt » n'existe pas quand il
+s'agit d'identifier un vendeur.
+
+### Les six documents
+
+| Document | Ce qu'il règle | Fondement |
+| --- | --- | --- |
+| Mentions légales | Éditeur, directeur de publication, hébergeur | LCEN art. 6-III-1 ; C. com. R123-237 |
+| Confidentialité | Données, base légale, durée, droits | RGPD art. 13 à 22 |
+| Conditions d'utilisation | Objet, âge, obligations, responsabilité | — |
+| Conditions de vente | Prix, essai, reconduction, rétractation, médiation | C. conso. L221-5, L221-18, L215-1, L224-45-1, L612-1 |
+| Avertissement santé | Ce que des calculs ne savent pas de toi | — |
+| Accessibilité | Ce qui a été fait, ce qui ne l'a pas été | WCAG 2.1 AA |
+
+Les textes ne sont pas génériques : ils décrivent ce que fait réellement
+l'application. La politique de confidentialité peut écrire « aucun
+destinataire » parce que c'est vrai, et nommer la seule exception — le
+code-barres envoyé à Open Food Facts. Les conditions de vente citent les tarifs
+**depuis `PRICES`**, pas une copie qui divergerait au premier changement ; un
+test le vérifie.
+
+Ils restent un modèle : une relecture par un professionnel du droit reste
+nécessaire avant une mise en ligne payante, et l'écran le dit lui-même plutôt
+que de laisser croire le contraire.
+
+### Les trois obligations d'un abonnement vendu à des particuliers
+
+Elles sont traitées dans les conditions de vente **et** dans l'interface, parce
+qu'une obligation écrite seulement dans un document n'est pas remplie :
+
+- **Rétractation, quatorze jours** (C. conso. L221-18), indépendante de l'essai
+  puisqu'elle court depuis la souscription.
+- **Reconduction tacite** (L215-1), annoncée avant de souscrire, avec rappel
+  avant l'échéance annuelle.
+- **Résiliation aussi simple que la souscription** (L224-45-1) : le bouton
+  d'arrêt est au même endroit, à la même profondeur, que le bouton
+  d'activation. Pas de formulaire, pas de justification, pas de courrier.
+
+### RGPD : des droits exerçables, pas déclarés
+
+Un droit rangé dans « réglages » n'est pas un droit. L'onglet Profil porte donc
+une rubrique **« Tes droits »**, avec deux actions et rien d'autre :
+
+- **Exporter mes données** (articles 15 et 20) produit `1-better-mes-donnees-
+  AAAA-MM-JJ.json` : **l'état complet**, pas une sélection jugée intéressante —
+  un test compare les clés de l'archive à celles de l'état, parce qu'une clé
+  oubliée serait une donnée détenue et non restituée. L'archive porte un
+  en-tête en français qui dit ce qu'elle contient et ce qu'elle ne contient
+  pas ; le mot de passe d'un compte n'y figure pas, puisqu'il n'est jamais
+  enregistré.
+- **Effacer toutes mes données** (article 17), immédiat et définitif.
+
+L'export offre deux voies : le téléchargement, et l'affichage du contenu à
+copier. Ce n'est pas une ceinture-bretelles — certains aperçus intégrés
+interdisent à une page de remettre un fichier, et un droit qui dépend du
+navigateur n'est pas un droit. Quand le téléchargement est refusé,
+l'application le dit et montre le contenu.
+
+**Le consentement est demandé avant la saisie, pas après.** L'écran d'accueil
+du questionnaire annonce que les questions suivantes portent sur des données de
+santé et où elles vont, avec un lien vers la politique et l'avertissement santé
+— c'est ce que suppose le consentement explicite de l'article 9-2-a. L'écran de
+connexion porte les mêmes liens ; l'écran des formules ajoute les conditions de
+vente.
+
+### Stockage local et traceurs
+
+Aucun cookie publicitaire, aucune mesure d'audience, aucun traceur tiers. Le
+stockage local sert exclusivement à conserver ce que la personne a saisi :
+strictement nécessaire au service demandé, donc dispensé de consentement
+(art. 82 de la loi Informatique et Libertés). C'est écrit tel quel dans la
+politique, avec la seule exception honnête : si les connexions Apple ou Google
+sont configurées, le script du fournisseur est chargé depuis ses serveurs et
+dépose ses propres traceurs. Tant qu'elles ne le sont pas — le cas par défaut —
+aucun script tiers n'est chargé.
+
+### Accessibilité
+
+Visée : **WCAG 2.1 niveau AA**. Aucun audit externe n'a été conduit, et la
+déclaration le dit au lieu de revendiquer une conformité certifiée.
+
+Ce qui a été ajouté ou vérifié : lien d'évitement vers le contenu (hors écran
+au repos, ramené au premier plan une fois ciblé, vérifié au navigateur —
+`y = −71 px` au repos, `y = 8 px` ciblé, et `Entrée` déplace bien le focus sur
+`#contenu`), repère `<main>` et navigation nommée, région d'annonce
+`aria-live` pour les confirmations, cibles tactiles portées à 45 px sur les
+boutons ronds sans toucher à leur dessin, contour de focus propre au lien
+d'évitement — le contour commun, de la couleur de l'encre, était invisible sur
+une pastille déjà noire.
+
+Ce qui ne l'est pas, et qui figure dans les limites connues : le survol détaillé
+de la courbe de poids n'est pas accessible au clavier, aucun test n'a été mené
+avec un lecteur d'écran réel, et les boutons secondaires en ligne n'atteignent
+pas les 44 px du niveau AAA.
+
+### Publication technique
+
+- **Manifeste** (`public/manifest.webmanifest`) : nom, description, portée,
+  couleurs, catégories, affichage autonome.
+- **Icônes**, fabriquées depuis le logo par `scripts/make-icons.mjs`. Trois
+  formats qui ne se remplacent pas : 192 et 512 px pour le manifeste, une
+  version *maskable* réduite à 62 % et centrée sur fond plein — Android découpe
+  l'icône selon la forme du lanceur et amputerait une icône qui remplit son
+  cadre —, et un `apple-touch-icon` de 180 px sur fond opaque, iOS rendant noir
+  tout logo transparent.
+- **Métadonnées** : description, `og:` et `twitter:` pour qu'un lien partagé
+  n'affiche pas une adresse nue, `theme-color` **par thème** (une seule valeur
+  donnait une barre noire sur une application affichée en clair),
+  `apple-mobile-web-app-title`, `robots.txt`.
+- **`<noscript>`** qui explique que les calculs se font dans le navigateur.
+- **Numéro de version** affiché dans l'application, injecté au build depuis
+  `package.json` : deux numéros qui divergent valent moins que pas de numéro du
+  tout, puisqu'un rapport de bug citerait une version inexistante.
+
+Pas de *service worker*. Le fichier chargé fonctionne déjà hors ligne — tout est
+inclus, et seul le scanner appelle l'extérieur. Un cache mal invalidé aurait en
+revanche servi une ancienne version à des gens qui ne comprendraient pas
+pourquoi leur correctif n'arrive pas : le coût réel dépassait le gain.
+
+### Ce qui reste à faire, et qui n'est pas du code
+
+Rien de ce qui suit ne peut être écrit depuis ce dépôt :
+
+1. Renseigner les **seize variables `VITE_LEGAL_*`** (voir `.env.example` et le
+   workflow de publication). Les douze obligatoires débloquent `publishReady()`.
+2. Faire **relire les six documents** par un professionnel du droit.
+3. **Adhérer à un médiateur de la consommation** — c'est une adhésion payante,
+   obligatoire dès qu'on vend à des particuliers, pas une mention à recopier.
+4. Choisir un **prestataire de paiement** et brancher la facturation réelle.
+5. Obtenir l'**accord écrit de Damien Phelipon** pour son nom et sa photo, et
+   son intitulé de diplôme exact.
+
+---
+
 ## Contenu des bases
 
 | Base | Volume |
@@ -972,6 +1167,13 @@ code-barres, les prix réellement actualisés et le remplissage automatique du
 panier nécessitent respectivement une caméra, une source de prix et un accès
 officiel d'enseigne : aucun des trois ne peut être simulé honnêtement.
 
+**Mise en conformité** — six documents légaux, mentions obligatoires
+détectées et signalées, essai gratuit de sept jours, droits RGPD exerçables
+depuis l'application, manifeste, icônes, métadonnées de partage, lien
+d'évitement et région d'annonce. ✅ Restent hors du code : l'identité réelle de
+l'éditeur, une relecture juridique, l'adhésion à un médiateur et un prestataire
+de paiement.
+
 ---
 
 ## Tests
@@ -980,7 +1182,7 @@ officiel d'enseigne : aucun des trois ne peut être simulé honnêtement.
 npm test
 ```
 
-213 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
+242 tests couvrent les règles métier : formules nutritionnelles et garde-fous,
 choix du split et contrainte de matériel, respect des régimes et des restrictions,
 déduction du garde-manger, conversion en formats d'achat, cohérence des
 substitutions (dont la protection de la densité protéique), couverture de tous
@@ -1011,9 +1213,22 @@ qui n'est pas un dépassement, jamais de valeur négative) et la validation d'un
 séance sans aucune charge notée — dont le jour crédité quand la séance est
 faite en avance, et le point accordé à une séance décalée —, et la géométrie de
 la courbe de poids (abscisse proportionnelle aux dates, amplitude minimale,
-objectif inclus ou écarté, point désigné au survol).
+objectif inclus ou écarté, point désigné au survol), l'essai de sept jours
+(mensuel seulement, échéance qui *est* la fin de l'essai, zéro dû tant qu'il
+court, second essai refusé, abonnement d'avant la fonctionnalité resté
+lisible), le socle légal (aucune valeur inventée en l'absence de configuration
+— vérifié par des motifs cherchant un SIREN, une adresse électronique ou une
+rue dans les textes —, trou nommé pour chaque mention obligatoire absente,
+tarifs des conditions de vente tirés du moteur, articles cités présents) et
+l'export RGPD (clés de l'archive comparées une à une à celles de l'état, aucune
+trace de mot de passe).
 
 Le test de fumée `npm run smoke` va plus loin : il compte les jours réellement
-planifiés en gratuit (3) puis après activation (7), crée un compte e-mail, vérifie
-que l'état stocké est bien chiffré, recharge la page, constate que le mot de
-passe est redemandé, en essaie un mauvais puis le bon.
+planifiés en gratuit (3) puis après activation (7), **ouvre l'essai gratuit et
+vérifie qu'il ouvre les sept jours, qu'il s'annonce à 0,00 €, et qu'il n'est
+pas proposé une seconde fois après avoir été arrêté**, ouvre les conditions de
+vente et y cherche rétractation, reconduction et essai, compte les mentions
+obligatoires signalées comme manquantes, relit l'archive d'export depuis
+l'écran, crée un compte e-mail, vérifie que l'état stocké est bien chiffré,
+recharge la page, constate que le mot de passe est redemandé, en essaie un
+mauvais puis le bon.

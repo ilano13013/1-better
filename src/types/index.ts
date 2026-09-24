@@ -428,6 +428,13 @@ export interface AppState {
   plan: Plan;
   /** Abonnement en cours, `null` en formule gratuite. */
   subscription: Subscription | null;
+  /**
+   * L'essai gratuit a-t-il déjà été ouvert sur cet appareil ?
+   *
+   * Marqué à l'ouverture, jamais effacé par une résiliation : sans cela,
+   * résilier puis réactiver rendrait l'abonnement gratuit indéfiniment.
+   */
+  trialUsed: boolean;
   /** Journal de ce qui a réellement été mangé. Facultatif par construction. */
   intake: IntakeEntry[];
   /** Jour où le programme commence. `null` tant que le choix n'a pas été fait. */

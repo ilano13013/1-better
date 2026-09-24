@@ -168,6 +168,43 @@ export const PERIOD_LABELS: Record<BillingPeriod, string> = {
   yearly: 'Annuel',
 };
 
+/* ------------------------------ Essai gratuit ------------------------------ */
+
+/**
+ * ESSAI GRATUIT — sept jours, sur le mensuel seulement.
+ *
+ * L'annuel n'en ouvre pas : un essai sert à décider avant de s'engager, et
+ * l'engagement annuel se décide justement après un mois d'usage. Proposer les
+ * deux reviendrait à offrir sept jours à qui a déjà choisi.
+ *
+ * Trois règles, et elles tiennent toutes dans ce module parce que l'interface
+ * ne doit pas pouvoir les contredire :
+ *
+ * 1. **Un seul essai par appareil.** Sans cela, résilier et réactiver donnerait
+ *    un abonnement gratuit à vie. `trialUsed` est marqué à l'ouverture de
+ *    l'essai, pas à sa fin — abandonner au deuxième jour consomme l'essai.
+ * 2. **L'essai *est* la première période.** Son dernier jour est l'échéance :
+ *    `renewsAt` porte donc la date du premier prélèvement, et tout ce qui lit
+ *    déjà `renewsAt` — jours restants, expiration, retour au gratuit —
+ *    fonctionne sans savoir qu'un essai existe.
+ * 3. **Rien n'est dû pendant l'essai.** Résilier avant l'échéance n'entraîne
+ *    aucun paiement, et c'est écrit à l'écran avant de commencer, pas dans les
+ *    conditions générales.
+ */
+export const TRIAL_DAYS = 7;
+
+/** Les formules qui ouvrent un essai. */
+export function periodHasTrial(period: BillingPeriod): boolean {
+  return period === 'monthly';
+}
+
+/** Vrai si cette formule peut encore ouvrir un essai pour cet état. */
+export function trialAvailable(
+  state: { trialUsed?: boolean }, period: BillingPeriod,
+): boolean {
+  return periodHasTrial(period) && state.trialUsed !== true;
+}
+
 /** Ce que l'annuel coûte par mois, en centimes (arrondi au centime). */
 export function monthlyEquivalent(period: BillingPeriod): number {
   return period === 'yearly' ? Math.round(PRICES.yearly / 12) : PRICES.monthly;
@@ -189,6 +226,15 @@ export interface Subscription {
   startedAt: string;
   /** Échéance de la période en cours, au format `AAAA-MM-JJ`. */
   renewsAt: string;
+  /**
+   * Dernier jour de l'essai gratuit, au format `AAAA-MM-JJ`, ou `null` si la
+   * souscription n'en ouvrait pas.
+   *
+   * Vaut toujours `renewsAt` quand il est renseigné : l'essai est la première
+   * période. Le champ existe pour que l'écran sache *dire* qu'on est en essai —
+   * pas pour dater autre chose.
+   */
+  trialEndsAt: string | null;
 }
 
 function parseDay(iso: string): Date | null {
@@ -221,9 +267,49 @@ export function renewalDate(startIso: string, period: BillingPeriod): string {
   return toDay(next);
 }
 
-export function startSubscription(period: BillingPeriod, now: Date = new Date()): Subscription {
+/** Dernier jour d'un essai ouvert à cette date. */
+export function trialEndDate(startIso: string, days: number = TRIAL_DAYS): string {
+  const start = parseDay(startIso);
+  if (!start) return startIso;
+  const end = new Date(start.getTime());
+  end.setDate(end.getDate() + days);
+  return toDay(end);
+}
+
+/**
+ * Ouvre une souscription.
+ *
+ * `withTrial` est décidé par l'appelant — le réducteur, qui seul sait si
+ * l'essai a déjà été consommé. Passer `true` sur une formule sans essai ne
+ * donne rien : c'est `periodHasTrial` qui tranche, pas l'appelant.
+ */
+export function startSubscription(
+  period: BillingPeriod, now: Date = new Date(), withTrial = false,
+): Subscription {
   const startedAt = toDay(now);
-  return { period, startedAt, renewsAt: renewalDate(startedAt, period) };
+  const trial = withTrial && periodHasTrial(period);
+  const renewsAt = trial ? trialEndDate(startedAt) : renewalDate(startedAt, period);
+  return { period, startedAt, renewsAt, trialEndsAt: trial ? renewsAt : null };
+}
+
+/** Vrai tant que l'essai court — donc tant que rien n'a été prélevé. */
+export function inTrial(
+  subscription: Subscription | null, now: Date = new Date(),
+): boolean {
+  if (!subscription || !subscription.trialEndsAt) return false;
+  return toDay(now) <= subscription.trialEndsAt;
+}
+
+/**
+ * Ce que coûte la souscription *aujourd'hui*, en centimes.
+ *
+ * Zéro pendant l'essai. C'est cette fonction que l'écran affiche, plutôt que
+ * le tarif de la formule : annoncer « 4,99 € » le premier jour d'un essai
+ * gratuit serait faux.
+ */
+export function dueToday(subscription: Subscription | null, now: Date = new Date()): number {
+  if (!subscription) return 0;
+  return inTrial(subscription, now) ? 0 : PRICES[subscription.period];
 }
 
 /** Une période échue n'ouvre plus rien : il n'existe aucun renouvellement. */
